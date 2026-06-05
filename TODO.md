@@ -583,7 +583,7 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
   - Added delete confirmation modal with warning message and error handling.
   - Both modals use proper ARIA attributes (role="dialog", aria-modal, aria-labelledby) for accessibility.
 
-### [ ] WEB-01 [status: pending] Resolve Tailwind CSS package resolution so web production builds succeed
+### [x] WEB-01 [status: completed] Resolve Tailwind CSS package resolution so web production builds succeed
 
 - **Related file paths**
   - `packages/ui/package.json`
@@ -630,12 +630,17 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
   - `pnpm --filter @suite/drive-web build`
 
 - **Subtasks**
-  - [ ] WEB-01.1 [file: packages/ui/package.json] Add the missing Tailwind CSS dependency at the shared UI package boundary.
+  - [x] WEB-01.1 [file: packages/ui/package.json] Add the missing Tailwind CSS dependency at the shared UI package boundary. ✅
     - Validate with: `pnpm --filter @suite/drive-web build`
-  - [ ] WEB-01.2 [file: packages/ui/src/styles/globals.css, apps/*/web/src/styles.css] Confirm the shared stylesheet remains the single source of truth for web app styling imports.
+  - [x] WEB-01.2 [file: packages/ui/src/styles/globals.css, apps/*/web/src/styles.css] Confirm the shared stylesheet remains the single source of truth for web app styling imports. ✅
     - Validate with: `pnpm --filter @suite/drive-web build`
-  - [ ] WEB-01.3 [file: apps/*/web/package.json] Confirm web packages do not need duplicate Tailwind setup once the shared dependency is present.
+  - [x] WEB-01.3 [file: apps/*/web/package.json] Confirm web packages do not need duplicate Tailwind setup once the shared dependency is present. ✅
     - Validate with: `pnpm --filter @suite/drive-web build`
+
+- **Implementation notes**
+  - Added `tailwindcss: ^4.0.0` as a devDependency to `packages/ui/package.json`.
+  - All three web apps (calendar, tasks, drive) now build successfully without per-app Tailwind duplication.
+  - The shared stylesheet at `packages/ui/src/styles/globals.css` remains the single source of truth.
 
 ### [ ] QA-01 [status: pending] Add targeted tests and acceptance checks for the MVP slices
 
