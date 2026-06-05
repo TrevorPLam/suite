@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { listDriveFiles, type UploadDriveFileInput, uploadDriveFile } from '@suite/domain-drive';
+import { deleteDriveFile, listDriveFiles, renameDriveFile, type RenameDriveFileInput, type UploadDriveFileInput, uploadDriveFile } from '@suite/domain-drive';
 
 const app = new Hono();
 
@@ -21,6 +21,23 @@ function parseUploadDriveFileBody(body: unknown): UploadDriveFileInput | null {
   return {
     name: name.trim(),
     size,
+  };
+}
+
+function parseRenameDriveFileBody(body: unknown, id: string): RenameDriveFileInput | null {
+  if (typeof body !== 'object' || body === null) {
+    return null;
+  }
+
+  const { name } = body as Record<string, unknown>;
+
+  if (!isNonEmptyString(name)) {
+    return null;
+  }
+
+  return {
+    id,
+    name: name.trim(),
   };
 }
 
@@ -47,6 +64,55 @@ app.post('/api/files', async (c) => {
   }
 
   return c.json(uploadDriveFile(payload), 201);
+});
+
+app.put('/api/files/:id', async (c) => {
+  const id = c.req.param('id');
+
+  if (!id) {
+    return c.json({ error: 'File ID is required' }, 400);
+  }
+
+  let body: unknown;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const payload = parseRenameDriveFileBody(body, id);
+
+  if (!payload) {
+    return c.json({
+      error: 'Invalid rename payload',
+      expected: ['name'],
+    }, 400);
+  }
+
+  const result = renameDriveFile(payload);
+
+  if (!result) {
+    return c.json({ error: 'File not found' }, 404);
+  }
+
+  return c.json(result);
+});
+
+app.delete('/api/files/:id', (c) => {
+  const id = c.req.param('id');
+
+  if (!id) {
+    return c.json({ error: 'File ID is required' }, 400);
+  }
+
+  const deleted = deleteDriveFile(id);
+
+  if (!deleted) {
+    return c.json({ error: 'File not found' }, 404);
+  }
+
+  return c.json({ ok: true });
 });
 
 export default app;

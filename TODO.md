@@ -504,7 +504,7 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
   - Added `GET /api/files` so the API can browse the same `DriveFile` records used by uploads.
   - Reworked the drive web surface into a two-panel upload-and-browse flow that loads files on mount and inserts newly uploaded files immediately.
 
-### [ ] DRIVE-02 [status: pending] Drive should support rename, delete, and useful file metadata actions
+### [x] DRIVE-02 [status: completed] Drive should support rename, delete, and useful file metadata actions
 
 - **Related file paths**
   - `apps/drive/specs/upload-file.spec.md`
@@ -565,12 +565,23 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
   - `pnpm --filter @suite/drive-api typecheck`
 
 - **Subtasks**
-  - [ ] DRIVE-02.1 [file: packages/domain-drive/src/lib/*, packages/domain-drive/src/index.ts] Add rename and delete mutations so the file record lifecycle stays narrow and deterministic.
+  - [x] DRIVE-02.1 [file: packages/domain-drive/src/lib/*, packages/domain-drive/src/index.ts] Add rename and delete mutations so the file record lifecycle stays narrow and deterministic. ✅
     - Validate with: `pnpm --filter @suite/drive-api typecheck`
-  - [ ] DRIVE-02.2 [file: apps/drive/api/src/index.ts, apps/drive/api/src/routes/*] Add rename and delete routes that validate payloads and call the drive domain functions without route-level business logic.
+  - [x] DRIVE-02.2 [file: apps/drive/api/src/index.ts, apps/drive/api/src/routes/*] Add rename and delete routes that validate payloads and call the drive domain functions without route-level business logic. ✅
     - Validate with: `pnpm --filter @suite/drive-api typecheck`
-  - [ ] DRIVE-02.3 [file: apps/drive/web/src/features/*, apps/drive/web/src/components/*] Add file action controls and a details or metadata panel so users can manage the file list without leaving the screen.
+  - [x] DRIVE-02.3 [file: apps/drive/web/src/features/*, apps/drive/web/src/components/*] Add file action controls and a details or metadata panel so users can manage the file list without leaving the screen. ✅
     - Validate with: `pnpm --filter @suite/drive-web typecheck`
+
+- **Implementation notes**
+  - Added `RenameDriveFileInput` type and `renameDriveFile()` mutation to the drive domain package with proper null handling for missing files.
+  - Added `deleteDriveFile()` mutation that returns a boolean success indicator.
+  - Added `getDriveFile()` helper for single-file retrieval by ID.
+  - Added `PUT /api/files/:id` route with payload validation for rename operations.
+  - Added `DELETE /api/files/:id` route with proper 404 handling for missing files.
+  - Extended `DriveFileList` component with Rename and Delete action buttons.
+  - Added rename modal dialog with form validation and error handling.
+  - Added delete confirmation modal with warning message and error handling.
+  - Both modals use proper ARIA attributes (role="dialog", aria-modal, aria-labelledby) for accessibility.
 
 ### [ ] WEB-01 [status: pending] Resolve Tailwind CSS package resolution so web production builds succeed
 

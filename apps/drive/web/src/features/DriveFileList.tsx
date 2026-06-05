@@ -7,13 +7,15 @@ type DriveFileListProps = {
   error: string;
   errorDetails: string[];
   onRefresh: () => void;
+  onRename: (file: DriveFile) => void;
+  onDelete: (file: DriveFile) => void;
 };
 
 function formatFileSize(size: number) {
   return `${size.toLocaleString()} bytes`;
 }
 
-export function DriveFileList({ files, loading, error, errorDetails, onRefresh }: DriveFileListProps) {
+export function DriveFileList({ files, loading, error, errorDetails, onRefresh, onRename, onDelete }: DriveFileListProps) {
   return (
     <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24 }}>
       <div style={{ display: 'grid', gap: 16 }}>
@@ -103,7 +105,7 @@ export function DriveFileList({ files, loading, error, errorDetails, onRefresh }
                   background: '#0a0a0a',
                   padding: 16,
                   display: 'grid',
-                  gap: 8,
+                  gap: 12,
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'start' }}>
@@ -113,6 +115,25 @@ export function DriveFileList({ files, loading, error, errorDetails, onRefresh }
                   </div>
 
                   <span style={{ color: 'rgba(249, 250, 251, 0.5)', fontSize: 12 }}>ID: {file.id}</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Button
+                    type="button"
+                    onClick={() => onRename(file)}
+                    className="bg-white/10 text-white"
+                    style={{ fontSize: 14, padding: '8px 12px' }}
+                  >
+                    Rename
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => onDelete(file)}
+                    className="bg-red-500/20 text-red-300"
+                    style={{ fontSize: 14, padding: '8px 12px' }}
+                  >
+                    Delete
+                  </Button>
                 </div>
               </article>
             ))}

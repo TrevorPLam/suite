@@ -14,6 +14,12 @@ export function App() {
   const [uploadError, setUploadError] = useState('');
   const [uploadErrorDetails, setUploadErrorDetails] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [renamingFile, setRenamingFile] = useState<DriveFile | null>(null);
+  const [renameName, setRenameName] = useState('');
+  const [renaming, setRenaming] = useState(false);
+  const [renameError, setRenameError] = useState('');
+  const [deleting, setDeleting] = useState<DriveFile | null>(null);
+  const [deleteError, setDeleteError] = useState('');
 
   const extractErrorMessage = useCallback((value: unknown, fallback: string) => {
     if (typeof value === 'object' && value !== null) {
@@ -143,6 +149,89 @@ export function App() {
     }
   }
 
+  const handleRename = useCallback((file: DriveFile) => {
+    setRenamingFile(file);
+    setRenameName(file.name);
+    setRenameError('');
+  }, []);
+
+  const handleRenameSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!renamingFile) return;
+
+    setRenaming(true);
+    setRenameError('');
+
+    try {
+      const response = await fetch(`/api/files/${renamingFile.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: renameName }),
+      });
+
+      const payload: unknown = await response.json();
+
+      if (!response.ok) {
+        setRenameError(extractErrorMessage(payload, 'Unable to rename file'));
+        return;
+      }
+
+      if (typeof payload === 'object' && payload !== null) {
+        const candidate = payload as Record<string, unknown>;
+
+        if (
+          typeof candidate.id === 'string'
+          && typeof candidate.name === 'string'
+          && typeof candidate.size === 'number'
+        ) {
+          const updatedFile: DriveFile = {
+            id: candidate.id,
+            name: candidate.name,
+            size: candidate.size,
+          };
+
+          setFiles((currentFiles) =>
+            currentFiles.map((file) => (file.id === updatedFile.id ? updatedFile : file)),
+          );
+          setRenamingFile(null);
+          setRenameName('');
+          setStatus(`Renamed to ${updatedFile.name}`);
+          return;
+        }
+      }
+
+      setRenameError('The server returned an unexpected file shape');
+    } catch (renameErrorCatch) {
+      setRenameError(renameErrorCatch instanceof Error ? renameErrorCatch.message : 'Unable to rename file');
+    } finally {
+      setRenaming(false);
+    }
+  }, [renamingFile, renameName, extractErrorMessage]);
+
+  const handleDelete = useCallback(async (file: DriveFile) => {
+    setDeleting(file);
+    setDeleteError('');
+
+    try {
+      const response = await fetch(`/api/files/${file.id}`, {
+        method: 'DELETE',
+      });
+
+      const payload: unknown = await response.json();
+
+      if (!response.ok) {
+        setDeleteError(extractErrorMessage(payload, 'Unable to delete file'));
+        return;
+      }
+
+      setFiles((currentFiles) => currentFiles.filter((f) => f.id !== file.id));
+      setDeleting(null);
+      setStatus(`Deleted ${file.name}`);
+    } catch (deleteErrorCatch) {
+      setDeleteError(deleteErrorCatch instanceof Error ? deleteErrorCatch.message : 'Unable to delete file');
+    }
+  }, [extractErrorMessage]);
+
   return (
     <main
       style={{
@@ -260,8 +349,162 @@ export function App() {
             error={filesError}
             errorDetails={filesErrorDetails}
             onRefresh={loadFiles}
+            onRename={handleRename}
+            onDelete={handleDelete}
           />
         </section>
+
+        {renamingFile && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rename-dialog-title"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 24,
+              zIndex: 1000,
+            }}
+          >
+            <article
+              style={{
+                borderRadius: 20,
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: '#111111',
+                padding: 24,
+                maxWidth: 400,
+                width: '100%',
+              }}
+            >
+              <h2 id="rename-dialog-title" style={{ margin: 0, fontSize: 24 }}>
+                Rename file
+              </h2>
+              <p style={{ margin: '8px 0 0', color: 'rgba(249, 250, 251, 0.72)' }}>
+                Rename {renamingFile.name}
+              </p>
+
+              <form onSubmit={handleRenameSubmit} style={{ display: 'grid', gap: 16, marginTop: 24 }}>
+                <label style={{ display: 'grid', gap: 8 }}>
+                  <span>New name</span>
+                  <input
+                    value={renameName}
+                    onChange={(inputEvent) => setRenameName(inputEvent.target.value)}
+                    aria-label="New file name"
+                    autoFocus
+                    style={{
+                      borderRadius: 12,
+                      border: '1px solid rgba(255, 255, 255, 0.14)',
+                      background: '#0a0a0a',
+                      color: 'inherit',
+                      padding: '12px 14px',
+                    }}
+                  />
+                </label>
+
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                  <Button
+                    type="button"
+                    onClick={() => setRenamingFile(null)}
+                    className="bg-white/10 text-white"
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={renaming}>
+                    {renaming ? 'Renaming…' : 'Rename'}
+                  </Button>
+                </div>
+
+                {renameError ? (
+                  <div
+                    role="alert"
+                    style={{
+                      borderRadius: 12,
+                      border: '1px solid rgba(248, 113, 113, 0.35)',
+                      background: 'rgba(127, 29, 29, 0.3)',
+                      padding: 16,
+                      color: '#fecaca',
+                    }}
+                  >
+                    <p style={{ margin: 0, fontWeight: 600 }}>{renameError}</p>
+                  </div>
+                ) : null}
+              </form>
+            </article>
+          </div>
+        )}
+
+        {deleting && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-dialog-title"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 24,
+              zIndex: 1000,
+            }}
+          >
+            <article
+              style={{
+                borderRadius: 20,
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: '#111111',
+                padding: 24,
+                maxWidth: 400,
+                width: '100%',
+              }}
+            >
+              <h2 id="delete-dialog-title" style={{ margin: 0, fontSize: 24 }}>
+                Delete file
+              </h2>
+              <p style={{ margin: '8px 0 0', color: 'rgba(249, 250, 251, 0.72)' }}>
+                Are you sure you want to delete {deleting.name}? This action cannot be undone.
+              </p>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24 }}>
+                <Button
+                  type="button"
+                  onClick={() => setDeleting(null)}
+                  className="bg-white/10 text-white"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => handleDelete(deleting)}
+                  className="bg-red-500/20 text-red-300"
+                >
+                  Delete
+                </Button>
+              </div>
+
+              {deleteError ? (
+                <div
+                  role="alert"
+                  style={{
+                    borderRadius: 12,
+                    border: '1px solid rgba(248, 113, 113, 0.35)',
+                    background: 'rgba(127, 29, 29, 0.3)',
+                    padding: 16,
+                    color: '#fecaca',
+                    marginTop: 16,
+                  }}
+                >
+                  <p style={{ margin: 0, fontWeight: 600 }}>{deleteError}</p>
+                </div>
+              ) : null}
+            </article>
+          </div>
+        )}
       </div>
     </main>
   );
