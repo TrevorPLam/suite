@@ -642,7 +642,7 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
   - All three web apps (calendar, tasks, drive) now build successfully without per-app Tailwind duplication.
   - The shared stylesheet at `packages/ui/src/styles/globals.css` remains the single source of truth.
 
-### [ ] QA-01 [status: pending] Add targeted tests and acceptance checks for the MVP slices
+### [x] QA-01 [status: completed] Add targeted tests and acceptance checks for the MVP slices
 
 - **Related file paths**
   - `apps/calendar/specs/*.spec.md`
@@ -710,12 +710,24 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
   - `pnpm --filter @suite/drive-web typecheck`
 
 - **Subtasks**
-  - [ ] QA-01.1 [file: packages/domain-calendar/src/*.test.ts, packages/domain-tasks/src/*.test.ts, packages/domain-drive/src/*.test.ts] Add targeted unit tests for the core domain mutation/query helpers, one behavior slice per file.
+  - [x] QA-01.1 [file: packages/domain-calendar/src/*.test.ts, packages/domain-tasks/src/*.test.ts, packages/domain-drive/src/*.test.ts] Add targeted unit tests for the core domain mutation/query helpers, one behavior slice per file. ✅
     - Validate with: `pnpm --filter @suite/calendar-api typecheck`
-  - [ ] QA-01.2 [file: apps/*/api/src/*.test.ts] Add focused API tests for the create/update/list/delete routes so request validation stays narrow and explicit.
+  - [x] QA-01.2 [file: apps/*/api/src/*.test.ts] Add focused API tests for the create/update/list/delete routes so request validation stays narrow and explicit. ✅
     - Validate with: `pnpm --filter @suite/tasks-api typecheck`
-  - [ ] QA-01.3 [file: apps/*/web/src/*] Add a short manual acceptance checklist or browser smoke flow for each app so the MVP can be exercised without running the full suite.
+  - [x] QA-01.3 [file: apps/*/web/src/*] Add a short manual acceptance checklist or browser smoke flow for each app so the MVP can be exercised without running the full suite. ✅
     - Validate with: `pnpm --filter @suite/drive-web typecheck`
+
+- **Implementation notes**
+  - Added Vitest 2.1.8 to root package.json and all API packages.
+  - Created root vitest.config.ts with node environment and test globals.
+  - Added targeted unit tests for calendar domain (create, update, query, conflict detection).
+  - Added targeted unit tests for tasks domain (create, update, archive, delete, filter).
+  - Added targeted unit tests for drive domain (upload, rename, delete, query).
+  - Added focused API tests for calendar API (health, list, create, update routes).
+  - Added focused API tests for tasks API (health, list, create, update, archive, delete routes).
+  - Added focused API tests for drive API (health, list, upload, rename, delete routes).
+  - Created manual acceptance checklists for calendar, tasks, and drive apps.
+  - All validation commands pass (typecheck for all API and web packages).
 
 ## Priority order
 
