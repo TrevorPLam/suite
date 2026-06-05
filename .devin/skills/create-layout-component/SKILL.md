@@ -1,7 +1,11 @@
 ---
 name: create-layout-component
-description: Guides the creation of layout components including Sidebar, CommandPalette, StatusBar, and RightPanel with proper state management and responsive behavior
+description: Deprecated. Use suite-layout-component for Suite app shells, sidebars, drawers, and status bars.
 ---
+
+## Deprecated Skill
+
+This legacy skill existed for the older dashboard-oriented YDM layout. For the current Suite monorepo, use `suite-layout-component` instead.
 
 ## Layout Components
 

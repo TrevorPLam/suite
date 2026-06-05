@@ -14,6 +14,13 @@ export type RenameDriveFileInput = {
   name: string;
 };
 
+export class DriveError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DriveError';
+  }
+}
+
 const driveFiles: DriveFile[] = [];
 
 function createDriveFileId() {
@@ -37,6 +44,10 @@ export function getDriveFile(id: string): DriveFile | null {
   return file ? { ...file } : null;
 }
 
+export function resetDriveFiles(): void {
+  driveFiles.length = 0;
+}
+
 export function getDriveOverview() {
   return {
     name: 'Drive',
@@ -45,10 +56,29 @@ export function getDriveOverview() {
   };
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
 export function uploadDriveFile(input: UploadDriveFileInput): DriveFile {
+  const name = input.name.trim();
+
+  if (!isNonEmptyString(name)) {
+    throw new DriveError('name must be a non-empty string');
+  }
+
+  if (!Number.isFinite(input.size) || !Number.isInteger(input.size)) {
+    throw new DriveError('size must be an integer');
+  }
+
+  if (input.size < 0) {
+    throw new DriveError('size must be non-negative');
+  }
+
   const file: DriveFile = {
     id: createDriveFileId(),
-    ...input,
+    name,
+    size: input.size,
   };
 
   driveFiles.push(file);
@@ -66,7 +96,7 @@ export function renameDriveFile(input: RenameDriveFileInput): DriveFile | null {
   const existingFile = driveFiles[index]!;
   const updatedFile: DriveFile = {
     id: existingFile.id,
-    name: input.name,
+    name: input.name.trim(),
     size: existingFile.size,
   };
 

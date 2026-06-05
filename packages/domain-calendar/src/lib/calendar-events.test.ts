@@ -1,22 +1,37 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   createCalendarEvent,
   updateCalendarEvent,
   getCalendarEvent,
   listCalendarEvents,
   listCalendarEventsInRange,
+  resetCalendarEvents,
   CalendarEventError,
   type CreateCalendarEventInput,
   type UpdateCalendarEventInput,
 } from './calendar-events.js';
 
+function assertCalendarEventError(
+  fn: () => void,
+  code: string,
+  detail?: string,
+): void {
+  let error: CalendarEventError | undefined;
+  try {
+    fn();
+  } catch (e) {
+    error = e as CalendarEventError;
+  }
+  expect(error).toBeInstanceOf(CalendarEventError);
+  expect(error?.code).toBe(code);
+  if (detail) {
+    expect(error?.details).toContain(detail);
+  }
+}
+
 describe('calendar-events - create', () => {
   beforeEach(() => {
-    // Clear in-memory store before each test
-    const events = (globalThis as any).__calendarEvents;
-    if (events) {
-      events.clear();
-    }
+    resetCalendarEvents();
   });
 
   it('should create a valid event with a stable ID', () => {
@@ -54,8 +69,7 @@ describe('calendar-events - create', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    expect(() => createCalendarEvent(input)).toThrow(CalendarEventError);
-    expect(() => createCalendarEvent(input)).toThrow('title must be a non-empty string');
+    assertCalendarEventError(() => createCalendarEvent(input), 'validation_error', 'title must be a non-empty string');
   });
 
   it('should reject whitespace-only title', () => {
@@ -75,8 +89,7 @@ describe('calendar-events - create', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    expect(() => createCalendarEvent(input)).toThrow(CalendarEventError);
-    expect(() => createCalendarEvent(input)).toThrow('startAt must be a valid ISO timestamp');
+    assertCalendarEventError(() => createCalendarEvent(input), 'validation_error', 'startAt must be a valid ISO timestamp');
   });
 
   it('should reject invalid endAt timestamp', () => {
@@ -86,8 +99,7 @@ describe('calendar-events - create', () => {
       endAt: 'invalid-date',
     };
 
-    expect(() => createCalendarEvent(input)).toThrow(CalendarEventError);
-    expect(() => createCalendarEvent(input)).toThrow('endAt must be a valid ISO timestamp');
+    assertCalendarEventError(() => createCalendarEvent(input), 'validation_error', 'endAt must be a valid ISO timestamp');
   });
 
   it('should reject endAt before or equal to startAt', () => {
@@ -116,8 +128,7 @@ describe('calendar-events - create', () => {
 
     createCalendarEvent(firstInput);
 
-    expect(() => createCalendarEvent(secondInput)).toThrow(CalendarEventError);
-    expect(() => createCalendarEvent(secondInput)).toThrow('conflict_error');
+    assertCalendarEventError(() => createCalendarEvent(secondInput), 'conflict_error');
   });
 
   it('should allow non-overlapping events', () => {
@@ -142,10 +153,7 @@ describe('calendar-events - create', () => {
 
 describe('calendar-events - update', () => {
   beforeEach(() => {
-    const events = (globalThis as any).__calendarEvents;
-    if (events) {
-      events.clear();
-    }
+    resetCalendarEvents();
   });
 
   it('should update an existing event', () => {
@@ -178,8 +186,7 @@ describe('calendar-events - update', () => {
       endAt: '2025-01-15T15:00:00Z',
     };
 
-    expect(() => updateCalendarEvent('', updateInput)).toThrow(CalendarEventError);
-    expect(() => updateCalendarEvent('', updateInput)).toThrow('id must be a non-empty string');
+    assertCalendarEventError(() => updateCalendarEvent('', updateInput), 'validation_error', 'id must be a non-empty string');
   });
 
   it('should reject update for non-existent event', () => {
@@ -189,8 +196,7 @@ describe('calendar-events - update', () => {
       endAt: '2025-01-15T15:00:00Z',
     };
 
-    expect(() => updateCalendarEvent('non-existent-id', updateInput)).toThrow(CalendarEventError);
-    expect(() => updateCalendarEvent('non-existent-id', updateInput)).toThrow('not_found_error');
+    assertCalendarEventError(() => updateCalendarEvent('non-existent-id', updateInput), 'not_found_error');
   });
 
   it('should reject update that creates conflict with other events', () => {
@@ -215,8 +221,7 @@ describe('calendar-events - update', () => {
       endAt: '2025-01-15T15:30:00Z',
     };
 
-    expect(() => updateCalendarEvent(firstEvent.id, updateInput)).toThrow(CalendarEventError);
-    expect(() => updateCalendarEvent(firstEvent.id, updateInput)).toThrow('conflict_error');
+    assertCalendarEventError(() => updateCalendarEvent(firstEvent.id, updateInput), 'conflict_error');
   });
 
   it('should allow update that does not create conflict', () => {
@@ -249,10 +254,7 @@ describe('calendar-events - update', () => {
 
 describe('calendar-events - query', () => {
   beforeEach(() => {
-    const events = (globalThis as any).__calendarEvents;
-    if (events) {
-      events.clear();
-    }
+    resetCalendarEvents();
   });
 
   it('should list all events sorted by start time', () => {

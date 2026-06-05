@@ -1,392 +1,109 @@
 ---
 trigger: model_decision
-description: Testing strategy and framework setup for the YDM monorepo (currently no tests exist)
+description: Testing strategy and framework setup for the Suite monorepo
 ---
 
 # Testing Strategy Rules
 
 ## Current State Assessment
 
-**CRITICAL**: The repository has **no test infrastructure** - no test framework, unit tests, integration tests, or E2E tests are configured or implemented.
+The repository has an active Vitest-based test suite. Tests are colocated with the code they exercise and should stay close to the owning bounded context.
 
-## Required Testing Stack
+- **Framework**: Vitest v2.1.8 at the workspace root, with package-level configs where needed.
+- **Domain tests**: Node environment.
+- **API tests**: Node environment, using in-process requests against Hono apps.
+- **Web tests**: `happy-dom` for React component tests in `apps/*/web` and `packages/ui`.
 
-### **Frontend Testing (nexus-digital)**
+## Test Ownership Matrix
 
-- **Framework**: Vitest (preferred for Vite projects)
-- **Components**: @testing-library/react for component testing
-- **E2E**: Playwright for end-to-end testing
-- **Mocking**: MSW for API mocking
-- **Coverage**: c8 or istanbul for coverage reports
+| Package / App | Test Location | Environment | Notes |
+|---|---|---|---|
+| `packages/domain-calendar` | `src/**/*.test.ts` | Node | In-memory calendar logic and conflict detection |
+| `packages/domain-tasks` | `src/**/*.test.ts` | Node | In-memory task logic |
+| `packages/domain-drive` | `src/**/*.test.ts` | Node | In-memory drive logic |
+| `apps/calendar/api` | `src/**/*.test.ts` | Node | Hono API routes |
+| `apps/tasks/api` | `src/**/*.test.ts` | Node | Hono API routes |
+| `apps/drive/api` | `src/**/*.test.ts` | Node | Hono API routes |
+| `apps/calendar/web` | `src/**/*.test.tsx` | `happy-dom` | React component and interaction tests |
+| `apps/tasks/web` | `src/**/*.test.tsx` | `happy-dom` | React component and interaction tests |
+| `apps/drive/web` | `src/**/*.test.tsx` | `happy-dom` | React component and interaction tests |
+| `packages/ui` | `src/**/*.test.tsx` | `happy-dom` | Shared UI primitives when needed |
 
-### **Backend Testing (api-server)**
+## Architecture Decisions
 
-- **Framework**: Jest or Vitest for Node.js
-- **API Testing**: Supertest for HTTP endpoint testing
-- **Database**: Test database with transaction rollback
-- **Mocking**: Jest mocks or vi.mock for dependencies
+### 1. Test Placement
 
-### **Database Testing**
+- **Colocation is the default**. Tests live next to the code they protect.
+- Suggested patterns:
+  - `packages/domain-*/src/**/*.test.ts`
+  - `apps/*/api/src/**/*.test.ts`
+  - `apps/*/web/src/**/*.test.tsx`
+  - `packages/ui/src/**/*.test.tsx`
 
-- **Framework**: Use same test framework as backend
-- **Strategy**: Test database with proper cleanup
-- **Migrations**: Test migration scripts
-- **Seed Data**: Consistent test data setup
+### 2. Shared Testing Package
 
-## Testing Architecture
+- **No `packages/testing` exists yet**.
+- Introduce it **only when** reusable helpers or factories are needed by **two or more** bounded contexts.
+- Current helpers (reset, factories, builders) are small enough to stay local to each domain package.
 
-### **Test Structure**
+### 3. Environment Split
 
-```
-artifacts/
-├── api-server/
-│   ├── src/
-│   │   ├── routes/
-│   │   │   ├── health.test.ts
-│   │   │   └── users.test.ts
-│   │   ├── middleware/
-│   │   │   └── auth.test.ts
-│   │   └── __tests__/
-│   │       └── setup.ts
-├── nexus-digital/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Navbar.test.tsx
-│   │   │   └── Footer.test.tsx
-│   │   ├── pages/
-│   │   │   ├── Home.test.tsx
-│   │   │   └── Contact.test.tsx
-│   │   └── __tests__/
-│   │       ├── setup.ts
-│   │       └── mocks.ts
-└── e2e/
-    ├── tests/
-    │   ├── auth.spec.ts
-    │   ├── contact.spec.ts
-    │   └── navigation.spec.ts
-    └── fixtures/
-        ├── users.ts
-        └── industries.ts
-```
+- **Node environment** (`vitest.config.ts` at repo root):
+  - Covers `packages/**/*.test.ts` and `apps/*/api/**/*.test.ts`.
+  - Used for domain logic and API route tests.
+- **Browser environment** (per-package `vitest.config.ts`):
+  - Each web app owns its own `vitest.config.ts` with `environment: 'happy-dom'`.
+  - `packages/ui` will get its own config when component tests are added.
+- This prevents web tests from accidentally running under Node when invoked from the root.
 
-### **Frontend Testing Patterns**
+### 4. Reset and Isolation Rules
 
-#### **Component Testing**
+- Do not rely on undeclared `globalThis` state for resets.
+- Expose explicit `reset*` or factory functions from the owning domain package.
+- Reset in-memory repositories in `beforeEach`.
+- Keep stable IDs deterministic in tests where possible.
 
-```typescript
-// src/components/Navbar.test.tsx
-import { render, screen } from '@testing-library/react';
-import { Navbar } from './Navbar';
-
-describe('Navbar', () => {
-  it('renders navigation links', () => {
-    render(<Navbar />);
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
-    expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('About')).toBeInTheDocument();
-  });
-
-  it('highlights active route', () => {
-    render(<Navbar currentPath="/about" />);
-    const aboutLink = screen.getByText('About');
-    expect(aboutLink).toHaveClass('active');
-  });
-});
-```
-
-#### **Page Testing with API Mocks**
-
-```typescript
-// src/pages/Home.test.tsx
-import { render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Home } from './Home';
-import { server } from '../__tests__/mocks/server';
-
-// Mock API responses
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
-
-describe('Home Page', () => {
-  it('displays featured industries', async () => {
-    const queryClient = new QueryClient();
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <Home />
-      </QueryClientProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Photographers')).toBeInTheDocument();
-      expect(screen.getByText('Plumbers')).toBeInTheDocument();
-    });
-  });
-});
-```
-
-### **Backend Testing Patterns**
-
-#### **API Endpoint Testing**
-
-```typescript
-// src/routes/health.test.ts
-import request from 'supertest';
-import { app } from '../app';
-
-describe('Health Endpoint', () => {
-  it('returns health status', async () => {
-    const response = await request(app).get('/api/healthz').expect(200);
-
-    expect(response.body).toEqual({ status: 'ok' });
-  });
-});
-```
-
-#### **Database Integration Testing**
-
-```typescript
-// src/routes/users.test.ts
-import request from 'supertest';
-import { db } from '@workspace/db';
-import { usersTable } from '@workspace/db/schema';
-import { app } from '../app';
-
-describe('Users API', () => {
-  beforeEach(async () => {
-    // Clean up database before each test
-    await db.delete(usersTable);
-  });
-
-  it('creates a new user', async () => {
-    const userData = {
-      name: 'Test User',
-      email: 'test@example.com',
-      password: 'password123',
-    };
-
-    const response = await request(app).post('/api/users').send(userData).expect(201);
-
-    expect(response.body.name).toBe(userData.name);
-    expect(response.body.email).toBe(userData.email);
-    expect(response.body).not.toHaveProperty('password');
-  });
-});
-```
-
-### **E2E Testing Patterns**
-
-#### **Critical User Journeys**
-
-```typescript
-// e2e/tests/contact.spec.ts
-import { test, expect } from '@playwright/test';
-
-test('contact form submission', async ({ page }) => {
-  await page.goto('/');
-
-  // Navigate to contact page
-  await page.click('text=Contact');
-  await expect(page).toHaveURL('/contact');
-
-  // Fill out contact form
-  await page.fill('[name="name"]', 'John Doe');
-  await page.fill('[name="email"]', 'john@example.com');
-  await page.fill('[name="message"]', 'I need a website');
-
-  // Submit form
-  await page.click('button[type="submit"]');
-
-  // Verify success message
-  await expect(page.locator('text=Thank you for your inquiry')).toBeVisible();
-});
-```
-
-## Test Configuration
-
-### **Vitest Configuration (Frontend)**
-
-```typescript
-// vitest.config.ts
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    setupFiles: ['./src/__tests__/setup.ts'],
-    globals: true,
-    coverage: {
-      provider: 'c8',
-      reporter: ['text', 'html'],
-      exclude: ['node_modules/', 'src/__tests__/', '**/*.d.ts'],
-    },
-  },
-});
-```
-
-### **Jest Configuration (Backend)**
-
-```typescript
-// jest.config.js
-module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
-  testMatch: ['<rootDir>/src/**/*.test.ts'],
-  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/__tests__/**'],
-  coverageThreshold: {
-    global: {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80,
-    },
-  },
-};
-```
-
-## Testing Workflow
-
-### **Development Testing**
+## Validation Commands
 
 ```bash
-# Frontend unit tests
-pnpm --filter @firm/site test
+# Run all package tests
+pnpm test
 
-# Backend unit tests
-pnpm --filter @workspace/api-server test
+# Run a specific package
+pnpm --filter @suite/domain-calendar test
+pnpm --filter @suite/calendar-api test
+pnpm --filter @suite/calendar-web test
 
-# Watch mode for development
-pnpm --filter @firm/site test:watch
+# Type check the workspace
+pnpm typecheck
 
-# Coverage reports
-pnpm --filter @firm/site test:coverage
-```
-
-### **CI/CD Testing**
-
-```bash
-# Full test suite
-pnpm run test
-
-# E2E tests
-pnpm run test:e2e
-
-# Type checking + testing
-pnpm run typecheck && pnpm run test
-```
-
-## Test Data Management
-
-### **Fixtures and Factories**
-
-```typescript
-// e2e/fixtures/users.ts
-import { faker } from '@faker-js/faker';
-
-export const createUser = (overrides = {}) => ({
-  name: faker.person.fullName(),
-  email: faker.internet.email(),
-  role: 'client',
-  ...overrides,
-});
-
-export const createAdmin = () => createUser({ role: 'admin' });
-```
-
-### **Database Seeding for Tests**
-
-```typescript
-// src/__tests__/setup.ts
-import { db } from '@workspace/db';
-import { usersTable } from '@workspace/db/schema';
-
-beforeAll(async () => {
-  // Set up test database
-  await setupTestDatabase();
-});
-
-afterAll(async () => {
-  // Clean up test database
-  await cleanupTestDatabase();
-});
-
-beforeEach(async () => {
-  // Reset database state
-  await db.delete(usersTable);
-});
+# Nx affected tests (for CI)
+nx affected -t test
 ```
 
 ## Testing Best Practices
 
-### **Frontend Testing**
+### Domain Tests
 
-- Test user behavior, not implementation details
-- Use meaningful test names that describe the behavior
-- Mock external dependencies (API calls, timers)
-- Test error states and loading states
-- Keep tests focused and isolated
+- Test both happy paths and error paths.
+- Assert on error **codes**, not just message strings.
+- Prefer table-driven cases for validation and conflict rules.
 
-### **Backend Testing**
+### API Tests
 
-- Test happy path and error paths
-- Use test database with transaction rollback
-- Mock external services (email, payment processors)
-- Test authentication and authorization
-- Validate request/response schemas
+- Use the Hono `app.request()` helper for in-process HTTP testing.
+- Keep route handlers thin; test request parsing, status mapping, and delegation.
+- Verify that domain errors are translated into the correct HTTP status and response shape.
 
-### **E2E Testing**
+### Web Tests ( upcoming in TEST-04 )
 
-- Focus on critical user journeys
-- Use page object pattern for complex interactions
-- Test across multiple viewports (mobile, desktop)
-- Include accessibility testing
-- Use realistic test data
+- Use `@testing-library/react` for component tests.
+- Verify keyboard-only interactions and dialog semantics.
+- Assert accessibility attributes (`role`, `aria-label`, `aria-describedby`, `aria-live`).
+- Prefer user-visible assertions over implementation details.
 
-## Coverage Requirements
+## CI / Affected Testing
 
-### **Minimum Coverage Thresholds**
-
-- **Statements**: 80%
-- **Branches**: 80%
-- **Functions**: 80%
-- **Lines**: 80%
-
-### **Critical Path Coverage**
-
-- All API endpoints: 100%
-- All user-facing components: 90%
-- Business logic: 95%
-- Utility functions: 100%
-
-## Integration with Type Safety
-
-### **Type-Safe Testing**
-
-```typescript
-// Use generated Zod schemas for test data
-import { insertUserSchema } from '@workspace/api-zod';
-
-const validUser = insertUserSchema.parse({
-  name: 'Test User',
-  email: 'test@example.com',
-  password: 'password123',
-});
-```
-
-### **API Contract Testing**
-
-```typescript
-// Test that API responses match OpenAPI schema
-import { validateResponse } from '@workspace/api-zod';
-
-it('returns valid user schema', async () => {
-  const response = await request(app).get('/api/users/1');
-  expect(() => validateResponse('User', response.body)).not.toThrow();
-});
-```
-
-This testing strategy ensures comprehensive coverage across the full YDM stack while maintaining type safety and developer experience.
+- `nx affected -t test` is the default PR entry point.
+- Full workspace validation (`pnpm test && pnpm typecheck`) is the release gate.
+- Nx `namedInputs` already exclude `**/*.test.ts` and `specs/**` from the `production` input set.

@@ -5,16 +5,14 @@ import {
   getDriveFile,
   renameDriveFile,
   deleteDriveFile,
+  resetDriveFiles,
   type UploadDriveFileInput,
   type RenameDriveFileInput,
 } from './index.js';
 
 describe('drive - upload', () => {
   beforeEach(() => {
-    const files = (globalThis as any).__driveFiles;
-    if (files) {
-      files.length = 0;
-    }
+    resetDriveFiles();
   });
 
   it('should upload a file with a stable ID', () => {
@@ -73,10 +71,7 @@ describe('drive - upload', () => {
 
 describe('drive - query', () => {
   beforeEach(() => {
-    const files = (globalThis as any).__driveFiles;
-    if (files) {
-      files.length = 0;
-    }
+    resetDriveFiles();
   });
 
   it('should list files in reverse upload order', () => {
@@ -127,10 +122,7 @@ describe('drive - query', () => {
 
 describe('drive - rename', () => {
   beforeEach(() => {
-    const files = (globalThis as any).__driveFiles;
-    if (files) {
-      files.length = 0;
-    }
+    resetDriveFiles();
   });
 
   it('should rename a file', () => {
@@ -204,10 +196,7 @@ describe('drive - rename', () => {
 
 describe('drive - delete', () => {
   beforeEach(() => {
-    const files = (globalThis as any).__driveFiles;
-    if (files) {
-      files.length = 0;
-    }
+    resetDriveFiles();
   });
 
   it('should delete a file', () => {

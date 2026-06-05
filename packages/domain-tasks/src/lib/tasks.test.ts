@@ -8,6 +8,7 @@ import {
   archiveTask,
   deleteTask,
   filterTasks,
+  resetTasks,
   TaskError,
   type CreateTaskInput,
   type UpdateTaskCompletionInput,
@@ -15,12 +16,23 @@ import {
   type ArchiveTaskInput,
 } from './tasks.js';
 
+function assertTaskError(fn: () => void, code: string, detail?: string): void {
+  let error: TaskError | undefined;
+  try {
+    fn();
+  } catch (e) {
+    error = e as TaskError;
+  }
+  expect(error).toBeInstanceOf(TaskError);
+  expect(error?.code).toBe(code);
+  if (detail) {
+    expect(error?.details).toContain(detail);
+  }
+}
+
 describe('tasks - create', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should create a valid task with a stable ID', () => {
@@ -72,8 +84,7 @@ describe('tasks - create', () => {
       title: '',
     };
 
-    expect(() => createTask(input)).toThrow(TaskError);
-    expect(() => createTask(input)).toThrow('title must be a non-empty string');
+    assertTaskError(() => createTask(input), 'validation_error', 'title must be a non-empty string');
   });
 
   it('should reject whitespace-only title', () => {
@@ -87,10 +98,7 @@ describe('tasks - create', () => {
 
 describe('tasks - update completion', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should update task completion status', () => {
@@ -116,8 +124,7 @@ describe('tasks - update completion', () => {
       completed: true,
     };
 
-    expect(() => updateTaskCompletion('', updateInput)).toThrow(TaskError);
-    expect(() => updateTaskCompletion('', updateInput)).toThrow('id must be a non-empty string');
+    assertTaskError(() => updateTaskCompletion('', updateInput), 'validation_error', 'id must be a non-empty string');
   });
 
   it('should reject update for non-existent task', () => {
@@ -125,17 +132,13 @@ describe('tasks - update completion', () => {
       completed: true,
     };
 
-    expect(() => updateTaskCompletion('non-existent-id', updateInput)).toThrow(TaskError);
-    expect(() => updateTaskCompletion('non-existent-id', updateInput)).toThrow('not_found_error');
+    assertTaskError(() => updateTaskCompletion('non-existent-id', updateInput), 'not_found_error');
   });
 });
 
 describe('tasks - update', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should update task title', () => {
@@ -186,8 +189,7 @@ describe('tasks - update', () => {
       title: 'Buy milk',
     };
 
-    expect(() => updateTask('non-existent-id', updateInput)).toThrow(TaskError);
-    expect(() => updateTask('non-existent-id', updateInput)).toThrow('not_found_error');
+    assertTaskError(() => updateTask('non-existent-id', updateInput), 'not_found_error');
   });
 
   it('should reject update with empty title', () => {
@@ -207,10 +209,7 @@ describe('tasks - update', () => {
 
 describe('tasks - archive', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should archive a task', () => {
@@ -265,17 +264,13 @@ describe('tasks - archive', () => {
       archived: true,
     };
 
-    expect(() => archiveTask('non-existent-id', archiveInput)).toThrow(TaskError);
-    expect(() => archiveTask('non-existent-id', archiveInput)).toThrow('not_found_error');
+    assertTaskError(() => archiveTask('non-existent-id', archiveInput), 'not_found_error');
   });
 });
 
 describe('tasks - delete', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should delete a task', () => {
@@ -296,17 +291,13 @@ describe('tasks - delete', () => {
   });
 
   it('should reject delete for non-existent task', () => {
-    expect(() => deleteTask('non-existent-id')).toThrow(TaskError);
-    expect(() => deleteTask('non-existent-id')).toThrow('not_found_error');
+    assertTaskError(() => deleteTask('non-existent-id'), 'not_found_error');
   });
 });
 
 describe('tasks - query', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should list all tasks in reverse creation order', () => {

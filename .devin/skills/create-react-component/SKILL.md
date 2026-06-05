@@ -1,36 +1,33 @@
 ---
 name: create-react-component
-description: Guides the creation of React components with TypeScript, Tailwind CSS v4, and shadcn/ui following the YDM project's visual identity and accessibility standards
+description: Guides the creation of React components for Suite apps and shared UI using TypeScript, Tailwind CSS v4, shadcn/ui, accessibility rules, and Suite-specific layout conventions
 ---
 
-## Component Creation Checklist for YDM (2026)
+## Suite Component Creation Checklist
 
-1. **Determine component location** based on artifact and functionality:
+1. **Determine component location** based on ownership:
 
-   **Nexus Digital Frontend (`artifacts/nexus-digital/`)**:
-   - Pages: `src/pages/` (Home, Industry, Process, About, Blog, Contact)
-   - Custom components: `src/components/` (Navbar, Footer, ParticleNetwork, etc.)
-   - Reusable UI components: `src/components/ui/` (shadcn/ui)
+   **App web surfaces (`apps/<app>/web`)**:
+   - Feature components: `src/components/`
+   - Route/page components: `src/pages/` or `src/routes/` depending on the app structure
+   - App-local UI wrappers: `src/components/ui/`
 
-   **Mockup Sandbox (`artifacts/mockup-sandbox/`)**:
-   - Mockup components: `src/components/mockups/` (for preview system)
-   - UI components: `src/components/ui/` (shadcn/ui)
+   **Shared UI (`packages/ui`)**:
+   - Reusable primitives and cross-app building blocks
+   - Keep these generic, typed, and free of app-specific state
 
-   **API Server (`artifacts/api-server/`)**:
-   - Route handlers: `src/routes/` (API endpoints)
-   - Middleware: `src/middleware/` (Express middleware)
-   - Utilities: `src/lib/` (backend utilities)
+   **Domain packages (`packages/domain-*`)**:
+   - Do not create React components here unless a package already owns a web-facing helper
 
 2. **Use shadcn/ui components as base** when available (Tailwind v4)
-   - Note: YDM uses Tailwind CSS v4.1.14 with Vite plugin integration
-   - Components use forwardRef for ref forwarding (React 19 pattern)
-   - CSS custom properties for theming (tokens.css)
-   - Glass morphism effects throughout design system
+   - Use the shared design tokens and CSS variables from the workspace
+   - Keep styling consistent with the Suite visual identity
+   - Prefer composition over copying large component patterns
 
 3. **Apply visual identity**:
-   - Glass panels: `backdrop-blur-md bg-white/5 border border-white/10 rounded-xl`
-   - Electric blue accent: `#0066ff → #00aaff` for CTAs, focus rings, active states
-   - Dark backgrounds: `#000000`, `#0a0a0a`, `#111111`, `#1a1a1a`
+   - Dark, high-contrast surfaces
+   - Electric blue accent for focus, active, and primary actions
+   - Rounded surfaces and restrained glass effects only where the design calls for them
 
 4. **Add 150ms ease-out transitions** on interactive elements
 
@@ -44,41 +41,33 @@ description: Guides the creation of React components with TypeScript, Tailwind C
    - aria-live regions for dynamic content
    - Screen reader announcements for important changes
 
-6. **Use TypeScript** with proper interfaces for props (TypeScript 5.9.2)
+6. **Use TypeScript** with proper interfaces for props
 
-7. **Add skeleton loaders** for data fetching states (using TanStack Query)
+7. **Add skeleton loaders** for data fetching states when the component depends on remote data
 
-8. **React 19 patterns**:
-   - Use `forwardRef` for components that need ref forwarding
-   - Use `<Context.Provider>` for context providers
-   - Use standard ref callbacks with cleanup functions
-   - Consider Suspense boundaries with React.lazy() for code splitting
-   - Use standard form handling with React Hook Form
-   - Use FormEvent for form submissions
-   - Use TanStack Query v5.90.21 for optimistic UI updates
-   - Use standard useEffect/useCallback/useMemo hooks
-   - Integrate with generated API hooks from `@workspace/api-client-react`
+8. **React patterns**:
+   - Use `forwardRef` only when the component truly needs ref forwarding
+   - Use standard context providers and hooks when shared state is required
+   - Use `useEffect`, `useCallback`, and `useMemo` normally
+   - Integrate with app-local data hooks or shared query helpers
 
-9. **YDM-Specific Integration**:
-   - Use Wouter for routing (not React Router)
-   - Import API hooks from `@workspace/api-client-react`
-   - Use Framer Motion 11.0.0 for animations (not motion library)
-   - Respect platform environment variables (PORT, BASE_PATH)
+9. **Suite-specific integration**:
+   - Use Wouter for routing
+   - Use Framer Motion for motion where it improves clarity
+   - Respect app and workspace environment boundaries
    - Use workspace protocol for internal dependencies
 
 ## Related Skills
 
-- **motion-implementation**: Add animations and micro-interactions to components
-- **form-components**: For creating form components with validation
-- **accessibility**: Ensure WCAG 2.2 AA compliance
-- **performance**: Optimize component rendering and Core Web Vitals
+- **suite-layout-component**: Build shells, panels, and navigation surfaces
+- **suite-hooks**: Build data hooks for feature components
+- **suite-zustand-store**: Build UI-only state when the component needs shared client state
+- **suite-testing**: Add or update tests for interactive components
 
-## Component Structure Template (React 19 - YDM)
+## Component Structure Template
 
 ```tsx
 import React from 'react';
-import { motion } from 'framer-motion';
-import { useUsersQuery } from '@workspace/api-client-react'; // Example API hook
 
 interface ComponentNameProps {
   title: string;
@@ -86,29 +75,16 @@ interface ComponentNameProps {
   className?: string;
 }
 
-export const ComponentName: React.FC<ComponentNameProps> = ({
+export function ComponentName({
   title,
   onAction,
   className = '',
-}) => {
-  const { data: users, isLoading } = useUsersQuery();
+}: ComponentNameProps) {
 
   return (
-    <motion.div
-      className={`backdrop-blur-md bg-white/5 border border-white/10 rounded-xl p-6 ${className}`}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.15 }}
-    >
+    <section className={`rounded-xl border border-white/10 bg-[#111111] p-6 ${className}`}>
       <h2 className="text-xl font-bold mb-4">{title}</h2>
-      {isLoading ? (
-        <div className="animate-pulse">Loading...</div>
-      ) : (
-        <div>
-          {/* component content */}
-          {users && <p>Found {users.length} users</p>}
-        </div>
-      )}
+      <div>{/* component content */}</div>
       {onAction && (
         <button
           onClick={onAction}
@@ -117,15 +93,15 @@ export const ComponentName: React.FC<ComponentNameProps> = ({
           Action
         </button>
       )}
-    </motion.div>
+    </section>
   );
-};
+}
 
-// React 19: Use forwardRef for ref forwarding
+// Use forwardRef only when needed for accessibility or composition
 export const ComponentWithRef = React.forwardRef<HTMLDivElement, ComponentNameProps>(
   ({ title, onAction, className }, ref) => {
     return (
-      <div ref={ref} className={`glass-card ${className}`}>
+      <div ref={ref} className={`rounded-xl border border-white/10 bg-[#111111] ${className}`}>
         <h3>{title}</h3>
         {onAction && <button onClick={onAction}>Action</button>}
       </div>

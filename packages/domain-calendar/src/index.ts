@@ -4,6 +4,7 @@ export {
   getCalendarEvent,
   listCalendarEvents,
   listCalendarEventsInRange,
+  resetCalendarEvents,
   updateCalendarEvent,
 } from './lib/calendar-events.js';
 

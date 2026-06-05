@@ -67,6 +67,10 @@ function normalizeTaskTitle(title: unknown): string {
   return title.trim();
 }
 
+export function resetTasks(): void {
+  taskItems.clear();
+}
+
 export function listTasks(): TaskItem[] {
   return [...taskItems.values()].reverse().map(snapshot);
 }

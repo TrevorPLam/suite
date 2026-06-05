@@ -188,6 +188,10 @@ export function createCalendarEvent(input: CreateCalendarEventInput): CalendarEv
   return snapshot(event);
 }
 
+export function resetCalendarEvents(): void {
+  calendarEvents.clear();
+}
+
 export function updateCalendarEvent(id: string, input: UpdateCalendarEventInput): CalendarEvent {
   if (!isNonEmptyString(id)) {
     throw new CalendarEventError('Invalid calendar event id', 'validation_error', [

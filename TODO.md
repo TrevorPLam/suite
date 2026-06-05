@@ -1,750 +1,303 @@
-# TODO.md — Suite MVP Delivery
+# TODO.md — Suite Testing & Quality Worklist
 
-This document defines the remaining work to turn Calendar, Tasks, and Drive into solid MVPs without overbuilding. The goal is to keep the first release feature-rich enough to test, learn from, and reuse as a baseline for future apps.
+This document tracks the remaining work to make the monorepo’s testing model explicit, reliable, and high quality. The focus is now on test placement, isolation, contract alignment, accessibility-aware verification, and CI guardrails.
 
-## MVP bar
+## Quality bar
 
-- **Calendar**
-  - Create, edit, delete, and browse events.
-  - Day and week views.
-  - Simple conflict checks and filtering/search by title.
-  - Minimal reminders or notifications only if they do not expand scope.
-
-- **Tasks**
-  - Create, complete, edit, archive, and delete tasks.
-  - Active/completed views and lightweight filters.
-  - Due date and priority metadata if it stays simple.
-
-- **Drive**
-  - Upload, list, rename, delete, and download file records.
-  - Simple metadata and browsing.
-  - No folder trees, sharing, OCR, or chunked uploads in MVP.
+- Domain tests are deterministic and isolated.
+- API tests verify contract behavior at the boundary.
+- Web tests cover critical user flows, keyboard access, and dialog semantics.
+- Test environments are intentional: Node for domain/API, jsdom or browser for UI.
+- Shared helpers live in a shared package only when reused across multiple bounded contexts.
+- CI uses targeted affected tests first, then full validation gates.
 
 ## Working rules
 
 - **SDD**
-  - Every new behavior starts in `apps/<app>/specs/`.
-  - Code follows the spec, not the other way around.
+  - Start with a test plan or spec before adding behavior.
+  - Any new test environment must be documented before use.
 
 - **DDD**
-  - Business rules live in `packages/domain-*`.
-  - API routes orchestrate only validation, auth, and domain calls.
-  - UI code should not own business rules.
+  - Domain rules stay in `packages/domain-*`.
+  - Test helpers stay local unless they are clearly shared across contexts.
 
 - **TDD**
-  - Add domain and API tests before broadening the implementation.
-  - Prefer targeted tests for a single use case over broad suite runs.
+  - Fix isolation and contract drift before broadening coverage.
+  - Prefer one behavior slice per test file.
 
 - **BDD**
-  - Every parent task must include user-visible scenarios in Given/When/Then form.
-  - Acceptance criteria should be written so a human can verify them manually.
+  - Every parent task includes Given/When/Then scenarios.
+  - Acceptance criteria must be manually verifiable.
 
 - **Deep modules**
-  - Keep behavior split by bounded context and layer.
-  - Suggested module layout:
-    - `apps/<app>/specs/` for behavior specs
-    - `apps/<app>/api/src/routes/` for route adapters
-    - `apps/<app>/web/src/features/` for UI slices
-    - `packages/domain-*/src/lib/` for pure domain logic
-    - `packages/db/src/` and `packages/auth/src/` for infrastructure adapters
+  - Suggested locations:
+    - `packages/domain-*/src/**/*.test.ts`
+    - `apps/*/api/src/**/*.test.ts`
+    - `apps/*/web/src/**/*.test.tsx`
+    - `packages/testing/` only if shared utilities become necessary
 
 - **General rules**
-  - Keep parent tasks small.
-  - Do not import across domain boundaries.
-  - Keep public exports narrow and explicit.
+  - Default to colocated tests.
+  - Never rely on hidden `globalThis` state for resets.
   - Keep route handlers thin.
-  - Prefer `workspace:*` for local package dependencies.
+  - Use `workspace:` if a shared testing package is introduced.
+  - Treat accessibility as part of quality, not a separate afterthought.
 
 ## Task list
 
-### [x] CORE-01 [status: completed] Standardize shared scripts and baseline infrastructure for targeted validation
+### [x] TEST-01 [status: completed] Define the repo testing architecture and ownership model
+
+- **Related file paths**
+  - `vitest.config.ts`
+  - `packages/*/package.json`
+  - `apps/*/package.json`
+  - `.devin/rules/testing-strategy.md`
+
+- **Definition of done**
+  - The repo has a written decision on where tests live and whether `packages/testing` is needed.
+  - Node and browser test environments are separated intentionally.
+  - Package test scripts are standardized enough for targeted runs.
+
+- **BDD scenarios**
+  - Given a new package, when I add tests, then the location and command are obvious.
+  - Given a UI test, when it runs, then it uses the correct DOM environment.
+
+- **Rules to follow**
+  - Prefer colocated tests.
+  - Introduce `packages/testing` only for real reuse.
+  - Keep root config minimal; put package-specific config close to the package.
+
+- **Validation commands**
+  - `pnpm test`
+  - `pnpm typecheck`
+  - `nx affected -t test`
+
+- **Subtasks**
+  - [x] TEST-01.1 Inventory current test locations and document the ownership matrix.
+  - [x] TEST-01.2 Decide whether reusable helpers belong in `packages/testing` or stay local.
+  - [x] TEST-01.3 Split Node and browser Vitest setup if UI tests need a different environment.
+
+### [x] TEST-02 [status: completed] Make in-memory domain state deterministic and testable
+
+- **Related file paths**
+  - `packages/domain-calendar/src/**`
+  - `packages/domain-tasks/src/**`
+  - `packages/domain-drive/src/**`
+
+- **Definition of done**
+  - Each domain package exposes explicit reset or factory behavior for tests.
+  - No test depends on execution order or hidden singleton state.
+  - Domain suites pass alone and together with the same result.
+
+- **BDD scenarios**
+  - Given any domain test file, when it runs in isolation, then it produces the same result as when it runs in the full suite.
+  - Given a test reset, when state is cleared, then no leaked records remain in the next assertion.
+
+- **Rules to follow**
+  - Do not depend on undeclared `globalThis` stores.
+  - Prefer explicit repository factories or reset helpers.
+  - Keep mutable state inside the owning module boundary.
+
+- **Validation commands**
+  - `pnpm --filter @suite/domain-calendar test`
+  - `pnpm --filter @suite/domain-tasks test`
+  - `pnpm --filter @suite/domain-drive test`
+
+- **Subtasks**
+  - [x] TEST-02.1 Calendar: expose deterministic state reset for event tests.
+  - [x] TEST-02.2 Tasks: remove order dependence from list and mutation tests.
+  - [x] TEST-02.3 Drive: make uploads, rename, delete, and query tests isolated.
+
+### [ ] TEST-03 [status: pending] Align domain and API contracts for validation, status codes, and error semantics
+
+- **Related file paths**
+  - `packages/domain-calendar/src/**`
+  - `packages/domain-tasks/src/**`
+  - `packages/domain-drive/src/**`
+  - `apps/calendar/api/src/**`
+  - `apps/tasks/api/src/**`
+  - `apps/drive/api/src/**`
+
+- **Definition of done**
+  - Validation rules match the intended behavior for trimming, required fields, numeric bounds, and conflicts.
+  - Error codes and messages are stable enough for assertions and API mapping.
+  - Missing or empty identifiers use one documented status policy across the stack.
+  - API response payload shapes are consistent and intentional.
+
+- **BDD scenarios**
+  - Given an invalid request payload, when the API receives it, then it returns the chosen client error with a stable error shape.
+  - Given a non-existent resource id, when the route handles it, then the status code matches the documented contract.
+  - Given a conflict, when the domain rejects it, then the API translates the error consistently.
+
+- **Rules to follow**
+  - Domain owns invariants; API owns request parsing and error translation.
+  - Avoid message-string-only assertions where an error code exists.
+  - Keep route handlers thin and avoid duplicating business rules in UI code.
+
+- **Validation commands**
+  - `pnpm --filter @suite/calendar-api test`
+  - `pnpm --filter @suite/tasks-api test`
+  - `pnpm --filter @suite/drive-api test`
+
+- **Subtasks**
+  - [ ] TEST-03.1 Calendar: settle empty-id and conflict behavior with matching tests.
+  - [ ] TEST-03.2 Tasks: align not-found, archive, and completion error handling.
+  - [ ] TEST-03.3 Drive: align name trimming, size validation, and missing-id responses.
+
+### [ ] TEST-04 [status: pending] Add browser-level smoke and component tests for the web apps
+
+- **Related file paths**
+  - `apps/calendar/web/src/**`
+  - `apps/tasks/web/src/**`
+  - `apps/drive/web/src/**`
+
+- **Definition of done**
+  - Critical create/edit/upload flows have component or smoke coverage.
+  - Keyboard-only interaction paths are verified.
+  - Dialogs, status messages, and error states are covered.
+  - Accessibility expectations are explicit for interactive controls.
+
+- **BDD scenarios**
+  - Given a keyboard-only user, when they complete a create flow, then they can reach every action without a mouse.
+  - Given a modal dialog, when it opens, then it has a proper title, focus behavior, and escape handling.
+  - Given a validation failure, when the form re-renders, then the error is announced or visible.
+
+- **Rules to follow**
+  - Use the appropriate DOM/browser environment for React tests.
+  - Keep UI tests close to the feature they protect.
+  - Include accessibility assertions for labels, dialogs, and live updates.
+
+- **Validation commands**
+  - `pnpm --filter @suite/calendar-web typecheck`
+  - `pnpm --filter @suite/tasks-web typecheck`
+  - `pnpm --filter @suite/drive-web typecheck`
+  - `pnpm --filter @suite/calendar-web test`
+  - `pnpm --filter @suite/tasks-web test`
+  - `pnpm --filter @suite/drive-web test`
+
+- **Subtasks**
+  - [ ] TEST-04.1 Calendar: cover event form create/edit happy paths and failures.
+  - [ ] TEST-04.2 Tasks: cover task create and state-change interactions.
+  - [ ] TEST-04.3 Drive: cover upload, rename, delete dialogs, and a11y checks.
+
+### [ ] TEST-05 [status: pending] Establish affected-test CI, command conventions, and coverage guardrails
 
 - **Related file paths**
   - `package.json`
-  - `pnpm-workspace.yaml`
   - `nx.json`
-  - `tsconfig.base.json`
-  - `packages/*/package.json`
-  - `packages/*/project.json`
-  - `packages/db/src/*`
-  - `packages/auth/src/*`
-  - `packages/env-config/src/*`
+  - `pnpm-workspace.yaml`
+  - any CI workflow or build config files that run validation
 
 - **Definition of done**
-  - Shared and domain packages expose consistent scripts for local validation.
-  - The workspace graph remains clean and predictable.
-  - Minimal data-access and identity boundaries exist for the app MVPs to depend on.
-  - Targeted validation commands can run without guesswork.
+  - Package-level test commands are documented and predictable.
+  - Affected testing is the default CI entry point for PRs.
+  - Coverage expectations exist for the critical domain and API paths.
+  - Full workspace validation remains available as a gate, not a daily tax.
 
 - **BDD scenarios**
-  - Given a single package change, when I run a targeted validation command, then only that package and its direct dependency chain need to be checked.
-  - Given a shared package update, when I inspect the workspace graph, then the affected apps are visible and traceable.
-
-- **Out of scope**
-  - Full auth product flows.
-  - Zero-knowledge encryption implementation.
-  - Billing, usage metering, or advanced observability.
+  - Given a change in one package, when CI runs, then only affected tests run first.
+  - Given a release candidate, when full validation runs, then the workspace passes the required checks.
+  - Given a new package, when it is added to the workspace, then the validation command convention is obvious.
 
 - **Rules to follow**
-  - Keep package entrypoints at `src/index.ts`.
-  - Keep adapters separate from domain logic.
-  - Preserve strict TypeScript settings and exact optional property behavior.
-
-- **Advanced coding pattern**
-  - Use adapter/port boundaries for persistence and identity.
-  - Use a single public entrypoint per package.
-  - Keep workspace config declarative and minimal.
-
-- **Anti-patterns**
-  - Root-level business logic.
-  - Mega-utils shared across unrelated apps.
-  - Cross-domain imports between `packages/domain-*`.
-  - Route handlers that directly own persistence logic.
-
-- **Imports/exports**
-  - Import local packages via `workspace:*`.
-  - Export only the public API from each package `src/index.ts`.
-  - Avoid deep imports from package internals outside the owning module.
-
-- **Depends on**
-  - Current workspace scaffold.
-  - Existing `pnpm install` and typecheck stability.
-
-- **Blocks**
-  - CAL-01
-  - CAL-02
-  - TASK-01
-  - TASK-02
-  - DRIVE-01
-  - DRIVE-02
-  - QA-01
+  - Use `nx affected -t test` for PR-oriented validation.
+  - Keep package scripts aligned with workspace expectations.
+  - Do not hide failures behind overly broad root commands.
 
 - **Validation commands**
+  - `nx affected -t test`
+  - `pnpm test`
   - `pnpm typecheck`
-  - `pnpm graph`
-  - `pnpm --filter @suite/calendar-api typecheck`
-  - `pnpm --filter @suite/tasks-api typecheck`
-  - `pnpm --filter @suite/drive-api typecheck`
+  - `nx graph --affected`
 
 - **Subtasks**
-  - [x] CORE-01.1 [file: packages/*/package.json] Add consistent `typecheck`, `test`, and `lint` scripts to workspace packages that own source so the next tasks can use targeted package commands instead of whole-repo commands.
-    - Validate with: `pnpm typecheck` and `pnpm graph`
-  - [x] CORE-01.2 [file: packages/db/src/*, packages/auth/src/*, packages/env-config/src/*] Add the smallest useful persistence, identity, and env contracts needed by the app MVPs; keep them adapter-only and avoid pushing domain rules into these packages.
-    - Validate with: `pnpm --filter @suite/calendar-api typecheck`
-  - [x] CORE-01.3 [file: nx.json, packages/*/project.json] Keep Nx metadata aligned with workspace package boundaries and update tags/source roots only where they materially improve project graph clarity.
-    - Validate with: `pnpm graph`
+  - [ ] TEST-05.1 Document the canonical local and CI test commands.
+  - [ ] TEST-05.2 Add or refine coverage thresholds for critical paths.
+  - [ ] TEST-05.3 Ensure CI can run affected tests without requiring full-workspace execution.
 
-### [x] CAL-01 [status: completed] Calendar event creation should persist and support updates
+### [ ] DOC-01 [status: pending] Update repo guidance and handoff docs to match the real testing model
 
 - **Related file paths**
-  - `apps/calendar/specs/create-event.spec.md`
-  - `packages/domain-calendar/src/index.ts`
-  - `packages/domain-calendar/src/lib/*`
-  - `apps/calendar/api/src/index.ts`
-  - `apps/calendar/api/src/routes/*`
-  - `apps/calendar/web/src/App.tsx`
-  - `apps/calendar/web/src/features/*`
+  - `.devin/rules/testing-strategy.md`
+  - `MEMORY.md`
+  - `README.md`
+  - `TODO.md`
 
 - **Definition of done**
-  - Event creation writes to a real persistence boundary, not a stub.
-  - Event updates are supported with validation and stable IDs.
-  - The API returns clear failure responses for invalid or conflicting events.
-  - The web app can create and edit an event end to end.
+  - Stale statements about having no tests are removed.
+  - The repo documents where tests live, how they are reset, and how they are run.
+  - New contributors can find the testing model without tribal knowledge.
 
 - **BDD scenarios**
-  - Given a valid title and time range, when I submit the event form, then the API returns a created event with a stable ID.
-  - Given a conflicting event range, when I try to save it, then the API rejects the request with a clear validation message.
-  - Given an existing event, when I edit and resubmit it, then the updated values persist and re-render.
-
-- **Out of scope**
-  - Recurrence rules.
-  - Attendees and invites.
-  - Booking pages.
-  - ICS export.
-  - Advanced timezone UI.
+  - Given a new contributor, when they open the docs, then they can locate the correct test file convention and run command.
+  - Given a failing test suite, when they read the guidance, then they can identify whether it is a Node, browser, or contract issue.
 
 - **Rules to follow**
-  - Keep validation at the API boundary.
-  - Keep domain logic pure and deterministic.
-  - Use small vertical slices over a deep folder hierarchy.
-  - Preserve the spec-first contract when changing data shapes.
-
-- **Advanced coding pattern**
-  - Command-style mutation functions in the domain package.
-  - Repository port for event storage.
-  - Thin route adapter that transforms request payloads into domain commands.
-
-- **Anti-patterns**
-  - Event rules living only in React components.
-  - Shared date logic duplicated in multiple files.
-  - Hidden coupling between UI state and persistence logic.
-
-- **Imports/exports**
-  - Import `@suite/domain-calendar` only from the calendar app surfaces.
-  - Export `CalendarEvent`, `CreateCalendarEventInput`, and future mutation/query functions from `packages/domain-calendar/src/index.ts`.
-  - Keep route modules exporting only the Hono app by default.
-
-- **Depends on**
-  - CORE-01
-  - Existing create-event spec
-
-- **Blocks**
-  - CAL-02
+  - Keep guidance aligned with the actual workspace shape.
+  - Document decisions rather than assumptions.
+  - Update handoff notes whenever the test model changes.
 
 - **Validation commands**
-  - `pnpm --filter @suite/calendar-api typecheck`
-  - `pnpm --filter @suite/calendar-web typecheck`
-  - `pnpm --filter @suite/calendar-api dev`
-  - `pnpm --filter @suite/calendar-web dev`
+  - `pnpm test`
+  - `pnpm typecheck`
 
 - **Subtasks**
-  - [x] CAL-01.1 [file: packages/domain-calendar/src/lib/*, packages/domain-calendar/src/index.ts] Add the persistence-facing event mutation and query primitives needed to save and retrieve event records without introducing recurrence or collaboration.
-    - Validate with: `pnpm --filter @suite/calendar-api typecheck`
-  - [x] CAL-01.2 [file: apps/calendar/api/src/index.ts, apps/calendar/api/src/routes/*] Add event edit/update request handling so the API can validate payloads and call the domain mutation without route-level business logic.
-    - Validate with: `pnpm --filter @suite/calendar-api typecheck`
-  - [x] CAL-01.3 [file: apps/calendar/web/src/App.tsx, apps/calendar/web/src/features/*] Extend the calendar form flow to support editing an existing event and rendering clear server-side validation errors.
-    - Validate with: `pnpm --filter @suite/calendar-web typecheck`
+  - [ ] DOC-01.1 Rewrite the stale testing strategy guidance so it matches the repo reality.
+  - [ ] DOC-01.2 Add a concise testing overview to the handoff notes.
+  - [ ] DOC-01.3 Record where shared helpers belong if `packages/testing` is introduced.
 
-- **Implementation notes**
-  - Added an in-memory calendar event repository with create, list, get, and update commands plus overlap detection and stable IDs.
-  - Added `GET /api/events` and `PUT /api/events/:id` while keeping validation and error mapping at the API boundary.
-  - Replaced the calendar web starter with a browse-and-edit flow that shows saved events, supports edit mode, and surfaces server validation errors.
-
-### [x] CAL-02 [status: completed] Calendar browsing should show useful day and week views
+### [ ] QA-01 [status: pending] Re-run the full targeted validation matrix and lock the baseline
 
 - **Related file paths**
-  - `apps/calendar/specs/create-event.spec.md`
-  - `apps/calendar/specs/browse-calendar.spec.md`
-  - `packages/domain-calendar/src/index.ts`
-  - `packages/domain-calendar/src/lib/*`
-  - `apps/calendar/api/src/index.ts`
-  - `apps/calendar/web/src/App.tsx`
-  - `apps/calendar/web/src/features/*`
-  - `apps/calendar/web/src/components/*`
+  - `packages/domain-calendar/src/**`
+  - `packages/domain-tasks/src/**`
+  - `packages/domain-drive/src/**`
+  - `apps/*/api/src/**`
+  - `apps/*/web/src/**`
+  - `vitest.config.ts`
 
 - **Definition of done**
-  - Calendar events can be listed by date range.
-  - Day and week views are available in the web app.
-  - Empty, loading, and error states are clearly handled.
-  - The user can browse the calendar without leaving the app shell.
+  - The targeted domain, API, and UI test suites pass.
+  - The root typecheck passes.
+  - No flaky or state-leaking suite remains.
+  - The baseline is documented so future work can compare against it.
 
 - **BDD scenarios**
-  - Given events on multiple days, when I switch the calendar view, then only the relevant events are shown.
-  - Given no events for a selected range, when I open the view, then I see an empty state instead of a broken layout.
-
-- **Out of scope**
-  - Month grid drag-and-drop.
-  - Full calendar sharing.
-  - Real-time collaborative editing.
-  - Recurrence exceptions.
+  - Given the current MVP work, when I run the validation matrix, then I get a clean pass or a clearly scoped failure list.
+  - Given a future change, when I compare against the baseline, then regressions are obvious.
 
 - **Rules to follow**
-  - Keep query logic separate from mutation logic.
-  - Keep view components dumb and reusable.
-  - Keep state changes local to the smallest feature slice.
-
-- **Advanced coding pattern**
-  - Query/command split in the domain layer.
-  - Derived view models for day/week presentation.
-  - Feature folder per screen or interaction slice.
-
-- **Anti-patterns**
-  - Rendering raw API payloads directly in the page shell.
-  - Building a monolithic calendar component.
-  - Mixing filtering logic into the domain mutation path.
-
-- **Imports/exports**
-  - Import calendar query helpers from `@suite/domain-calendar` only.
-  - Export view helpers or hooks from `apps/calendar/web/src/features/*` instead of deep component trees.
-  - Keep public module boundaries explicit.
-
-- **Depends on**
-  - CORE-01
-  - CAL-01
-
-- **Blocks**
-  - None
+  - Validate the smallest meaningful set first.
+  - Fix determinism before broadening coverage.
+  - Do not accept green typecheck as a substitute for passing tests.
 
 - **Validation commands**
-  - `pnpm --filter @suite/calendar-web typecheck`
-  - `pnpm --filter @suite/calendar-web dev`
-  - `pnpm --filter @suite/calendar-api typecheck`
+  - `pnpm test`
+  - `pnpm typecheck`
+  - `pnpm --filter @suite/domain-calendar test`
+  - `pnpm --filter @suite/domain-tasks test`
+  - `pnpm --filter @suite/domain-drive test`
+  - `pnpm --filter @suite/calendar-api test`
+  - `pnpm --filter @suite/tasks-api test`
+  - `pnpm --filter @suite/drive-api test`
 
 - **Subtasks**
-  - [x] CAL-02.1 [file: packages/domain-calendar/src/lib/*, packages/domain-calendar/src/index.ts] Add a list/query API for events that supports date-range filtering and returns data ready for day/week views.
-    - Validate with: `pnpm --filter @suite/calendar-api typecheck`
-  - [x] CAL-02.2 [file: apps/calendar/web/src/features/*, apps/calendar/web/src/App.tsx] Replace the single form-centric screen with a browseable day/week view and a small filter bar.
-    - Validate with: `pnpm --filter @suite/calendar-web typecheck`
-  - [x] CAL-02.3 [file: apps/calendar/web/src/components/*] Add reusable empty-state, error-state, and event-row components so the view stays easy to extend.
-    - Validate with: `pnpm --filter @suite/calendar-web typecheck`
-
-- **Implementation notes**
-  - Added `listCalendarEventsInRange()` to the calendar domain so range filtering stays deterministic and sorted.
-  - Extended `GET /api/events` to accept optional `startAt` and `endAt` query params and return the matching overlap range.
-  - Added a new `browse-calendar.spec.md` and split the calendar web browse experience into reusable feature/component slices for day and week views.
-
-### [x] TASK-01 [status: completed] Tasks should persist creation and completion state
-
-- **Related file paths**
-  - `apps/tasks/specs/create-task.spec.md`
-  - `packages/domain-tasks/src/index.ts`
-  - `packages/domain-tasks/src/lib/*`
-  - `apps/tasks/api/src/index.ts`
-  - `apps/tasks/web/src/App.tsx`
-  - `apps/tasks/web/src/features/*`
-
-- **Definition of done**
-  - Task creation persists to the domain storage boundary.
-  - Completion state can be toggled and stored reliably.
-  - The API returns a stable task record for the UI.
-  - The web app reflects created and completed tasks without a full refresh.
-
-- **BDD scenarios**
-  - Given a new task title, when I submit the form, then I get a saved task back.
-  - Given a task marked incomplete, when I toggle completion, then the completed state persists.
-
-- **Out of scope**
-  - Subtasks.
-  - Assignments and mentions.
-  - Comments.
-  - Dependency graphs.
-  - Kanban boards.
-
-- **Rules to follow**
-  - Keep task state transitions explicit.
-  - Preserve exact optional property semantics.
-  - Keep all domain invariants in `packages/domain-tasks`.
-
-- **Advanced coding pattern**
-  - State transition functions for completion/archiving.
-  - Repository abstraction for task persistence.
-  - Thin API adapter for mutation endpoints.
-
-- **Anti-patterns**
-  - Boolean flags scattered across UI components.
-  - Hidden task rules in event handlers.
-  - Cross-domain helper reuse that blurs boundaries.
-
-- **Imports/exports**
-  - Import `@suite/domain-tasks` only from the tasks app surfaces.
-  - Export `TaskItem`, `CreateTaskInput`, and future mutation/query helpers from the domain package entrypoint.
-  - Keep route modules exporting only the Hono app by default.
-
-- **Depends on**
-  - CORE-01
-  - Existing create-task spec
-
-- **Blocks**
-  - TASK-02
-
-- **Validation commands**
-  - `pnpm --filter @suite/tasks-api typecheck`
-  - `pnpm --filter @suite/tasks-web typecheck`
-  - `pnpm --filter @suite/tasks-api dev`
-  - `pnpm --filter @suite/tasks-web dev`
-
-- **Subtasks**
-  - [x] TASK-01.1 [file: packages/domain-tasks/src/lib/*, packages/domain-tasks/src/index.ts] Add task persistence and completion mutation primitives that preserve the current create flow while enabling state transitions. ✅
-    - Validate with: `pnpm --filter @suite/tasks-api typecheck`
-  - [x] TASK-01.2 [file: apps/tasks/api/src/index.ts, apps/tasks/api/src/routes/*] Add completion update handling so the API can mutate task state without moving business logic into the route layer. ✅
-    - Validate with: `pnpm --filter @suite/tasks-api typecheck`
-  - [x] TASK-01.3 [file: apps/tasks/web/src/App.tsx, apps/tasks/web/src/features/*] Extend the task form/surface to reflect saved completion state and show actionable errors when mutations fail. ✅
-    - Validate with: `pnpm --filter @suite/tasks-web typecheck`
-
-- **Implementation notes**
-  - Added an in-memory task repository with create, list, get, and completion update primitives.
-  - Added `GET /api/tasks`, `GET /api/tasks/:id`, and `PUT /api/tasks/:id/completion` while keeping validation and domain error mapping in the API layer.
-  - Reworked the tasks web surface into a browse-and-toggle flow that shows saved tasks, supports completion updates, and surfaces readable API errors.
-
-### [x] TASK-02 [status: completed] Tasks should support editing, archiving, and practical filters
-
-- **Related file paths**
-  - `apps/tasks/specs/create-task.spec.md`
-  - `packages/domain-tasks/src/index.ts`
-  - `packages/domain-tasks/src/lib/*`
-  - `apps/tasks/api/src/index.ts`
-  - `apps/tasks/web/src/App.tsx`
-  - `apps/tasks/web/src/features/*`
-  - `apps/tasks/web/src/components/*`
-
-- **Definition of done**
-  - Tasks can be edited, archived, and deleted if needed.
-  - The web app can filter by active/completed/archived state.
-  - Due date or priority metadata is available only if it stays simple.
-  - Empty states and filters feel intentional, not bolted on.
-
-- **BDD scenarios**
-  - Given completed tasks, when I switch to the completed filter, then only completed items are visible.
-  - Given an archived task, when I open the active filter, then the task is hidden from the default list.
-
-- **Out of scope**
-  - Subtasks and nested tasks.
-  - Collaboration or assignment.
-  - Recurring tasks.
-  - Complex workflow automations.
-
-- **Rules to follow**
-  - Keep filters derived from task state, not duplicated state.
-  - Keep editing a task a small mutation with a clear contract.
-  - Reuse shared UI primitives instead of inventing one-off controls.
-
-- **Advanced coding pattern**
-  - Query selector functions for filter views.
-  - Small view-model adapters for task rows and filter chips.
-  - Command/query separation in the domain package.
-
-- **Anti-patterns**
-  - Duplicating active/completed logic in multiple React components.
-  - Overusing local component state for persistent task data.
-  - Mixing archive semantics with delete semantics.
-
-- **Imports/exports**
-  - Keep imports from `@suite/domain-tasks` explicit and minimal.
-  - Export query helpers like `listTasks` and `filterTasks` from the domain entrypoint when they are added.
-  - Export UI feature slices from `apps/tasks/web/src/features/*`.
-
-- **Depends on**
-  - CORE-01
-  - TASK-01
-
-- **Blocks**
-  - None
-
-- **Validation commands**
-  - `pnpm --filter @suite/tasks-web typecheck`
-  - `pnpm --filter @suite/tasks-web dev`
-  - `pnpm --filter @suite/tasks-api typecheck`
-
-- **Subtasks**
-  - [x] TASK-02.1 [file: packages/domain-tasks/src/lib/*, packages/domain-tasks/src/index.ts] Add list/query helpers that can support active/completed/archived filters without introducing board or dependency complexity. ✅
-    - Validate with: `pnpm --filter @suite/tasks-api typecheck`
-  - [x] TASK-02.2 [file: apps/tasks/web/src/features/*, apps/tasks/web/src/App.tsx] Add filter chips or tabs and render a task list view that updates without reloading the page. ✅
-    - Validate with: `pnpm --filter @suite/tasks-web typecheck`
-  - [x] TASK-02.3 [file: apps/tasks/web/src/components/*] Add reusable task-row and empty-state components so editing and filtering stay modular. ✅
-    - Validate with: `pnpm --filter @suite/tasks-web typecheck`
-
-- **Implementation notes**
-  - Added `archived` field to `TaskItem` and created `filterTasks()` helper with support for all/active/completed/archived views.
-  - Added domain mutations: `updateTask()`, `archiveTask()`, and `deleteTask()` with proper validation and error handling.
-  - Added API routes: `PUT /api/tasks/:id` for edit, `PUT /api/tasks/:id/archive` for archive, and `DELETE /api/tasks/:id` for delete.
-  - Extended the tasks web app with filter chips (all/active/completed/archived) and client-side filtering that updates without page reload.
-  - Created reusable `TaskRow` and `EmptyState` components in `apps/tasks/web/src/components/` for modular editing and filtering.
-
-### [x] DRIVE-01 [status: completed] Drive should persist uploads and expose a browsable file list
-
-- **Related file paths**
-  - `apps/drive/specs/upload-file.spec.md`
-  - `packages/domain-drive/src/index.ts`
-  - `packages/domain-drive/src/lib/*`
-  - `apps/drive/api/src/index.ts`
-  - `apps/drive/web/src/App.tsx`
-  - `apps/drive/web/src/features/*`
-
-- **Definition of done**
-  - Uploads create file records in a real storage boundary.
-  - The app can list uploaded files.
-  - The UI shows file metadata after upload.
-  - Validation errors are surfaced clearly for bad file data.
-
-- **BDD scenarios**
-  - Given a valid file name and size, when I submit the upload form, then the file appears in the list.
-  - Given invalid metadata, when I submit the form, then the API rejects it with a helpful message.
-
-- **Out of scope**
-  - Chunked uploads.
-  - Folders.
-  - Sharing.
-  - OCR.
-  - Virus scanning.
-  - Rich previews.
-
-- **Rules to follow**
-  - Keep file metadata validation at the API edge.
-  - Keep file storage behind a domain/infrastructure boundary.
-  - Prefer simple records over binary processing in the first MVP.
-
-- **Advanced coding pattern**
-  - Storage adapter pattern for upload/list operations.
-  - Mutation + query split for file metadata.
-  - Feature module per browse/upload interaction.
-
-- **Anti-patterns**
-  - Upload logic living in React state handlers.
-  - File storage rules scattered across route and UI files.
-  - Premature chunking or streaming abstractions.
-
-- **Imports/exports**
-  - Import `@suite/domain-drive` only from the drive app surfaces.
-  - Export `DriveFile`, `UploadDriveFileInput`, and future list/mutation helpers from the domain entrypoint.
-  - Keep Hono handlers as default app exports only.
-
-- **Depends on**
-  - CORE-01
-  - Existing upload-file spec
-
-- **Blocks**
-  - DRIVE-02
-
-- **Validation commands**
-  - `pnpm --filter @suite/drive-api typecheck`
-  - `pnpm --filter @suite/drive-web typecheck`
-  - `pnpm --filter @suite/drive-api dev`
-  - `pnpm --filter @suite/drive-web dev`
-
-- **Subtasks**
-  - [x] DRIVE-01.1 [file: packages/domain-drive/src/lib/*, packages/domain-drive/src/index.ts] Add file persistence and list helpers so uploaded file records can be saved and queried without introducing folders or sharing.
-    - Validate with: `pnpm --filter @suite/drive-api typecheck`
-  - [x] DRIVE-01.2 [file: apps/drive/api/src/index.ts, apps/drive/api/src/routes/*] Add file listing support to the API so the upload response and browse response share the same domain shape.
-    - Validate with: `pnpm --filter @suite/drive-api typecheck`
-  - [x] DRIVE-01.3 [file: apps/drive/web/src/App.tsx, apps/drive/web/src/features/*] Extend the upload screen into a browsable file list that shows the uploaded metadata immediately after a successful mutation.
-    - Validate with: `pnpm --filter @suite/drive-web typecheck`
-
-- **Implementation notes**
-  - Added an in-memory drive file store with stable IDs and a list helper that returns newest-first records.
-  - Added `GET /api/files` so the API can browse the same `DriveFile` records used by uploads.
-  - Reworked the drive web surface into a two-panel upload-and-browse flow that loads files on mount and inserts newly uploaded files immediately.
-
-### [x] DRIVE-02 [status: completed] Drive should support rename, delete, and useful file metadata actions
-
-- **Related file paths**
-  - `apps/drive/specs/upload-file.spec.md`
-  - `packages/domain-drive/src/index.ts`
-  - `packages/domain-drive/src/lib/*`
-  - `apps/drive/api/src/index.ts`
-  - `apps/drive/web/src/App.tsx`
-  - `apps/drive/web/src/features/*`
-  - `apps/drive/web/src/components/*`
-
-- **Definition of done**
-  - Files can be renamed and deleted through the same baseline workflow.
-  - The UI exposes file metadata in a readable list or details pane.
-  - Simple download or open links are available if they do not require a larger storage redesign.
-  - Error states are clear and recoverable.
-
-- **BDD scenarios**
-  - Given an uploaded file, when I rename it, then the list updates with the new name.
-  - Given a file I no longer need, when I delete it, then it disappears from the file list.
-
-- **Out of scope**
-  - Folder hierarchies.
-  - Shared links and permissions.
-  - Collaborative editing.
-  - Preview generation.
-  - Media processing pipelines.
-
-- **Rules to follow**
-  - Keep rename and delete as separate commands.
-  - Keep metadata transformations explicit and testable.
-  - Keep file actions inside the drive bounded context.
-
-- **Advanced coding pattern**
-  - Small command handlers per file action.
-  - View-model adapter for file metadata rows.
-  - Repository port for mutable file records.
-
-- **Anti-patterns**
-  - Treating file actions as one big mutable blob.
-  - Reaching into storage details from the UI.
-  - Mixing folder-like behavior into the first MVP.
-
-- **Imports/exports**
-  - Keep imports from `@suite/domain-drive` explicit and limited to the drive app.
-  - Export file query/mutation helpers from `packages/domain-drive/src/index.ts`.
-  - Keep reusable UI widgets in `apps/drive/web/src/components/*`.
-
-- **Depends on**
-  - CORE-01
-  - DRIVE-01
-
-- **Blocks**
-  - None
-
-- **Validation commands**
-  - `pnpm --filter @suite/drive-web typecheck`
-  - `pnpm --filter @suite/drive-web dev`
-  - `pnpm --filter @suite/drive-api typecheck`
-
-- **Subtasks**
-  - [x] DRIVE-02.1 [file: packages/domain-drive/src/lib/*, packages/domain-drive/src/index.ts] Add rename and delete mutations so the file record lifecycle stays narrow and deterministic. ✅
-    - Validate with: `pnpm --filter @suite/drive-api typecheck`
-  - [x] DRIVE-02.2 [file: apps/drive/api/src/index.ts, apps/drive/api/src/routes/*] Add rename and delete routes that validate payloads and call the drive domain functions without route-level business logic. ✅
-    - Validate with: `pnpm --filter @suite/drive-api typecheck`
-  - [x] DRIVE-02.3 [file: apps/drive/web/src/features/*, apps/drive/web/src/components/*] Add file action controls and a details or metadata panel so users can manage the file list without leaving the screen. ✅
-    - Validate with: `pnpm --filter @suite/drive-web typecheck`
-
-- **Implementation notes**
-  - Added `RenameDriveFileInput` type and `renameDriveFile()` mutation to the drive domain package with proper null handling for missing files.
-  - Added `deleteDriveFile()` mutation that returns a boolean success indicator.
-  - Added `getDriveFile()` helper for single-file retrieval by ID.
-  - Added `PUT /api/files/:id` route with payload validation for rename operations.
-  - Added `DELETE /api/files/:id` route with proper 404 handling for missing files.
-  - Extended `DriveFileList` component with Rename and Delete action buttons.
-  - Added rename modal dialog with form validation and error handling.
-  - Added delete confirmation modal with warning message and error handling.
-  - Both modals use proper ARIA attributes (role="dialog", aria-modal, aria-labelledby) for accessibility.
-
-### [x] WEB-01 [status: completed] Resolve Tailwind CSS package resolution so web production builds succeed
-
-- **Related file paths**
-  - `packages/ui/package.json`
-  - `packages/ui/src/styles/globals.css`
-  - `apps/*/web/src/styles.css`
-  - `apps/*/web/package.json`
-
-- **Definition of done**
-  - The shared UI stylesheet can resolve `@import "tailwindcss"` during production builds.
-  - Web app production builds complete without CSS import resolution errors.
-  - The fix is applied in the shared package boundary, not duplicated per app.
-
-- **BDD scenarios**
-  - Given a web app that imports `@suite/ui/styles/globals.css`, when I run the production build, then Tailwind CSS resolves and the bundle completes successfully.
-
-- **Out of scope**
-  - Rewriting the visual system.
-  - App-specific CSS forks.
-  - Any unrelated runtime behavior changes.
-
-- **Rules to follow**
-  - Keep the fix in the shared UI boundary if possible.
-  - Prefer the smallest manifest change that restores buildability.
-  - Avoid duplicating Tailwind setup in each web app.
-
-- **Advanced coding pattern**
-  - Shared-package dependency ownership for cross-app CSS toolchain requirements.
-
-- **Anti-patterns**
-  - Per-app Tailwind dependency duplication.
-  - Leaving shared CSS imports unresolved in package manifests.
-
-- **Imports/exports**
-  - Keep the shared stylesheet exported from `packages/ui`.
-  - Ensure web app styles continue importing the shared stylesheet directly.
-
-- **Depends on**
-  - None
-
-- **Blocks**
-  - None
-
-- **Validation commands**
-  - `pnpm --filter @suite/drive-web build`
-
-- **Subtasks**
-  - [x] WEB-01.1 [file: packages/ui/package.json] Add the missing Tailwind CSS dependency at the shared UI package boundary. ✅
-    - Validate with: `pnpm --filter @suite/drive-web build`
-  - [x] WEB-01.2 [file: packages/ui/src/styles/globals.css, apps/*/web/src/styles.css] Confirm the shared stylesheet remains the single source of truth for web app styling imports. ✅
-    - Validate with: `pnpm --filter @suite/drive-web build`
-  - [x] WEB-01.3 [file: apps/*/web/package.json] Confirm web packages do not need duplicate Tailwind setup once the shared dependency is present. ✅
-    - Validate with: `pnpm --filter @suite/drive-web build`
-
-- **Implementation notes**
-  - Added `tailwindcss: ^4.0.0` as a devDependency to `packages/ui/package.json`.
-  - All three web apps (calendar, tasks, drive) now build successfully without per-app Tailwind duplication.
-  - The shared stylesheet at `packages/ui/src/styles/globals.css` remains the single source of truth.
-
-### [x] QA-01 [status: completed] Add targeted tests and acceptance checks for the MVP slices
-
-- **Related file paths**
-  - `apps/calendar/specs/*.spec.md`
-  - `apps/tasks/specs/*.spec.md`
-  - `apps/drive/specs/*.spec.md`
-  - `packages/domain-calendar/src/*`
-  - `packages/domain-tasks/src/*`
-  - `packages/domain-drive/src/*`
-  - `apps/*/api/src/*`
-  - `apps/*/web/src/*`
-
-- **Definition of done**
-  - Each mutation/query slice has at least one targeted domain test.
-  - Each API contract has a narrow validation test or smoke check.
-  - Each app has a manual acceptance path that can be verified quickly.
-  - Test commands remain narrow and package-focused.
-
-- **BDD scenarios**
-  - Given a valid request, when I run the corresponding targeted test, then the contract behavior is proven without running the full repository.
-  - Given a rejected payload, when the API test runs, then the failure path is explicit and stable.
-
-- **Out of scope**
-  - Huge snapshot suites.
-  - Overly generic e2e coverage for every edge case.
-  - Test-only abstractions that leak into production modules.
-
-- **Rules to follow**
-  - Write tests against the smallest stable module boundary.
-  - Prefer one test file per behavior slice.
-  - Keep fixtures local to the owning bounded context.
-
-- **Advanced coding pattern**
-  - Domain tests for pure business rules.
-  - Thin API tests for request validation and adapter behavior.
-  - Browser smoke tests for the end-to-end happy path.
-
-- **Anti-patterns**
-  - Full-suite runs for every tiny change.
-  - Giant test helpers shared across all apps.
-  - Snapshot-only coverage with no behavioral assertions.
-
-- **Imports/exports**
-  - Export only the behavior under test from each module.
-  - Keep test helpers local to the module or app they support.
-  - Avoid cross-app test dependencies.
-
-- **Depends on**
-  - CORE-01
-  - CAL-01
-  - CAL-02
-  - TASK-01
-  - TASK-02
-  - DRIVE-01
-  - DRIVE-02
-
-- **Blocks**
-  - None
-
-- **Validation commands**
-  - `pnpm --filter @suite/calendar-api typecheck`
-  - `pnpm --filter @suite/tasks-api typecheck`
-  - `pnpm --filter @suite/drive-api typecheck`
-  - `pnpm --filter @suite/calendar-web typecheck`
-  - `pnpm --filter @suite/tasks-web typecheck`
-  - `pnpm --filter @suite/drive-web typecheck`
-
-- **Subtasks**
-  - [x] QA-01.1 [file: packages/domain-calendar/src/*.test.ts, packages/domain-tasks/src/*.test.ts, packages/domain-drive/src/*.test.ts] Add targeted unit tests for the core domain mutation/query helpers, one behavior slice per file. ✅
-    - Validate with: `pnpm --filter @suite/calendar-api typecheck`
-  - [x] QA-01.2 [file: apps/*/api/src/*.test.ts] Add focused API tests for the create/update/list/delete routes so request validation stays narrow and explicit. ✅
-    - Validate with: `pnpm --filter @suite/tasks-api typecheck`
-  - [x] QA-01.3 [file: apps/*/web/src/*] Add a short manual acceptance checklist or browser smoke flow for each app so the MVP can be exercised without running the full suite. ✅
-    - Validate with: `pnpm --filter @suite/drive-web typecheck`
-
-- **Implementation notes**
-  - Added Vitest 2.1.8 to root package.json and all API packages.
-  - Created root vitest.config.ts with node environment and test globals.
-  - Added targeted unit tests for calendar domain (create, update, query, conflict detection).
-  - Added targeted unit tests for tasks domain (create, update, archive, delete, filter).
-  - Added targeted unit tests for drive domain (upload, rename, delete, query).
-  - Added focused API tests for calendar API (health, list, create, update routes).
-  - Added focused API tests for tasks API (health, list, create, update, archive, delete routes).
-  - Added focused API tests for drive API (health, list, upload, rename, delete routes).
-  - Created manual acceptance checklists for calendar, tasks, and drive apps.
-  - All validation commands pass (typecheck for all API and web packages).
+  - [ ] QA-01.1 Run the full targeted validation matrix after TEST-02 and TEST-03.
+  - [ ] QA-01.2 Capture any remaining mismatches as explicit follow-up tasks.
+  - [ ] QA-01.3 Record the final pass/fail baseline in the handoff notes.
 
 ## Priority order
 
-1. CORE-01
-2. CAL-01
-3. CAL-02
-4. TASK-01
-5. TASK-02
-6. DRIVE-01
-7. DRIVE-02
-8. QA-01
-9. WEB-01
+1. TEST-01
+2. TEST-02
+3. TEST-03
+4. TEST-04
+5. TEST-05
+6. DOC-01
+7. QA-01
 
 ## Editing notes
 
 - Keep tasks small.
-- Split any task that starts to feel like a project.
-- Prefer one bounded context per parent task.
-- Add new subtasks instead of inflating a parent task.
-- Keep validation commands targeted and package-specific whenever possible.
+- Split any task that introduces a new test environment.
+- Update this document whenever the testing model changes.

@@ -8,6 +8,7 @@ export {
   archiveTask,
   deleteTask,
   filterTasks,
+  resetTasks,
 } from './lib/tasks.js';
 
 export type {

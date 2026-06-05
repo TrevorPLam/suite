@@ -220,13 +220,31 @@ Before ending a session, prefer to leave:
 - The active worklist now lives in `TODO.md` at the repo root.
 - The document is intentionally structured for SDD, DDD, TDD, BDD, and deep-module execution.
 - Current priority order in `TODO.md` is:
-  1. `CORE-01`
-  2. `CAL-01`
-  3. `CAL-02`
-  4. `TASK-01`
-  5. `TASK-02`
-  6. `DRIVE-01`
-  7. `DRIVE-02`
-  8. `QA-01`
-- The MVP target is to keep Calendar, Tasks, and Drive feature-rich enough to test and reuse as a baseline, without adding folders, collaboration, or other scope-heavy platform work too early.
+  1. `TEST-01` — completed
+  2. `TEST-02` — pending (next)
+  3. `TEST-03`
+  4. `TEST-04`
+  5. `TEST-05`
+  6. `DOC-01`
+  7. `QA-01`
+- The MVP target is to make the monorepo testing model explicit, reliable, and high quality.
 - When resuming, start from the smallest blocked item that unlocks the next dependent slice.
+
+### Testing architecture decisions (TEST-01 outcome)
+
+- Tests are colocated with source: `*.test.ts` / `*.test.tsx`.
+- No `packages/testing` shared package yet; criteria documented in `.devin/rules/testing-strategy.md`.
+- Root `vitest.config.ts` uses `node` environment and covers `packages/**/*.test.ts` + `apps/*/api/**/*.test.ts`.
+- Each web app (`apps/*/web`) owns a local `vitest.config.ts` with `environment: 'happy-dom'`.
+- Web packages now have `test` scripts and `vitest` + `happy-dom` in devDependencies.
+
+### TEST-02 outcome
+
+- All three domain packages now expose explicit reset functions:
+  - `packages/domain-calendar/src/lib/calendar-events.ts` → `resetCalendarEvents()`
+  - `packages/domain-tasks/src/lib/tasks.ts` → `resetTasks()`
+  - `packages/domain-drive/src/index.ts` → `resetDriveFiles()`
+- Tests were updated to call these reset functions in `beforeEach` instead of relying on undeclared `globalThis` stores.
+- Drive domain now validates uploads (name trimming, size bounds, integer check) and trims on rename.
+- Domain test assertion patterns were updated to check `error.code` and `error.details` instead of message-string matching.
+- **Baseline**: All 64 domain tests pass (calendar: 20, tasks: 28, drive: 16). `pnpm typecheck` passes across the workspace.
