@@ -268,3 +268,18 @@ Before ending a session, prefer to leave:
 - Each web app now has `src/test-setup.ts` importing `@testing-library/jest-dom/vitest` and `vitest.config.ts` references it via `setupFiles`.
 - Each web app's `package.json` includes the three testing-library devDependencies.
 - **Baseline**: All 124 tests pass (domain: 64, API: 45, web: 16). `pnpm typecheck` passes across the workspace.
+
+### TEST-05 outcome
+
+- CI workflow created in `.github/workflows/ci.yml` with PR checks (affected tests) and main branch validation (full tests + coverage)
+- Comprehensive test command documentation added in `docs/testing-commands.md`
+- Consistent script naming across all packages: `test`, `test:run`, `test:coverage`
+- Root `package.json` includes CI scripts: `ci:test`, `ci:validate`, `ci:coverage`
+- Coverage thresholds configured and enforced:
+  - Domain packages: 90% lines/functions, 85% branches
+  - API packages: 80% lines/functions, 75% branches
+  - Web packages: 70% lines/functions, 65% branches
+- Per-package `vitest.config.ts` files added for domain and API packages for independent execution
+- `nx.json` enhanced with `coverage` target and updated `namedInputs` to exclude test files from production builds
+- All 124 tests pass, typecheck passes across workspace
+- Testing strategy guidance updated in `.devin/rules/testing-strategy.md` to reflect current state

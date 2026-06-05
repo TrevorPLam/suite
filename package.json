@@ -8,9 +8,16 @@
     "build": "pnpm -r --if-present build",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test",
+    "test:run": "pnpm -r --if-present test:run",
+    "test:coverage": "pnpm -r --if-present test:coverage",
+    "test:affected": "nx affected -t test",
+    "test:affected:coverage": "nx affected -t coverage",
     "typecheck": "pnpm -r --if-present typecheck",
     "graph": "nx graph",
-    "clean": "rimraf .nx dist coverage"
+    "clean": "rimraf .nx dist coverage",
+    "ci:test": "nx affected -t test && nx affected -t typecheck",
+    "ci:validate": "pnpm test:run && pnpm typecheck",
+    "ci:coverage": "pnpm test:coverage"
   },
   "devDependencies": {
     "nx": "^22.7.0",

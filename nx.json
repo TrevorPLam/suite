@@ -20,6 +20,15 @@
         "^production"
       ]
     },
+    "coverage": {
+      "inputs": [
+        "default",
+        "^production"
+      ],
+      "dependsOn": [
+        "^build"
+      ]
+    },
     "lint": {
       "inputs": [
         "default",
@@ -35,11 +44,14 @@
     "production": [
       "default",
       "!{projectRoot}/**/*.test.ts",
-      "!{projectRoot}/specs/**"
+      "!{projectRoot}/**/*.test.tsx",
+      "!{projectRoot}/specs/**",
+      "!{projectRoot}/test-setup.ts"
     ],
     "sharedGlobals": [
       "{workspaceRoot}/nx.json",
-      "{workspaceRoot}/tsconfig.base.json"
+      "{workspaceRoot}/tsconfig.base.json",
+      "{workspaceRoot}/vitest.config.ts"
     ]
   },
   "defaultBase": "main",
