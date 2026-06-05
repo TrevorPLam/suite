@@ -1,0 +1,20 @@
+{
+  "name": "@suite/calendar-api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev src/index.ts",
+    "deploy": "wrangler deploy src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@suite/domain-calendar": "workspace:*",
+    "@suite/env-config": "workspace:*",
+    "hono": "^4.11.7"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "wrangler": "^4.0.0"
+  }
+}

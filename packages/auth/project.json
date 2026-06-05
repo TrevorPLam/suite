@@ -1,0 +1,7 @@
+{
+  "name": "auth",
+  "root": "packages/auth",
+  "sourceRoot": "packages/auth/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:infrastructure", "layer:shared"]
+}

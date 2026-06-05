@@ -1,0 +1,19 @@
+packages:
+  - "apps/*"
+  - "apps/*/*"
+  - "packages/*"
+  - "packages/domain-*"
+
+catalog:
+  nx: ^22.7.0
+  typescript: ^5.8.0
+
+catalogMode: strict
+saveWorkspaceProtocol: true
+preferWorkspacePackages: true
+sharedWorkspaceLockfile: true
+allowBuilds:
+  esbuild: false
+  nx: false
+  sharp: false
+  workerd: false

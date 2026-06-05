@@ -1,0 +1,7 @@
+{
+  "name": "domain-drive",
+  "root": "packages/domain-drive",
+  "sourceRoot": "packages/domain-drive/src",
+  "projectType": "library",
+  "tags": ["scope:drive", "type:domain", "layer:domain"]
+}

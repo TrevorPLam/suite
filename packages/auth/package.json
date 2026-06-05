@@ -1,0 +1,11 @@
+{
+  "name": "@suite/auth",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests configured yet\"",
+    "lint": "echo \"No lint configured yet\""
+  }
+}

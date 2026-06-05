@@ -1,0 +1,7 @@
+{
+  "name": "shared-kernel",
+  "root": "packages/shared-kernel",
+  "sourceRoot": "packages/shared-kernel/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:kernel", "layer:shared"]
+}

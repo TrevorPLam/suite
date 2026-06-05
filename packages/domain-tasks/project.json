@@ -1,0 +1,7 @@
+{
+  "name": "domain-tasks",
+  "root": "packages/domain-tasks",
+  "sourceRoot": "packages/domain-tasks/src",
+  "projectType": "library",
+  "tags": ["scope:tasks", "type:domain", "layer:domain"]
+}

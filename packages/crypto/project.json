@@ -1,0 +1,7 @@
+{
+  "name": "crypto",
+  "root": "packages/crypto",
+  "sourceRoot": "packages/crypto/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:infrastructure", "layer:shared"]
+}

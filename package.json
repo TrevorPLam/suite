@@ -1,0 +1,20 @@
+{
+  "name": "suite",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -r --if-present dev",
+    "build": "pnpm -r --if-present build",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "graph": "nx graph",
+    "clean": "rimraf .nx dist coverage"
+  },
+  "devDependencies": {
+    "nx": "^22.7.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.0"
+  }
+}

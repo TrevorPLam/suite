@@ -1,0 +1,7 @@
+{
+  "name": "domain-calendar",
+  "root": "packages/domain-calendar",
+  "sourceRoot": "packages/domain-calendar/src",
+  "projectType": "library",
+  "tags": ["scope:calendar", "type:domain", "layer:domain"]
+}

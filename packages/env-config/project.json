@@ -1,0 +1,7 @@
+{
+  "name": "env-config",
+  "root": "packages/env-config",
+  "sourceRoot": "packages/env-config/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:infrastructure", "layer:shared"]
+}

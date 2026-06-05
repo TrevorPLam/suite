@@ -1,0 +1,14 @@
+{
+  "name": "@suite/domain-tasks",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests configured yet\"",
+    "lint": "echo \"No lint configured yet\""
+  }
+}
