@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { resetCalendarEvents } from '@suite/domain-calendar';
 import app from './index.js';
 
 describe('calendar API - health', () => {
@@ -12,11 +13,7 @@ describe('calendar API - health', () => {
 
 describe('calendar API - list events', () => {
   beforeEach(() => {
-    // Clear in-memory store before each test
-    const events = (globalThis as any).__calendarEvents;
-    if (events) {
-      events.clear();
-    }
+    resetCalendarEvents();
   });
 
   it('should list all events', async () => {
@@ -52,10 +49,7 @@ describe('calendar API - list events', () => {
 
 describe('calendar API - create event', () => {
   beforeEach(() => {
-    const events = (globalThis as any).__calendarEvents;
-    if (events) {
-      events.clear();
-    }
+    resetCalendarEvents();
   });
 
   it('should create a valid event', async () => {
@@ -150,10 +144,7 @@ describe('calendar API - create event', () => {
 
 describe('calendar API - update event', () => {
   beforeEach(() => {
-    const events = (globalThis as any).__calendarEvents;
-    if (events) {
-      events.clear();
-    }
+    resetCalendarEvents();
   });
 
   it('should update an existing event', async () => {
@@ -189,7 +180,7 @@ describe('calendar API - update event', () => {
     expect(json.event.title).toBe('Updated Meeting');
   });
 
-  it('should reject update with empty id', async () => {
+  it('should reject update with missing id', async () => {
     const res = await app.request('/api/events/', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -200,9 +191,7 @@ describe('calendar API - update event', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json).toHaveProperty('error');
+    expect(res.status).toBe(404);
   });
 
   it('should reject update for non-existent event', async () => {

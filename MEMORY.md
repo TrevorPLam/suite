@@ -221,10 +221,10 @@ Before ending a session, prefer to leave:
 - The document is intentionally structured for SDD, DDD, TDD, BDD, and deep-module execution.
 - Current priority order in `TODO.md` is:
   1. `TEST-01` — completed
-  2. `TEST-02` — pending (next)
-  3. `TEST-03`
-  4. `TEST-04`
-  5. `TEST-05`
+  2. `TEST-02` — completed
+  3. `TEST-03` — completed
+  4. `TEST-04` — completed
+  5. `TEST-05` — pending (next)
   6. `DOC-01`
   7. `QA-01`
 - The MVP target is to make the monorepo testing model explicit, reliable, and high quality.
@@ -248,3 +248,23 @@ Before ending a session, prefer to leave:
 - Drive domain now validates uploads (name trimming, size bounds, integer check) and trims on rename.
 - Domain test assertion patterns were updated to check `error.code` and `error.details` instead of message-string matching.
 - **Baseline**: All 64 domain tests pass (calendar: 20, tasks: 28, drive: 16). `pnpm typecheck` passes across the workspace.
+
+### TEST-03 outcome
+
+- API tests now use domain `reset*` functions for isolation instead of broken `globalThis` stores:
+  - `apps/calendar/api/src/index.test.ts` → `resetCalendarEvents()`
+  - `apps/tasks/api/src/index.test.ts` → `resetTasks()`
+  - `apps/drive/api/src/index.test.ts` → `resetDriveFiles()`
+- Missing route parameter behavior is settled: a trailing slash (missing `:id` segment) returns 404 from Hono's router, not 400.
+- Domain error codes (`validation_error`, `not_found_error`, `conflict_error`) are consistently mapped to HTTP status codes (400, 404, 409) in all three API layers.
+- **Baseline**: All 109 tests pass (domain: 64, API: 45). `pnpm typecheck` passes across the workspace.
+
+### TEST-04 outcome
+
+- Browser-level component tests added to all three web apps using `@testing-library/react` + `@testing-library/user-event` + `@testing-library/jest-dom` on `happy-dom`:
+  - `apps/calendar/web/src/App.test.tsx` — 5 tests: loading/empty states, create event, edit event, server validation errors, a11y labels/live region.
+  - `apps/tasks/web/src/App.test.tsx` — 6 tests: loading/empty states, create task, toggle completion, archive task, delete task with confirm, server validation errors.
+  - `apps/drive/web/src/App.test.tsx` — 5 tests: loading/empty states, upload file, rename dialog a11y, delete dialog a11y, upload validation errors.
+- Each web app now has `src/test-setup.ts` importing `@testing-library/jest-dom/vitest` and `vitest.config.ts` references it via `setupFiles`.
+- Each web app's `package.json` includes the three testing-library devDependencies.
+- **Baseline**: All 124 tests pass (domain: 64, API: 45, web: 16). `pnpm typecheck` passes across the workspace.

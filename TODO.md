@@ -108,7 +108,7 @@ This document tracks the remaining work to make the monorepo’s testing model e
   - [x] TEST-02.2 Tasks: remove order dependence from list and mutation tests.
   - [x] TEST-02.3 Drive: make uploads, rename, delete, and query tests isolated.
 
-### [ ] TEST-03 [status: pending] Align domain and API contracts for validation, status codes, and error semantics
+### [x] TEST-03 [status: completed] Align domain and API contracts for validation, status codes, and error semantics
 
 - **Related file paths**
   - `packages/domain-calendar/src/**`
@@ -140,11 +140,11 @@ This document tracks the remaining work to make the monorepo’s testing model e
   - `pnpm --filter @suite/drive-api test`
 
 - **Subtasks**
-  - [ ] TEST-03.1 Calendar: settle empty-id and conflict behavior with matching tests.
-  - [ ] TEST-03.2 Tasks: align not-found, archive, and completion error handling.
-  - [ ] TEST-03.3 Drive: align name trimming, size validation, and missing-id responses.
+  - [x] TEST-03.1 Calendar: settle empty-id and conflict behavior with matching tests.
+  - [x] TEST-03.2 Tasks: align not-found, archive, and completion error handling.
+  - [x] TEST-03.3 Drive: align name trimming, size validation, and missing-id responses.
 
-### [ ] TEST-04 [status: pending] Add browser-level smoke and component tests for the web apps
+### [x] TEST-04 [status: completed] Add browser-level smoke and component tests for the web apps
 
 - **Related file paths**
   - `apps/calendar/web/src/**`
@@ -176,9 +176,9 @@ This document tracks the remaining work to make the monorepo’s testing model e
   - `pnpm --filter @suite/drive-web test`
 
 - **Subtasks**
-  - [ ] TEST-04.1 Calendar: cover event form create/edit happy paths and failures.
-  - [ ] TEST-04.2 Tasks: cover task create and state-change interactions.
-  - [ ] TEST-04.3 Drive: cover upload, rename, delete dialogs, and a11y checks.
+  - [x] TEST-04.1 Calendar: cover event form create/edit happy paths and failures.
+  - [x] TEST-04.2 Tasks: cover task create and state-change interactions.
+  - [x] TEST-04.3 Drive: cover upload, rename, delete dialogs, and a11y checks.
 
 ### [ ] TEST-05 [status: pending] Establish affected-test CI, command conventions, and coverage guardrails
 

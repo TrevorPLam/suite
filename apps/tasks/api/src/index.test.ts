@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { resetTasks } from '@suite/domain-tasks';
 import app from './index.js';
 
 describe('tasks API - health', () => {
@@ -12,10 +13,7 @@ describe('tasks API - health', () => {
 
 describe('tasks API - list tasks', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should list all tasks', async () => {
@@ -29,10 +27,7 @@ describe('tasks API - list tasks', () => {
 
 describe('tasks API - create task', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should create a valid task', async () => {
@@ -108,10 +103,7 @@ describe('tasks API - create task', () => {
 
 describe('tasks API - get task', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should get task by id', async () => {
@@ -143,10 +135,7 @@ describe('tasks API - get task', () => {
 
 describe('tasks API - update completion', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should update task completion', async () => {
@@ -192,10 +181,7 @@ describe('tasks API - update completion', () => {
 
 describe('tasks API - update task', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should update task title', async () => {
@@ -241,10 +227,7 @@ describe('tasks API - update task', () => {
 
 describe('tasks API - archive task', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should archive a task', async () => {
@@ -276,10 +259,7 @@ describe('tasks API - archive task', () => {
 
 describe('tasks API - delete task', () => {
   beforeEach(() => {
-    const tasks = (globalThis as any).__taskItems;
-    if (tasks) {
-      tasks.clear();
-    }
+    resetTasks();
   });
 
   it('should delete a task', async () => {

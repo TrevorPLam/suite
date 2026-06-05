@@ -8,5 +8,6 @@ export default defineConfig({
     environment: 'happy-dom',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     exclude: ['node_modules', 'dist'],
+    setupFiles: ['./src/test-setup.ts'],
   },
 });

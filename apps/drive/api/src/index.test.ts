@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { resetDriveFiles } from '@suite/domain-drive';
 import app from './index.js';
 
 describe('drive API - health', () => {
@@ -12,10 +13,7 @@ describe('drive API - health', () => {
 
 describe('drive API - list files', () => {
   beforeEach(() => {
-    const files = (globalThis as any).__driveFiles;
-    if (files) {
-      files.length = 0;
-    }
+    resetDriveFiles();
   });
 
   it('should list all files', async () => {
@@ -29,10 +27,7 @@ describe('drive API - list files', () => {
 
 describe('drive API - upload file', () => {
   beforeEach(() => {
-    const files = (globalThis as any).__driveFiles;
-    if (files) {
-      files.length = 0;
-    }
+    resetDriveFiles();
   });
 
   it('should upload a valid file', async () => {
@@ -125,10 +120,7 @@ describe('drive API - upload file', () => {
 
 describe('drive API - rename file', () => {
   beforeEach(() => {
-    const files = (globalThis as any).__driveFiles;
-    if (files) {
-      files.length = 0;
-    }
+    resetDriveFiles();
   });
 
   it('should rename a file', async () => {
@@ -167,9 +159,7 @@ describe('drive API - rename file', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json).toHaveProperty('error');
+    expect(res.status).toBe(404);
   });
 
   it('should return 404 for non-existent file', async () => {
@@ -201,10 +191,7 @@ describe('drive API - rename file', () => {
 
 describe('drive API - delete file', () => {
   beforeEach(() => {
-    const files = (globalThis as any).__driveFiles;
-    if (files) {
-      files.length = 0;
-    }
+    resetDriveFiles();
   });
 
   it('should delete a file', async () => {
@@ -235,9 +222,7 @@ describe('drive API - delete file', () => {
       method: 'DELETE',
     });
 
-    expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json).toHaveProperty('error');
+    expect(res.status).toBe(404);
   });
 
   it('should return 404 for non-existent file', async () => {
