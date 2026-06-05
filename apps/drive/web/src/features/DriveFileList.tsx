@@ -1,0 +1,124 @@
+import { Button } from '@suite/ui';
+import type { DriveFile } from '@suite/domain-drive';
+
+type DriveFileListProps = {
+  files: DriveFile[];
+  loading: boolean;
+  error: string;
+  errorDetails: string[];
+  onRefresh: () => void;
+};
+
+function formatFileSize(size: number) {
+  return `${size.toLocaleString()} bytes`;
+}
+
+export function DriveFileList({ files, loading, error, errorDetails, onRefresh }: DriveFileListProps) {
+  return (
+    <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24 }}>
+      <div style={{ display: 'grid', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 24 }}>Browse files</h2>
+            <p style={{ margin: '8px 0 0', color: 'rgba(249, 250, 251, 0.72)' }}>
+              Uploaded files stay in the same in-memory domain list and appear newest-first.
+            </p>
+          </div>
+
+          <Button type="button" onClick={onRefresh} className="bg-white/10 text-white">
+            Refresh files
+          </Button>
+        </div>
+
+        {loading ? (
+          <p role="status" style={{ margin: 0, color: 'rgba(249, 250, 251, 0.72)' }}>
+            Loading files from the server…
+          </p>
+        ) : error ? (
+          <div
+            role="alert"
+            style={{
+              borderRadius: 16,
+              border: '1px solid rgba(248, 113, 113, 0.35)',
+              background: 'rgba(127, 29, 29, 0.3)',
+              padding: 20,
+              display: 'grid',
+              gap: 12,
+            }}
+          >
+            <div style={{ display: 'grid', gap: 8 }}>
+              <h3 style={{ margin: 0, fontSize: 18, color: '#fecaca' }}>Unable to load files</h3>
+              <p style={{ margin: 0, color: '#fecaca' }}>{error}</p>
+            </div>
+
+            {errorDetails.length > 0 ? (
+              <ul style={{ margin: 0, paddingInlineStart: 20, color: '#fecaca' }}>
+                {errorDetails.map((detail) => (
+                  <li key={detail}>{detail}</li>
+                ))}
+              </ul>
+            ) : null}
+
+            <div>
+              <Button type="button" onClick={onRefresh} className="bg-white/10 text-white">
+                Try again
+              </Button>
+            </div>
+          </div>
+        ) : files.length === 0 ? (
+          <div
+            role="status"
+            style={{
+              borderRadius: 16,
+              border: '1px dashed rgba(255, 255, 255, 0.14)',
+              background: 'rgba(255, 255, 255, 0.03)',
+              padding: 20,
+              display: 'grid',
+              gap: 12,
+            }}
+          >
+            <div style={{ display: 'grid', gap: 8 }}>
+              <h3 style={{ margin: 0, fontSize: 18 }}>No files yet</h3>
+              <p style={{ margin: 0, color: 'rgba(249, 250, 251, 0.72)' }}>
+                Upload a file to see its metadata show up in the list immediately.
+              </p>
+            </div>
+
+            <div>
+              <Button type="button" onClick={onRefresh} className="bg-white/10 text-white">
+                Reload files
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div role="list" aria-label="Uploaded files" style={{ display: 'grid', gap: 12 }}>
+            {files.map((file) => (
+              <article
+                key={file.id}
+                role="listitem"
+                aria-label={`File ${file.name}`}
+                style={{
+                  borderRadius: 16,
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: '#0a0a0a',
+                  padding: 16,
+                  display: 'grid',
+                  gap: 8,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'start' }}>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <h3 style={{ margin: 0, fontSize: 18 }}>{file.name}</h3>
+                    <p style={{ margin: 0, color: 'rgba(249, 250, 251, 0.68)', fontSize: 14 }}>{formatFileSize(file.size)}</p>
+                  </div>
+
+                  <span style={{ color: 'rgba(249, 250, 251, 0.5)', fontSize: 12 }}>ID: {file.id}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}

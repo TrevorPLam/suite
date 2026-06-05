@@ -134,7 +134,7 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
   - [x] CORE-01.3 [file: nx.json, packages/*/project.json] Keep Nx metadata aligned with workspace package boundaries and update tags/source roots only where they materially improve project graph clarity.
     - Validate with: `pnpm graph`
 
-### [ ] CAL-01 [status: pending] Calendar event creation should persist and support updates
+### [x] CAL-01 [status: completed] Calendar event creation should persist and support updates
 
 - **Related file paths**
   - `apps/calendar/specs/create-event.spec.md`
@@ -198,17 +198,23 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
   - `pnpm --filter @suite/calendar-web dev`
 
 - **Subtasks**
-  - [ ] CAL-01.1 [file: packages/domain-calendar/src/lib/*, packages/domain-calendar/src/index.ts] Add the persistence-facing event mutation and query primitives needed to save and retrieve event records without introducing recurrence or collaboration.
+  - [x] CAL-01.1 [file: packages/domain-calendar/src/lib/*, packages/domain-calendar/src/index.ts] Add the persistence-facing event mutation and query primitives needed to save and retrieve event records without introducing recurrence or collaboration.
     - Validate with: `pnpm --filter @suite/calendar-api typecheck`
-  - [ ] CAL-01.2 [file: apps/calendar/api/src/index.ts, apps/calendar/api/src/routes/*] Add event edit/update request handling so the API can validate payloads and call the domain mutation without route-level business logic.
+  - [x] CAL-01.2 [file: apps/calendar/api/src/index.ts, apps/calendar/api/src/routes/*] Add event edit/update request handling so the API can validate payloads and call the domain mutation without route-level business logic.
     - Validate with: `pnpm --filter @suite/calendar-api typecheck`
-  - [ ] CAL-01.3 [file: apps/calendar/web/src/App.tsx, apps/calendar/web/src/features/*] Extend the calendar form flow to support editing an existing event and rendering clear server-side validation errors.
+  - [x] CAL-01.3 [file: apps/calendar/web/src/App.tsx, apps/calendar/web/src/features/*] Extend the calendar form flow to support editing an existing event and rendering clear server-side validation errors.
     - Validate with: `pnpm --filter @suite/calendar-web typecheck`
 
-### [ ] CAL-02 [status: pending] Calendar browsing should show useful day and week views
+- **Implementation notes**
+  - Added an in-memory calendar event repository with create, list, get, and update commands plus overlap detection and stable IDs.
+  - Added `GET /api/events` and `PUT /api/events/:id` while keeping validation and error mapping at the API boundary.
+  - Replaced the calendar web starter with a browse-and-edit flow that shows saved events, supports edit mode, and surfaces server validation errors.
+
+### [x] CAL-02 [status: completed] Calendar browsing should show useful day and week views
 
 - **Related file paths**
   - `apps/calendar/specs/create-event.spec.md`
+  - `apps/calendar/specs/browse-calendar.spec.md`
   - `packages/domain-calendar/src/index.ts`
   - `packages/domain-calendar/src/lib/*`
   - `apps/calendar/api/src/index.ts`
@@ -265,14 +271,19 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
   - `pnpm --filter @suite/calendar-api typecheck`
 
 - **Subtasks**
-  - [ ] CAL-02.1 [file: packages/domain-calendar/src/lib/*, packages/domain-calendar/src/index.ts] Add a list/query API for events that supports date-range filtering and returns data ready for day/week views.
+  - [x] CAL-02.1 [file: packages/domain-calendar/src/lib/*, packages/domain-calendar/src/index.ts] Add a list/query API for events that supports date-range filtering and returns data ready for day/week views.
     - Validate with: `pnpm --filter @suite/calendar-api typecheck`
-  - [ ] CAL-02.2 [file: apps/calendar/web/src/features/*, apps/calendar/web/src/App.tsx] Replace the single form-centric screen with a browseable day/week view and a small filter bar.
+  - [x] CAL-02.2 [file: apps/calendar/web/src/features/*, apps/calendar/web/src/App.tsx] Replace the single form-centric screen with a browseable day/week view and a small filter bar.
     - Validate with: `pnpm --filter @suite/calendar-web typecheck`
-  - [ ] CAL-02.3 [file: apps/calendar/web/src/components/*] Add reusable empty-state, error-state, and event-row components so the view stays easy to extend.
+  - [x] CAL-02.3 [file: apps/calendar/web/src/components/*] Add reusable empty-state, error-state, and event-row components so the view stays easy to extend.
     - Validate with: `pnpm --filter @suite/calendar-web typecheck`
 
-### [ ] TASK-01 [status: pending] Tasks should persist creation and completion state
+- **Implementation notes**
+  - Added `listCalendarEventsInRange()` to the calendar domain so range filtering stays deterministic and sorted.
+  - Extended `GET /api/events` to accept optional `startAt` and `endAt` query params and return the matching overlap range.
+  - Added a new `browse-calendar.spec.md` and split the calendar web browse experience into reusable feature/component slices for day and week views.
+
+### [x] TASK-01 [status: completed] Tasks should persist creation and completion state
 
 - **Related file paths**
   - `apps/tasks/specs/create-task.spec.md`
@@ -333,14 +344,19 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
   - `pnpm --filter @suite/tasks-web dev`
 
 - **Subtasks**
-  - [ ] TASK-01.1 [file: packages/domain-tasks/src/lib/*, packages/domain-tasks/src/index.ts] Add task persistence and completion mutation primitives that preserve the current create flow while enabling state transitions.
+  - [x] TASK-01.1 [file: packages/domain-tasks/src/lib/*, packages/domain-tasks/src/index.ts] Add task persistence and completion mutation primitives that preserve the current create flow while enabling state transitions. ✅
     - Validate with: `pnpm --filter @suite/tasks-api typecheck`
-  - [ ] TASK-01.2 [file: apps/tasks/api/src/index.ts, apps/tasks/api/src/routes/*] Add completion update handling so the API can mutate task state without moving business logic into the route layer.
+  - [x] TASK-01.2 [file: apps/tasks/api/src/index.ts, apps/tasks/api/src/routes/*] Add completion update handling so the API can mutate task state without moving business logic into the route layer. ✅
     - Validate with: `pnpm --filter @suite/tasks-api typecheck`
-  - [ ] TASK-01.3 [file: apps/tasks/web/src/App.tsx, apps/tasks/web/src/features/*] Extend the task form/surface to reflect saved completion state and show actionable errors when mutations fail.
+  - [x] TASK-01.3 [file: apps/tasks/web/src/App.tsx, apps/tasks/web/src/features/*] Extend the task form/surface to reflect saved completion state and show actionable errors when mutations fail. ✅
     - Validate with: `pnpm --filter @suite/tasks-web typecheck`
 
-### [ ] TASK-02 [status: pending] Tasks should support editing, archiving, and practical filters
+- **Implementation notes**
+  - Added an in-memory task repository with create, list, get, and completion update primitives.
+  - Added `GET /api/tasks`, `GET /api/tasks/:id`, and `PUT /api/tasks/:id/completion` while keeping validation and domain error mapping in the API layer.
+  - Reworked the tasks web surface into a browse-and-toggle flow that shows saved tasks, supports completion updates, and surfaces readable API errors.
+
+### [x] TASK-02 [status: completed] Tasks should support editing, archiving, and practical filters
 
 - **Related file paths**
   - `apps/tasks/specs/create-task.spec.md`
@@ -400,14 +416,21 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
   - `pnpm --filter @suite/tasks-api typecheck`
 
 - **Subtasks**
-  - [ ] TASK-02.1 [file: packages/domain-tasks/src/lib/*, packages/domain-tasks/src/index.ts] Add list/query helpers that can support active/completed/archived filters without introducing board or dependency complexity.
+  - [x] TASK-02.1 [file: packages/domain-tasks/src/lib/*, packages/domain-tasks/src/index.ts] Add list/query helpers that can support active/completed/archived filters without introducing board or dependency complexity. ✅
     - Validate with: `pnpm --filter @suite/tasks-api typecheck`
-  - [ ] TASK-02.2 [file: apps/tasks/web/src/features/*, apps/tasks/web/src/App.tsx] Add filter chips or tabs and render a task list view that updates without reloading the page.
+  - [x] TASK-02.2 [file: apps/tasks/web/src/features/*, apps/tasks/web/src/App.tsx] Add filter chips or tabs and render a task list view that updates without reloading the page. ✅
     - Validate with: `pnpm --filter @suite/tasks-web typecheck`
-  - [ ] TASK-02.3 [file: apps/tasks/web/src/components/*] Add reusable task-row and empty-state components so editing and filtering stay modular.
+  - [x] TASK-02.3 [file: apps/tasks/web/src/components/*] Add reusable task-row and empty-state components so editing and filtering stay modular. ✅
     - Validate with: `pnpm --filter @suite/tasks-web typecheck`
 
-### [ ] DRIVE-01 [status: pending] Drive should persist uploads and expose a browsable file list
+- **Implementation notes**
+  - Added `archived` field to `TaskItem` and created `filterTasks()` helper with support for all/active/completed/archived views.
+  - Added domain mutations: `updateTask()`, `archiveTask()`, and `deleteTask()` with proper validation and error handling.
+  - Added API routes: `PUT /api/tasks/:id` for edit, `PUT /api/tasks/:id/archive` for archive, and `DELETE /api/tasks/:id` for delete.
+  - Extended the tasks web app with filter chips (all/active/completed/archived) and client-side filtering that updates without page reload.
+  - Created reusable `TaskRow` and `EmptyState` components in `apps/tasks/web/src/components/` for modular editing and filtering.
+
+### [x] DRIVE-01 [status: completed] Drive should persist uploads and expose a browsable file list
 
 - **Related file paths**
   - `apps/drive/specs/upload-file.spec.md`
@@ -469,12 +492,17 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
   - `pnpm --filter @suite/drive-web dev`
 
 - **Subtasks**
-  - [ ] DRIVE-01.1 [file: packages/domain-drive/src/lib/*, packages/domain-drive/src/index.ts] Add file persistence and list helpers so uploaded file records can be saved and queried without introducing folders or sharing.
+  - [x] DRIVE-01.1 [file: packages/domain-drive/src/lib/*, packages/domain-drive/src/index.ts] Add file persistence and list helpers so uploaded file records can be saved and queried without introducing folders or sharing.
     - Validate with: `pnpm --filter @suite/drive-api typecheck`
-  - [ ] DRIVE-01.2 [file: apps/drive/api/src/index.ts, apps/drive/api/src/routes/*] Add file listing support to the API so the upload response and browse response share the same domain shape.
+  - [x] DRIVE-01.2 [file: apps/drive/api/src/index.ts, apps/drive/api/src/routes/*] Add file listing support to the API so the upload response and browse response share the same domain shape.
     - Validate with: `pnpm --filter @suite/drive-api typecheck`
-  - [ ] DRIVE-01.3 [file: apps/drive/web/src/App.tsx, apps/drive/web/src/features/*] Extend the upload screen into a browsable file list that shows the uploaded metadata immediately after a successful mutation.
+  - [x] DRIVE-01.3 [file: apps/drive/web/src/App.tsx, apps/drive/web/src/features/*] Extend the upload screen into a browsable file list that shows the uploaded metadata immediately after a successful mutation.
     - Validate with: `pnpm --filter @suite/drive-web typecheck`
+
+- **Implementation notes**
+  - Added an in-memory drive file store with stable IDs and a list helper that returns newest-first records.
+  - Added `GET /api/files` so the API can browse the same `DriveFile` records used by uploads.
+  - Reworked the drive web surface into a two-panel upload-and-browse flow that loads files on mount and inserts newly uploaded files immediately.
 
 ### [ ] DRIVE-02 [status: pending] Drive should support rename, delete, and useful file metadata actions
 
@@ -543,6 +571,60 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
     - Validate with: `pnpm --filter @suite/drive-api typecheck`
   - [ ] DRIVE-02.3 [file: apps/drive/web/src/features/*, apps/drive/web/src/components/*] Add file action controls and a details or metadata panel so users can manage the file list without leaving the screen.
     - Validate with: `pnpm --filter @suite/drive-web typecheck`
+
+### [ ] WEB-01 [status: pending] Resolve Tailwind CSS package resolution so web production builds succeed
+
+- **Related file paths**
+  - `packages/ui/package.json`
+  - `packages/ui/src/styles/globals.css`
+  - `apps/*/web/src/styles.css`
+  - `apps/*/web/package.json`
+
+- **Definition of done**
+  - The shared UI stylesheet can resolve `@import "tailwindcss"` during production builds.
+  - Web app production builds complete without CSS import resolution errors.
+  - The fix is applied in the shared package boundary, not duplicated per app.
+
+- **BDD scenarios**
+  - Given a web app that imports `@suite/ui/styles/globals.css`, when I run the production build, then Tailwind CSS resolves and the bundle completes successfully.
+
+- **Out of scope**
+  - Rewriting the visual system.
+  - App-specific CSS forks.
+  - Any unrelated runtime behavior changes.
+
+- **Rules to follow**
+  - Keep the fix in the shared UI boundary if possible.
+  - Prefer the smallest manifest change that restores buildability.
+  - Avoid duplicating Tailwind setup in each web app.
+
+- **Advanced coding pattern**
+  - Shared-package dependency ownership for cross-app CSS toolchain requirements.
+
+- **Anti-patterns**
+  - Per-app Tailwind dependency duplication.
+  - Leaving shared CSS imports unresolved in package manifests.
+
+- **Imports/exports**
+  - Keep the shared stylesheet exported from `packages/ui`.
+  - Ensure web app styles continue importing the shared stylesheet directly.
+
+- **Depends on**
+  - None
+
+- **Blocks**
+  - None
+
+- **Validation commands**
+  - `pnpm --filter @suite/drive-web build`
+
+- **Subtasks**
+  - [ ] WEB-01.1 [file: packages/ui/package.json] Add the missing Tailwind CSS dependency at the shared UI package boundary.
+    - Validate with: `pnpm --filter @suite/drive-web build`
+  - [ ] WEB-01.2 [file: packages/ui/src/styles/globals.css, apps/*/web/src/styles.css] Confirm the shared stylesheet remains the single source of truth for web app styling imports.
+    - Validate with: `pnpm --filter @suite/drive-web build`
+  - [ ] WEB-01.3 [file: apps/*/web/package.json] Confirm web packages do not need duplicate Tailwind setup once the shared dependency is present.
+    - Validate with: `pnpm --filter @suite/drive-web build`
 
 ### [ ] QA-01 [status: pending] Add targeted tests and acceptance checks for the MVP slices
 
@@ -629,6 +711,7 @@ This document defines the remaining work to turn Calendar, Tasks, and Drive into
 6. DRIVE-01
 7. DRIVE-02
 8. QA-01
+9. WEB-01
 
 ## Editing notes
 

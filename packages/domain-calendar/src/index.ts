@@ -1,27 +1,26 @@
-export type CalendarEvent = {
-  id: string;
-  title: string;
-  startAt: string;
-  endAt: string;
-};
+export {
+  CalendarEventError,
+  createCalendarEvent,
+  getCalendarEvent,
+  listCalendarEvents,
+  listCalendarEventsInRange,
+  updateCalendarEvent,
+} from './lib/calendar-events.js';
 
-export type CreateCalendarEventInput = {
-  title: string;
-  startAt: string;
-  endAt: string;
-};
+export type {
+  CalendarEvent,
+  CalendarEventErrorCode,
+  CalendarEventRange,
+  CreateCalendarEventInput,
+  UpdateCalendarEventInput,
+} from './lib/calendar-events.js';
+
+import { listCalendarEvents } from './lib/calendar-events.js';
 
 export function getCalendarOverview() {
   return {
     name: 'Calendar',
     description: 'Starter calendar domain package',
-    events: [] as CalendarEvent[],
-  };
-}
-
-export function createCalendarEvent(input: CreateCalendarEventInput): CalendarEvent {
-  return {
-    id: crypto.randomUUID(),
-    ...input,
+    events: listCalendarEvents(),
   };
 }

@@ -1,26 +1,31 @@
-export type TaskItem = {
-  id: string;
-  title: string;
-  completed: boolean;
-};
+export {
+  TaskError,
+  createTask,
+  getTask,
+  listTasks,
+  updateTaskCompletion,
+  updateTask,
+  archiveTask,
+  deleteTask,
+  filterTasks,
+} from './lib/tasks.js';
 
-export type CreateTaskInput = {
-  title: string;
-  completed?: boolean;
-};
+export type {
+  CreateTaskInput,
+  TaskErrorCode,
+  TaskItem,
+  UpdateTaskCompletionInput,
+  UpdateTaskInput,
+  ArchiveTaskInput,
+  TaskFilter,
+} from './lib/tasks.js';
+
+import { listTasks } from './lib/tasks.js';
 
 export function getTasksOverview() {
   return {
     name: 'Tasks',
     description: 'Starter tasks domain package',
-    tasks: [] as TaskItem[],
-  };
-}
-
-export function createTask(input: CreateTaskInput): TaskItem {
-  return {
-    id: crypto.randomUUID(),
-    title: input.title,
-    completed: input.completed ?? false,
+    tasks: listTasks(),
   };
 }

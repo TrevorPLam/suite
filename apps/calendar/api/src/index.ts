@@ -1,7 +1,17 @@
 import { Hono } from 'hono';
-import { createCalendarEvent, type CreateCalendarEventInput } from '@suite/domain-calendar';
+import {
+  CalendarEventError,
+  createCalendarEvent,
+  listCalendarEvents,
+  listCalendarEventsInRange,
+  updateCalendarEvent,
+  type CalendarEventRange,
+  type CreateCalendarEventInput,
+} from '@suite/domain-calendar';
 
 const app = new Hono();
+
+type CalendarResponseStatus = 400 | 404 | 409 | 500;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -9,6 +19,28 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isValidIsoTimestamp(value: unknown): value is string {
   return typeof value === 'string' && !Number.isNaN(Date.parse(value));
+}
+
+function readEventRange(searchParams: Record<string, string>): CalendarEventRange | null {
+  const startAt = searchParams.startAt;
+  const endAt = searchParams.endAt;
+
+  if (startAt === undefined && endAt === undefined) {
+    return null;
+  }
+
+  if (!isValidIsoTimestamp(startAt) || !isValidIsoTimestamp(endAt)) {
+    return null;
+  }
+
+  if (Date.parse(endAt) <= Date.parse(startAt)) {
+    return null;
+  }
+
+  return {
+    startAt,
+    endAt,
+  };
 }
 
 function parseCreateCalendarEventBody(body: unknown): CreateCalendarEventInput | null {
@@ -33,27 +65,154 @@ function parseCreateCalendarEventBody(body: unknown): CreateCalendarEventInput |
   };
 }
 
+function parseEventBody(body: unknown): CreateCalendarEventInput | null {
+  const payload = parseCreateCalendarEventBody(body);
+
+  if (!payload) {
+    return null;
+  }
+
+  return payload;
+}
+
+function readCalendarError(error: unknown): { status: CalendarResponseStatus; body: Record<string, unknown> } {
+  if (error instanceof CalendarEventError) {
+    if (error.code === 'conflict_error') {
+      return {
+        status: 409,
+        body: {
+          error: error.message,
+          details: error.details,
+        },
+      };
+    }
+
+    if (error.code === 'not_found_error') {
+      return {
+        status: 404,
+        body: {
+          error: error.message,
+          details: error.details,
+        },
+      };
+    }
+
+    return {
+      status: 400,
+      body: {
+        error: error.message,
+        details: error.details,
+      },
+    };
+  }
+
+  return {
+    status: 500,
+    body: {
+      error: 'Unable to process calendar event',
+    },
+  };
+}
+
+async function readRequestBody(c: { req: { json: () => Promise<unknown> } }) {
+  try {
+    return await c.req.json();
+  } catch {
+    return undefined;
+  }
+}
+
 app.get('/api/health', (c) => c.json({ ok: true, app: 'calendar' }));
 
-app.post('/api/events', async (c) => {
-  let body: unknown;
+app.get('/api/events', (c) => {
+  const range = readEventRange(c.req.query());
 
-  try {
-    body = await c.req.json();
-  } catch {
+  if (range === null) {
+    const hasStartAt = c.req.query('startAt') !== undefined;
+    const hasEndAt = c.req.query('endAt') !== undefined;
+
+    if (hasStartAt || hasEndAt) {
+      return c.json(
+        {
+          error: 'Invalid event range',
+          expected: ['startAt', 'endAt'],
+        },
+        400,
+      );
+    }
+
+    return c.json({ events: listCalendarEvents() });
+  }
+
+  return c.json({ events: listCalendarEventsInRange(range) });
+});
+
+app.post('/api/events', async (c) => {
+  const body = await readRequestBody(c);
+
+  if (body === undefined) {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
   const payload = parseCreateCalendarEventBody(body);
 
   if (!payload) {
-    return c.json({
-      error: 'Invalid event payload',
-      expected: ['title', 'startAt', 'endAt'],
-    }, 400);
+    return c.json(
+      {
+        error: 'Invalid event payload',
+        expected: ['title', 'startAt', 'endAt'],
+      },
+      400,
+    );
   }
 
-  return c.json(createCalendarEvent(payload), 201);
+  try {
+    return c.json({ event: createCalendarEvent(payload) }, 201);
+  } catch (error) {
+    const response = readCalendarError(error);
+
+    return c.json(response.body, response.status);
+  }
+});
+
+app.put('/api/events/:id', async (c) => {
+  const id = c.req.param('id').trim();
+
+  if (!isNonEmptyString(id)) {
+    return c.json(
+      {
+        error: 'Invalid event id',
+        expected: ['id'],
+      },
+      400,
+    );
+  }
+
+  const body = await readRequestBody(c);
+
+  if (body === undefined) {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const payload = parseEventBody(body);
+
+  if (!payload) {
+    return c.json(
+      {
+        error: 'Invalid event payload',
+        expected: ['title', 'startAt', 'endAt'],
+      },
+      400,
+    );
+  }
+
+  try {
+    return c.json({ event: updateCalendarEvent(id, payload) });
+  } catch (error) {
+    const response = readCalendarError(error);
+
+    return c.json(response.body, response.status);
+  }
 });
 
 export default app;

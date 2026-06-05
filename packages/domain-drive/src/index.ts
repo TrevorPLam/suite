@@ -9,17 +9,39 @@ export type UploadDriveFileInput = {
   size: number;
 };
 
+const driveFiles: DriveFile[] = [];
+
+function createDriveFileId() {
+  const randomUUID = globalThis.crypto?.randomUUID;
+
+  if (typeof randomUUID === 'function') {
+    return randomUUID.call(globalThis.crypto);
+  }
+
+  return `drive_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function listDriveFiles(): DriveFile[] {
+  return [...driveFiles]
+    .reverse()
+    .map((file) => ({ ...file }));
+}
+
 export function getDriveOverview() {
   return {
     name: 'Drive',
     description: 'Starter drive domain package',
-    files: [] as DriveFile[],
+    files: listDriveFiles(),
   };
 }
 
 export function uploadDriveFile(input: UploadDriveFileInput): DriveFile {
-  return {
-    id: crypto.randomUUID(),
+  const file: DriveFile = {
+    id: createDriveFileId(),
     ...input,
   };
+
+  driveFiles.push(file);
+
+  return { ...file };
 }

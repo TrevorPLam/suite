@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { type UploadDriveFileInput, uploadDriveFile } from '@suite/domain-drive';
+import { listDriveFiles, type UploadDriveFileInput, uploadDriveFile } from '@suite/domain-drive';
 
 const app = new Hono();
 
@@ -25,6 +25,8 @@ function parseUploadDriveFileBody(body: unknown): UploadDriveFileInput | null {
 }
 
 app.get('/api/health', (c) => c.json({ ok: true, app: 'drive' }));
+
+app.get('/api/files', (c) => c.json({ files: listDriveFiles() }));
 
 app.post('/api/files', async (c) => {
   let body: unknown;
