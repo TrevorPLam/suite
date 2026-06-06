@@ -1,15 +1,23 @@
 import type { QueryRepository } from '@suite/db';
 
+export type TaskPriority = 'low' | 'medium' | 'high';
+
 export type TaskItem = {
   id: string;
   title: string;
   completed: boolean;
   archived: boolean;
+  dueDate: string | null;
+  priority: TaskPriority;
+  tags: string[]
 };
 
 export type CreateTaskInput = {
   title: string;
   completed?: boolean;
+  dueDate?: string | null;
+  priority?: TaskPriority;
+  tags?: string[];
 };
 
 export type UpdateTaskCompletionInput = {
@@ -17,7 +25,10 @@ export type UpdateTaskCompletionInput = {
 };
 
 export type UpdateTaskInput = {
-  title: string;
+  title?: string;
+  dueDate?: string | null;
+  priority?: TaskPriority;
+  tags?: string[];
 };
 
 export type ArchiveTaskInput = {
@@ -25,6 +36,15 @@ export type ArchiveTaskInput = {
 };
 
 export type TaskErrorCode = 'validation_error' | 'not_found_error';
+
+export type SearchTasksInput = {
+  query?: string;
+  tags?: string[];
+};
+
+export type BatchOperationInput = {
+  taskIds: string[];
+};
 
 export class TaskError extends Error {
   constructor(
@@ -145,6 +165,84 @@ function normalizeTaskTitle(title: unknown): string {
   return title.trim();
 }
 
+function validateDueDate(dueDate: unknown): string | null {
+  if (dueDate === undefined || dueDate === null) {
+    return null;
+  }
+
+  if (typeof dueDate !== 'string') {
+    throw new TaskError('Invalid task payload', 'validation_error', [
+      'dueDate must be a string',
+    ]);
+  }
+
+  const trimmed = dueDate.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  // Basic ISO 8601 validation (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)
+  const isoRegex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/;
+  if (!isoRegex.test(trimmed)) {
+    throw new TaskError('Invalid task payload', 'validation_error', [
+      'dueDate must be a valid ISO 8601 timestamp',
+    ]);
+  }
+
+  return trimmed;
+}
+
+function validatePriority(priority: unknown): TaskPriority {
+  if (priority === undefined || priority === null) {
+    return 'medium'; // default
+  }
+
+  if (typeof priority !== 'string') {
+    throw new TaskError('Invalid task payload', 'validation_error', [
+      'priority must be a string',
+    ]);
+  }
+
+  const validPriorities: TaskPriority[] = ['low', 'medium', 'high'];
+  if (!validPriorities.includes(priority as TaskPriority)) {
+    throw new TaskError('Invalid task payload', 'validation_error', [
+      'priority must be one of: low, medium, high',
+    ]);
+  }
+
+  return priority as TaskPriority;
+}
+
+function validateTags(tags: unknown): string[] {
+  if (tags === undefined || tags === null) {
+    return [];
+  }
+
+  if (!Array.isArray(tags)) {
+    throw new TaskError('Invalid task payload', 'validation_error', [
+      'tags must be an array',
+    ]);
+  }
+
+  const validatedTags: string[] = [];
+  for (const tag of tags) {
+    if (typeof tag !== 'string') {
+      throw new TaskError('Invalid task payload', 'validation_error', [
+        'each tag must be a string',
+      ]);
+    }
+    const trimmed = tag.trim();
+    if (trimmed.length === 0) {
+      throw new TaskError('Invalid task payload', 'validation_error', [
+        'tags cannot contain empty strings',
+      ]);
+    }
+    validatedTags.push(trimmed);
+  }
+
+  return validatedTags;
+}
+
 export function resetTasks(): void {
   if (currentRepository instanceof InMemoryTaskRepository) {
     (currentRepository as InMemoryTaskRepository).clear();
@@ -170,10 +268,13 @@ export async function getTask(id: string): Promise<TaskItem | null> {
 }
 
 export async function createTask(input: CreateTaskInput): Promise<TaskItem> {
-  const taskInput = {
+  const taskInput: Omit<TaskItem, 'id'> = {
     title: normalizeTaskTitle(input.title),
     completed: input.completed ?? false,
     archived: false,
+    dueDate: validateDueDate(input.dueDate),
+    priority: validatePriority(input.priority),
+    tags: validateTags(input.tags),
   };
 
   const created = await currentRepository.create(taskInput);
@@ -218,7 +319,25 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
     ]);
   }
 
-  const updated = await currentRepository.update(id, { title: normalizeTaskTitle(input.title) });
+  const updates: Partial<TaskItem> = {};
+
+  if (input.title !== undefined) {
+    updates.title = normalizeTaskTitle(input.title);
+  }
+
+  if (input.dueDate !== undefined) {
+    updates.dueDate = validateDueDate(input.dueDate);
+  }
+
+  if (input.priority !== undefined) {
+    updates.priority = validatePriority(input.priority);
+  }
+
+  if (input.tags !== undefined) {
+    updates.tags = validateTags(input.tags);
+  }
+
+  const updated = await currentRepository.update(id, updates);
 
   if (!updated) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -301,4 +420,62 @@ export async function filterTasks(filter: TaskFilter): Promise<TaskItem[]> {
     default:
       return allTasks.filter((task) => !task.archived);
   }
+}
+
+export async function searchTasks(input: SearchTasksInput): Promise<TaskItem[]> {
+  const allTasks = await listTasks();
+  
+  return allTasks.filter((task) => {
+    // Filter by query (title search)
+    if (input.query) {
+      const query = input.query.toLowerCase();
+      const titleMatch = task.title.toLowerCase().includes(query);
+      if (!titleMatch) {
+        return false;
+      }
+    }
+    
+    // Filter by tags (must match all provided tags)
+    if (input.tags && input.tags.length > 0) {
+      const hasAllTags = input.tags.every((tag) => 
+        task.tags.some((taskTag) => taskTag === tag)
+      );
+      if (!hasAllTags) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+}
+
+export async function batchComplete(input: BatchOperationInput): Promise<TaskItem[]> {
+  const results: TaskItem[] = [];
+  
+  for (const taskId of input.taskIds) {
+    try {
+      const updated = await updateTaskCompletion(taskId, { completed: true });
+      results.push(updated);
+    } catch (error) {
+      // Continue with other tasks even if one fails
+      // In a production system, we might want to collect errors
+    }
+  }
+  
+  return results;
+}
+
+export async function batchArchive(input: BatchOperationInput): Promise<TaskItem[]> {
+  const results: TaskItem[] = [];
+  
+  for (const taskId of input.taskIds) {
+    try {
+      const updated = await archiveTask(taskId, { archived: true });
+      results.push(updated);
+    } catch (error) {
+      // Continue with other tasks even if one fails
+    }
+  }
+  
+  return results;
 }

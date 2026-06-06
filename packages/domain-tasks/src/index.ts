@@ -8,6 +8,9 @@ export {
   archiveTask,
   deleteTask,
   filterTasks,
+  searchTasks,
+  batchComplete,
+  batchArchive,
   resetTasks,
   resetTasksDB,
   setTaskRepository,
@@ -18,11 +21,14 @@ export type {
   CreateTaskInput,
   TaskErrorCode,
   TaskItem,
+  TaskPriority,
   UpdateTaskCompletionInput,
   UpdateTaskInput,
   ArchiveTaskInput,
   TaskFilter,
   TaskRepository,
+  SearchTasksInput,
+  BatchOperationInput,
 } from './lib/tasks.js';
 
 import { listTasks } from './lib/tasks.js';

@@ -8,12 +8,17 @@ import {
   archiveTask,
   deleteTask,
   filterTasks,
+  searchTasks,
+  batchComplete,
+  batchArchive,
   resetTasks,
   TaskError,
   type CreateTaskInput,
   type UpdateTaskCompletionInput,
   type UpdateTaskInput,
   type ArchiveTaskInput,
+  type SearchTasksInput,
+  type BatchOperationInput,
 } from './tasks.js';
 
 describe('tasks - create', () => {
@@ -408,5 +413,390 @@ describe('tasks - query', () => {
 
     expect(tasks).toHaveLength(1);
     expect(tasks[0]?.id).toBe(firstTask.id);
+  });
+});
+
+describe('tasks - due dates', () => {
+  beforeEach(() => {
+    resetTasks();
+  });
+
+  it('should create a task with a due date', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      dueDate: '2026-06-15T00:00:00Z',
+    };
+
+    const task = await createTask(input);
+
+    expect(task.dueDate).toBe('2026-06-15T00:00:00Z');
+  });
+
+  it('should create a task without a due date', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+    };
+
+    const task = await createTask(input);
+
+    expect(task.dueDate).toBeNull();
+  });
+
+  it('should update a task with a due date', async () => {
+    const createInput: CreateTaskInput = {
+      title: 'Buy groceries',
+    };
+
+    const task = await createTask(createInput);
+
+    const updateInput: UpdateTaskInput = {
+      dueDate: '2026-06-15T00:00:00Z',
+    };
+
+    const updated = await updateTask(task.id, updateInput);
+
+    expect(updated.dueDate).toBe('2026-06-15T00:00:00Z');
+  });
+
+  it('should remove a due date by setting to empty string', async () => {
+    const createInput: CreateTaskInput = {
+      title: 'Buy groceries',
+      dueDate: '2026-06-15T00:00:00Z',
+    };
+
+    const task = await createTask(createInput);
+
+    const updateInput: UpdateTaskInput = {
+      dueDate: '',
+    };
+
+    const updated = await updateTask(task.id, updateInput);
+
+    expect(updated.dueDate).toBeNull();
+  });
+
+  it('should reject invalid due date format', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      dueDate: 'invalid-date',
+    };
+
+    await expect(createTask(input)).rejects.toThrow(TaskError);
+  });
+
+  it('should reject non-string due date', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      dueDate: 123 as any,
+    };
+
+    await expect(createTask(input)).rejects.toThrow(TaskError);
+  });
+});
+
+describe('tasks - priorities', () => {
+  beforeEach(() => {
+    resetTasks();
+  });
+
+  it('should create a task with high priority', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      priority: 'high',
+    };
+
+    const task = await createTask(input);
+
+    expect(task.priority).toBe('high');
+  });
+
+  it('should default priority to medium', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+    };
+
+    const task = await createTask(input);
+
+    expect(task.priority).toBe('medium');
+  });
+
+  it('should create a task with low priority', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      priority: 'low',
+    };
+
+    const task = await createTask(input);
+
+    expect(task.priority).toBe('low');
+  });
+
+  it('should update task priority', async () => {
+    const createInput: CreateTaskInput = {
+      title: 'Buy groceries',
+    };
+
+    const task = await createTask(createInput);
+
+    const updateInput: UpdateTaskInput = {
+      priority: 'high',
+    };
+
+    const updated = await updateTask(task.id, updateInput);
+
+    expect(updated.priority).toBe('high');
+  });
+
+  it('should reject invalid priority', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      priority: 'urgent' as any,
+    };
+
+    await expect(createTask(input)).rejects.toThrow(TaskError);
+  });
+
+  it('should reject non-string priority', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      priority: 1 as any,
+    };
+
+    await expect(createTask(input)).rejects.toThrow(TaskError);
+  });
+});
+
+describe('tasks - tags', () => {
+  beforeEach(() => {
+    resetTasks();
+  });
+
+  it('should create a task with tags', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      tags: ['shopping', 'home'],
+    };
+
+    const task = await createTask(input);
+
+    expect(task.tags).toEqual(['shopping', 'home']);
+  });
+
+  it('should default tags to empty array', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+    };
+
+    const task = await createTask(input);
+
+    expect(task.tags).toEqual([]);
+  });
+
+  it('should trim tag whitespace', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      tags: ['  shopping  ', '  home  '],
+    };
+
+    const task = await createTask(input);
+
+    expect(task.tags).toEqual(['shopping', 'home']);
+  });
+
+  it('should update task tags', async () => {
+    const createInput: CreateTaskInput = {
+      title: 'Buy groceries',
+      tags: ['shopping'],
+    };
+
+    const task = await createTask(createInput);
+
+    const updateInput: UpdateTaskInput = {
+      tags: ['shopping', 'urgent'],
+    };
+
+    const updated = await updateTask(task.id, updateInput);
+
+    expect(updated.tags).toEqual(['shopping', 'urgent']);
+  });
+
+  it('should reject non-array tags', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      tags: 'shopping' as any,
+    };
+
+    await expect(createTask(input)).rejects.toThrow(TaskError);
+  });
+
+  it('should reject non-string tag', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      tags: [123] as any,
+    };
+
+    await expect(createTask(input)).rejects.toThrow(TaskError);
+  });
+
+  it('should reject empty tag string', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      tags: [''],
+    };
+
+    await expect(createTask(input)).rejects.toThrow(TaskError);
+  });
+});
+
+describe('tasks - search', () => {
+  beforeEach(() => {
+    resetTasks();
+  });
+
+  it('should search tasks by query', async () => {
+    await createTask({ title: 'Buy groceries' });
+    await createTask({ title: 'Pay bills' });
+    await createTask({ title: 'Walk the dog' });
+
+    const input: SearchTasksInput = {
+      query: 'buy',
+    };
+
+    const results = await searchTasks(input);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.title).toBe('Buy groceries');
+  });
+
+  it('should search tasks case-insensitively', async () => {
+    await createTask({ title: 'Buy groceries' });
+    await createTask({ title: 'Pay bills' });
+
+    const input: SearchTasksInput = {
+      query: 'BUY',
+    };
+
+    const results = await searchTasks(input);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.title).toBe('Buy groceries');
+  });
+
+  it('should search tasks by tags', async () => {
+    await createTask({ title: 'Buy groceries', tags: ['shopping', 'home'] });
+    await createTask({ title: 'Pay bills', tags: ['finance'] });
+    await createTask({ title: 'Walk the dog', tags: ['home'] });
+
+    const input: SearchTasksInput = {
+      tags: ['shopping'],
+    };
+
+    const results = await searchTasks(input);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.title).toBe('Buy groceries');
+  });
+
+  it('should search tasks by multiple tags (AND logic)', async () => {
+    await createTask({ title: 'Buy groceries', tags: ['shopping', 'home'] });
+    await createTask({ title: 'Pay bills', tags: ['finance'] });
+    await createTask({ title: 'Walk the dog', tags: ['home'] });
+
+    const input: SearchTasksInput = {
+      tags: ['shopping', 'home'],
+    };
+
+    const results = await searchTasks(input);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.title).toBe('Buy groceries');
+  });
+
+  it('should search tasks by query and tags', async () => {
+    await createTask({ title: 'Buy groceries', tags: ['shopping'] });
+    await createTask({ title: 'Buy milk', tags: ['shopping'] });
+    await createTask({ title: 'Pay bills', tags: ['finance'] });
+
+    const input: SearchTasksInput = {
+      query: 'buy',
+      tags: ['shopping'],
+    };
+
+    const results = await searchTasks(input);
+
+    expect(results).toHaveLength(2);
+  });
+
+  it('should return all tasks when no filters provided', async () => {
+    await createTask({ title: 'Buy groceries' });
+    await createTask({ title: 'Pay bills' });
+
+    const input: SearchTasksInput = {};
+
+    const results = await searchTasks(input);
+
+    expect(results).toHaveLength(2);
+  });
+});
+
+describe('tasks - batch operations', () => {
+  beforeEach(() => {
+    resetTasks();
+  });
+
+  it('should batch complete multiple tasks', async () => {
+    const task1 = await createTask({ title: 'First task' });
+    const task2 = await createTask({ title: 'Second task' });
+    const task3 = await createTask({ title: 'Third task' });
+
+    const input: BatchOperationInput = {
+      taskIds: [task1.id, task2.id],
+    };
+
+    const results = await batchComplete(input);
+
+    expect(results).toHaveLength(2);
+    expect(results[0]?.completed).toBe(true);
+    expect(results[1]?.completed).toBe(true);
+  });
+
+  it('should batch archive multiple tasks', async () => {
+    const task1 = await createTask({ title: 'First task' });
+    const task2 = await createTask({ title: 'Second task' });
+    const task3 = await createTask({ title: 'Third task' });
+
+    const input: BatchOperationInput = {
+      taskIds: [task1.id, task2.id],
+    };
+
+    const results = await batchArchive(input);
+
+    expect(results).toHaveLength(2);
+    expect(results[0]?.archived).toBe(true);
+    expect(results[1]?.archived).toBe(true);
+  });
+
+  it('should handle partial failures in batch complete', async () => {
+    const task1 = await createTask({ title: 'First task' });
+    const task2 = await createTask({ title: 'Second task' });
+
+    const input: BatchOperationInput = {
+      taskIds: [task1.id, 'non-existent-id', task2.id],
+    };
+
+    const results = await batchComplete(input);
+
+    // Should complete the valid tasks and skip the invalid one
+    expect(results.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('should handle empty task IDs array', async () => {
+    const input: BatchOperationInput = {
+      taskIds: [],
+    };
+
+    const results = await batchComplete(input);
+
+    expect(results).toHaveLength(0);
   });
 });

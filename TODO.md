@@ -884,9 +884,9 @@ export type { DriveFile, UploadDriveFileInput, RenameDriveFileInput, DriveError 
 
 ## Phase 3: Tasks App Production Readiness
 
-### [ ] TASK-01: Add missing features to tasks domain
+### [x] TASK-01: Add missing features to tasks domain
 
-**Status**: Not started  
+**Status**: Complete  
 **Related Files**: packages/domain-tasks/src/lib/tasks.ts, apps/tasks/specs/
 
 **Definition of Done**:
@@ -942,45 +942,63 @@ export type { TaskItem, CreateTaskInput, UpdateTaskInput, TaskPriority, TaskFilt
 
 **Subtasks**:
 
-#### TASK-01.1: Write spec for task due dates
+#### ✅ TASK-01.1: Write spec for task due dates
 **Target**: apps/tasks/specs/task-due-dates.spec.md
 **Action**: Write spec describing due date validation, filtering, and sorting behavior.
 **Validate**: Manual review
 
-#### TASK-01.2: Implement task due dates
+#### ✅ TASK-01.2: Implement task due dates
 **Target**: packages/domain-tasks/src/lib/tasks.ts
 **Action**: Add dueDate field to TaskItem, add validation, update create/update functions.
 **Validate**: `pnpm --filter @suite/domain-tasks test`
 
-#### TASK-01.3: Write spec for task priorities
+#### ✅ TASK-01.3: Write spec for task priorities
 **Target**: apps/tasks/specs/task-priorities.spec.md
 **Action**: Write spec describing priority levels, default priority, and sorting behavior.
 **Validate**: Manual review
 
-#### TASK-01.4: Implement task priorities
+#### ✅ TASK-01.4: Implement task priorities
 **Target**: packages/domain-tasks/src/lib/tasks.ts
 **Action**: Add priority field to TaskItem, add validation, update sorting logic.
 **Validate**: `pnpm --filter @suite/domain-tasks test`
 
-#### TASK-01.5: Write spec for task tags
+#### ✅ TASK-01.5: Write spec for task tags
 **Target**: apps/tasks/specs/task-tags.spec.md
 **Action**: Write spec describing tag management, tag search, and tag filtering.
 **Validate**: Manual review
 
-#### TASK-01.6: Implement task tags
+#### ✅ TASK-01.6: Implement task tags
 **Target**: packages/domain-tasks/src/lib/tasks.ts
 **Action**: Add tags field to TaskItem, implement tag management functions.
 **Validate**: `pnpm --filter @suite/domain-tasks test`
 
-#### TASK-01.7: Implement task search
+#### ✅ TASK-01.7: Implement task search
 **Target**: packages/domain-tasks/src/lib/tasks.ts
 **Action**: Add searchTasks function that filters by title and tags.
 **Validate**: `pnpm --filter @suite/domain-tasks test`
 
-#### TASK-01.8: Implement batch operations
+#### ✅ TASK-01.8: Implement batch operations
 **Target**: packages/domain-tasks/src/lib/tasks.ts
 **Action**: Add batchComplete and batchArchive functions for bulk operations.
 **Validate**: `pnpm --filter @suite/domain-tasks test`
+
+**Implementation Notes**:
+- Added TaskPriority type with 'low' | 'medium' | 'high' values
+- Added dueDate field as string | null (nullable for explicit removal)
+- Added priority field with default 'medium'
+- Added tags field as string[] with default empty array
+- Implemented validateDueDate with ISO 8601 validation
+- Implemented validatePriority with enum validation
+- Implemented validateTags with array and string validation
+- Added searchTasks function with query (title) and tags filtering (AND logic)
+- Added batchComplete and batchArchive functions for bulk operations
+- Updated UpdateTaskInput to make all fields optional
+- Exported new types: TaskPriority, SearchTasksInput, BatchOperationInput
+- Exported new functions: searchTasks, batchComplete, batchArchive
+- All 57 tests passing (28 original + 29 new)
+- Typecheck passing
+- Followed spec-first development: wrote 3 specs before implementation
+- Maintained backward compatibility with existing API
 
 ---
 
