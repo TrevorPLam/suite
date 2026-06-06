@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { axe } from 'vitest-axe';
 import * as React from 'react';
 import {
   Button,
@@ -132,6 +133,40 @@ describe('UI Components', () => {
 
     it('excludes falsy conditional classes from output', () => {
       expect(cn('class1', false && 'class2', 'class3')).toBe('class1 class3');
+    });
+  });
+
+  describe('Integration Accessibility', () => {
+    it('should have no accessibility violations when rendering all components together', async () => {
+      const { container } = render(
+        <div>
+          <Button>Click me</Button>
+          <Input placeholder="Enter text" />
+          <Dialog open>
+            <DialogContent>
+              <DialogTitle>Dialog</DialogTitle>
+            </DialogContent>
+          </Dialog>
+          <Card>
+            <CardHeader>
+              <CardTitle>Card</CardTitle>
+            </CardHeader>
+          </Card>
+          <Badge>Badge</Badge>
+          <Select open>
+            <SelectTrigger>
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Option</SelectItem>
+            </SelectContent>
+          </Select>
+          <Textarea placeholder="Text area" />
+        </div>
+      );
+      const results = await axe(container);
+      // @ts-expect-error - vitest-axe types not fully recognized in test files
+      expect(results).toHaveNoViolations();
     });
   });
 });

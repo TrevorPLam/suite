@@ -251,6 +251,65 @@ import { cn } from '@suite/ui';
 <div className={cn('base-class', 'conditional-class')} />
 ```
 
+## Accessibility Testing
+
+The UI package uses `vitest-axe` (axe-core integration for Vitest) to ensure all components meet WCAG accessibility standards.
+
+### Running Accessibility Tests
+
+Accessibility tests are included in the standard test suite:
+
+```bash
+pnpm test
+```
+
+### Writing Accessibility Tests
+
+When adding new components, include accessibility tests using the `toHaveNoViolations` matcher:
+
+```tsx
+import { describe, it, expect } from 'vitest';
+import { render } from '@testing-library/react';
+import { axe } from 'vitest-axe';
+import { MyComponent } from './my-component';
+
+describe('MyComponent Accessibility', () => {
+  it('should have no accessibility violations', async () => {
+    const { container } = render(<MyComponent />);
+    const results = await axe(container);
+    // @ts-expect-error - vitest-axe types not fully recognized in test files
+    expect(results).toHaveNoViolations();
+  });
+});
+```
+
+### Testing Guidelines
+
+- **Test all component variants**: Each variant (primary, secondary, error, etc.) should be tested
+- **Test interactive states**: Test disabled, focused, and error states
+- **Test with proper labels**: Form elements must have labels (via `aria-label`, `placeholder`, or `<label>`)
+- **Test keyboard navigation**: Ensure interactive elements are keyboard accessible
+- **Test ARIA attributes**: Verify proper ARIA roles and attributes are present
+
+### Common Accessibility Violations
+
+- **Missing labels**: Form elements without `aria-label`, `placeholder`, or associated `<label>`
+- **Missing alt text**: Images without descriptive `alt` attributes
+- **Color contrast**: Text and background colors that don't meet WCAG AA standards
+- **Keyboard traps**: Components that trap keyboard focus
+- **Missing ARIA roles**: Custom interactive elements without proper ARIA roles
+
+### Mocking for jsdom
+
+Some Radix UI components require mocking for jsdom compatibility. The test setup includes:
+
+```ts
+// vitest.setup.ts
+Element.prototype.scrollIntoView = vi.fn();
+```
+
+This is automatically configured in `vitest.setup.ts`.
+
 ## Development
 
 ```bash

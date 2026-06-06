@@ -47,6 +47,7 @@
     "tailwindcss": "^4.0.0",
     "vite": "^6.0.0",
     "vite-plugin-dts": "^4.0.0",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "vitest-axe": "^0.1.0"
   }
 }
