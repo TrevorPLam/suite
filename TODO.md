@@ -144,10 +144,10 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-008: Add Health Checks and Observability
+### [x] P2-008: Add Health Checks and Observability
 
-**Status**: Pending  
-**Priority**: P2  
+**Status**: Completed
+**Priority**: P2
 **Bounded Context**: Observability
 
 **Related Files**:
@@ -188,22 +188,33 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Implementation Notes**:
+- Added timestamp field to all health endpoints
+- Added /api/metrics endpoint to all three APIs with Prometheus format
+- Metrics include: request count, error count, latency (p50, p95, p99, avg), error rate
+- In-memory metrics collection with middleware (keeps last 1000 latency samples)
+- Typecheck passes for calendar-api and tasks-api
+- Pre-existing typecheck errors in drive-api test file (unrelated to this task)
+
 **Subtasks**:
 
 #### P2-008-01: Add metrics endpoint to calendar API
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Add GET /api/metrics that returns Prometheus-formatted metrics for request count, errors, latency
 **Validate Command**: `curl http://localhost:3001/api/metrics`
+**Status**: ✅ Complete
 
 #### P2-008-02: Add metrics endpoint to tasks API
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Add GET /api/metrics that returns Prometheus-formatted metrics for request count, errors, latency
 **Validate Command**: `curl http://localhost:3002/api/metrics`
+**Status**: ✅ Complete
 
 #### P2-008-03: Add metrics endpoint to drive API
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Add GET /api/metrics that returns Prometheus-formatted metrics for request count, errors, latency
 **Validate Command**: `curl http://localhost:3003/api/metrics`
+**Status**: ✅ Complete
 
 ---
 

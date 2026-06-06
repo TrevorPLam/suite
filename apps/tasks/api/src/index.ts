@@ -40,6 +40,35 @@ type Variables = {
 
 const app = new Hono<{ Variables: Variables }>();
 
+// Simple in-memory metrics collector
+const metrics = {
+  requestCount: 0,
+  errorCount: 0,
+  totalLatency: 0,
+  requestLatencies: [] as number[],
+};
+
+// Middleware to collect metrics (must be early to track all requests)
+app.use('/api/*', async (c, next) => {
+  const start = performance.now();
+  metrics.requestCount++;
+
+  try {
+    await next();
+
+    // Track latency for successful requests
+    const latency = performance.now() - start;
+    metrics.requestLatencies.push(latency);
+    // Keep only last 1000 latency samples
+    if (metrics.requestLatencies.length > 1000) {
+      metrics.requestLatencies.shift();
+    }
+  } catch (error) {
+    metrics.errorCount++;
+    throw error;
+  }
+});
+
 // Mount structured logging middleware
 app.use('/api/*', structuredLogger());
 
@@ -145,11 +174,59 @@ app.get('/api/v1/health', async (c) => {
     ok: dbStatus === 'ok',
     app: 'tasks',
     db: dbStatus,
+    timestamp: new Date().toISOString(),
     ...(dbLatency !== undefined && { dbLatency: `${dbLatency.toFixed(2)}ms` }),
   };
 
   const statusCode = dbStatus === 'ok' ? 200 : 503;
   return c.json(health, statusCode);
+});
+
+app.get('/api/metrics', async (c) => {
+  const avgLatency = metrics.requestLatencies.length > 0
+    ? metrics.requestLatencies.reduce((a, b) => a + b, 0) / metrics.requestLatencies.length
+    : 0;
+
+  const sortedLatencies = [...metrics.requestLatencies].sort((a, b) => a - b);
+  const p50Latency = sortedLatencies.length > 0
+    ? sortedLatencies[Math.floor(sortedLatencies.length * 0.5)]
+    : 0;
+
+  const p95Latency = sortedLatencies.length > 0
+    ? sortedLatencies[Math.floor(sortedLatencies.length * 0.95)]
+    : 0;
+
+  const p99Latency = sortedLatencies.length > 0
+    ? sortedLatencies[Math.floor(sortedLatencies.length * 0.99)]
+    : 0;
+
+  const errorRate = metrics.requestCount > 0
+    ? (metrics.errorCount / metrics.requestCount) * 100
+    : 0;
+
+  const prometheusMetrics = `
+# HELP http_requests_total Total number of HTTP requests
+# TYPE http_requests_total counter
+http_requests_total{app="tasks"} ${metrics.requestCount}
+
+# HELP http_errors_total Total number of HTTP errors
+# TYPE http_errors_total counter
+http_errors_total{app="tasks"} ${metrics.errorCount}
+
+# HELP http_request_duration_seconds Average request duration in seconds
+# TYPE http_request_duration_seconds gauge
+http_request_duration_seconds{app="tasks",quantile="0.5"} ${(p50Latency ?? 0) / 1000}
+http_request_duration_seconds{app="tasks",quantile="0.95"} ${(p95Latency ?? 0) / 1000}
+http_request_duration_seconds{app="tasks",quantile="0.99"} ${(p99Latency ?? 0) / 1000}
+http_request_duration_seconds{app="tasks",quantile="avg"} ${avgLatency / 1000}
+
+# HELP http_error_rate Error rate percentage
+# TYPE http_error_rate gauge
+http_error_rate{app="tasks"} ${errorRate}
+`.trim();
+
+  c.header('Content-Type', 'text/plain');
+  return c.text(prometheusMetrics);
 });
 
 app.get('/api/v1/tasks', async (c) => c.json({ tasks: await listTasks() }));
