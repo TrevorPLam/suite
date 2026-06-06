@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { organization } from 'better-auth/plugins';
+import { organization, twoFactor } from 'better-auth/plugins';
 import { dash } from '@better-auth/infra';
 import { users, sessions, accounts } from '@suite/db';
 
@@ -24,6 +24,7 @@ interface CreateAuthOptions {
 
 export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKey }: CreateAuthOptions) {
   const auth = betterAuth({
+    appName: 'Suite',
     database: db ? drizzleAdapter(db, {
       provider: 'pg',
       schema: {
@@ -57,6 +58,7 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
     },
     plugins: [
       organization(),
+      twoFactor(),
       ...(betterAuthApiKey ? [dash({ apiKey: betterAuthApiKey })] : []),
     ],
     advanced: {

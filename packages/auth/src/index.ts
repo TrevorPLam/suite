@@ -33,3 +33,11 @@ export type { Session, User as BetterAuthUser } from 'better-auth/types';
 
 // Organization client is already configured with organizationClient plugin
 // Applications can use authClient.organization.createOrganization, etc.
+
+// 2FA client utilities are available via authClient.twoFactor
+// Applications can use:
+// - authClient.twoFactor.getTotpUri({ password })
+// - authClient.twoFactor.verifyTotp({ code, trustDevice })
+// - authClient.twoFactor.generateBackupCodes({ password })
+// - authClient.twoFactor.verifyBackupCode({ code, disableSession, trustDevice })
+// - authClient.twoFactor.viewBackupCodes({ userId })

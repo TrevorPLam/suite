@@ -50,6 +50,13 @@
       "when": 1780771761223,
       "tag": "0006_volatile_genesis",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780772881181,
+      "tag": "0007_skinny_puck",
+      "breakpoints": true
     }
   ]
 }
