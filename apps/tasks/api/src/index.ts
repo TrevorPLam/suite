@@ -21,7 +21,7 @@ import {
 } from '@suite/domain-tasks';
 import { wireRepositories } from './bootstrap.js';
 import { validateTasksEnv } from '@suite/env-config';
-import { mountAuth } from '@suite/auth';
+import { mountAuth, requireAuth } from '@suite/auth';
 
 // Validate environment variables at startup
 const env = validateTasksEnv();
@@ -222,7 +222,7 @@ app.get('/api/tasks/search', async (c) => {
   return c.json({ tasks: results });
 });
 
-app.post('/api/tasks', async (c) => {
+app.post('/api/tasks', requireAuth, async (c) => {
   let body: unknown;
 
   try {
@@ -259,8 +259,8 @@ app.get('/api/tasks/:id', async (c) => {
   return c.json({ task });
 });
 
-app.put('/api/tasks/:id/completion', async (c) => {
-  const id = c.req.param('id').trim();
+app.put('/api/tasks/:id/completion', requireAuth, async (c) => {
+  const id = (c.req.param('id') || '').trim();
 
   if (!id) {
     return c.json({ error: 'Invalid task id', expected: ['id'] }, 400);
@@ -289,8 +289,8 @@ app.put('/api/tasks/:id/completion', async (c) => {
   }
 });
 
-app.put('/api/tasks/:id', async (c) => {
-  const id = c.req.param('id').trim();
+app.put('/api/tasks/:id', requireAuth, async (c) => {
+  const id = (c.req.param('id') || '').trim();
 
   if (!id) {
     return c.json({ error: 'Invalid task id', expected: ['id'] }, 400);
@@ -319,8 +319,8 @@ app.put('/api/tasks/:id', async (c) => {
   }
 });
 
-app.put('/api/tasks/:id/archive', async (c) => {
-  const id = c.req.param('id').trim();
+app.put('/api/tasks/:id/archive', requireAuth, async (c) => {
+  const id = (c.req.param('id') || '').trim();
 
   if (!id) {
     return c.json({ error: 'Invalid task id', expected: ['id'] }, 400);
@@ -349,8 +349,8 @@ app.put('/api/tasks/:id/archive', async (c) => {
   }
 });
 
-app.delete('/api/tasks/:id', async (c) => {
-  const id = c.req.param('id').trim();
+app.delete('/api/tasks/:id', requireAuth, async (c) => {
+  const id = (c.req.param('id') || '').trim();
 
   if (!id) {
     return c.json({ error: 'Invalid task id', expected: ['id'] }, 400);
@@ -384,7 +384,7 @@ function parseBatchOperationBody(body: unknown): BatchOperationInput | null {
   return { taskIds: taskIds as string[] };
 }
 
-app.post('/api/tasks/batch/complete', async (c) => {
+app.post('/api/tasks/batch/complete', requireAuth, async (c) => {
   let body: unknown;
 
   try {
@@ -412,7 +412,7 @@ app.post('/api/tasks/batch/complete', async (c) => {
   }
 });
 
-app.post('/api/tasks/batch/archive', async (c) => {
+app.post('/api/tasks/batch/archive', requireAuth, async (c) => {
   let body: unknown;
 
   try {

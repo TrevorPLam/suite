@@ -1119,10 +1119,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] AUTH-004 — Protect Tasks mutation routes with requireAuth
+### [x] AUTH-004 — Protect Tasks mutation routes with requireAuth
 
-**Status:** pending  
-**Depends on:** AUTH-002, DB-005  
+**Status:** done
+**Depends on:** AUTH-002, DB-005
 **Blocks:** none
 
 #### Related paths
@@ -1158,8 +1158,18 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| AUTH-004-a | `apps/tasks/api/src/index.test.ts` | TDD: 401 on POST `/api/tasks` without session. | `pnpm --filter @suite/tasks-api test:run -- src/index.test.ts` |
-| AUTH-004-b | `apps/tasks/api/src/index.ts` | Apply requireAuth to mutations. | `pnpm --filter @suite/tasks-api test:run -- src/index.test.ts` |
+| AUTH-004-a | `apps/tasks/api/src/index.test.ts` | TDD: 401 on POST `/api/tasks` without session. | `pnpm --filter @suite/tasks-api test:run -- src/index.test.ts` ✅ |
+| AUTH-004-b | `apps/tasks/api/src/index.ts` | Apply requireAuth to mutations. | `pnpm --filter @suite/tasks-api test:run -- src/index.test.ts` ✅ |
+
+#### Implementation notes
+
+- Added `requireAuth` import from `@suite/auth` to tasks API index.ts
+- Applied `requireAuth` middleware to all mutation routes: POST /api/tasks, PUT /api/tasks/:id/completion, PUT /api/tasks/:id, PUT /api/tasks/:id/archive, DELETE /api/tasks/:id, POST /api/tasks/batch/complete, POST /api/tasks/batch/archive
+- Fixed TypeScript errors for route parameters by adding null checks (c.req.param('id') may be undefined)
+- Added TDD tests for 401 responses on all mutation routes without session
+- Updated existing tests to use authenticated mock (allowAuth flag) for task creation in get task and search tests
+- Updated validation error tests to expect 401 instead of 400 (auth check runs before validation)
+- All 43 API tests pass, typecheck passes for tasks-api
 
 ---
 
