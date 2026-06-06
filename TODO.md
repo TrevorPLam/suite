@@ -310,11 +310,19 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P1-008: Fix Port Default Mismatch
+### [x] P1-008: Fix Port Default Mismatch
 
-**Status**: Pending  
-**Priority**: P1  
+**Status**: Complete
+**Priority**: P1
 **Bounded Context**: Configuration
+
+**Implementation Notes**:
+- Fixed calendar PORT default from 3002 to 3001 in packages/env-config/src/calendar.ts
+- Fixed tasks PORT default from 3001 to 3002 in packages/env-config/src/tasks.ts
+- Verified calendar Vite proxy targets http://localhost:3001 (already correct)
+- Verified tasks Vite proxy targets http://localhost:3002 (already correct)
+- Drive PORT default 3003 and Vite proxy 3003 were already correct
+- Typecheck and tests pass for @suite/env-config
 
 **Related Files**:
 - `packages/env-config/src/calendar.ts`
@@ -352,22 +360,22 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 **Subtasks**:
 
-#### P1-008-01: Fix calendar port default
+#### P1-008-01: Fix calendar port default ✅
 **Target File**: `packages/env-config/src/calendar.ts`
 **Action**: Change PORT default from 3002 to 3001
 **Validate Command**: `pnpm --filter @suite/env-config test`
 
-#### P1-008-02: Fix tasks port default
+#### P1-008-02: Fix tasks port default ✅
 **Target File**: `packages/env-config/src/tasks.ts`
 **Action**: Change PORT default from 3001 to 3002
 **Validate Command**: `pnpm --filter @suite/env-config test`
 
-#### P1-008-03: Verify calendar Vite proxy matches
+#### P1-008-03: Verify calendar Vite proxy matches ✅
 **Target File**: `apps/calendar/web/vite.config.ts`
 **Action**: Confirm proxy target is http://localhost:3001
 **Validate Command**: `grep "3001" apps/calendar/web/vite.config.ts`
 
-#### P1-008-04: Verify tasks Vite proxy matches
+#### P1-008-04: Verify tasks Vite proxy matches ✅
 **Target File**: `apps/tasks/web/vite.config.ts`
 **Action**: Confirm proxy target is http://localhost:3002
 **Validate Command**: `grep "3002" apps/tasks/web/vite.config.ts`
