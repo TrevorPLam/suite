@@ -40,6 +40,10 @@ export { validatePasswordStrength } from './password-policy.js';
 // Breached credential checking
 export { checkBreachedCredentials } from './breached-credentials.js';
 
+// Email service for verification and password reset
+export { sendVerificationEmail, sendPasswordResetEmail, sendPasswordResetNotificationEmail } from './email-service.js';
+export type { SendVerificationEmailOptions, SendPasswordResetEmailOptions, SendPasswordResetNotificationEmailOptions } from './email-service.js';
+
 // Session revocation utilities
 export { revokeSession, revokeAllSessions } from './session-revocation.js';
 

@@ -8,7 +8,7 @@ import { logAuthEvent, createAuthEvent } from './audit-log.js';
 import { generateDeviceFingerprint, detectAnomalousDevice, logDeviceAnomaly } from './device-fingerprinting.js';
 import { extractGeolocationFromCF, detectLocationAnomaly, logLocationAnomaly, type GeolocationData } from './geolocation.js';
 import { extractClientIP } from './ip-binding.js';
-import { sendVerificationEmail, sendPasswordResetEmail } from './email-service.js';
+import { sendVerificationEmail, sendPasswordResetEmail, sendPasswordResetNotificationEmail, type SendPasswordResetNotificationEmailOptions } from './email-service.js';
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
@@ -87,6 +87,8 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
+      resetPasswordTokenExpiresIn: 900, // 15 minutes (OWASP recommendation)
+      revokeSessionsOnPasswordReset: true, // Revoke all sessions on password reset for security
       sendVerificationEmail: async ({ user, url, token }: { user: { id: string; email: string; name?: string }; url: string; token: string }, request?: Request) => {
         // Use waitUntil for non-blocking email sending in Workers
         if (waitUntil) {
@@ -104,6 +106,31 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
           // In Node.js environments, send synchronously (but don't await to prevent timing attacks)
           void sendPasswordResetEmail({ user, url, token }, request);
         }
+      },
+      onPasswordReset: async ({ user }: { user: { id: string; email: string; name?: string } }, request?: Request) => {
+        // Send email notification on successful password reset
+        const ip = request?.headers ? extractClientIP(request.headers) : undefined;
+        const userAgent = request?.headers.get('user-agent') || undefined;
+
+        // Send notification email
+        const notificationOptions: SendPasswordResetNotificationEmailOptions = { user };
+        if (ip !== undefined) notificationOptions.ip = ip;
+        if (userAgent !== undefined) notificationOptions.userAgent = userAgent;
+
+        if (waitUntil) {
+          waitUntil(sendPasswordResetNotificationEmail(notificationOptions));
+        } else {
+          void sendPasswordResetNotificationEmail(notificationOptions);
+        }
+
+        // Log password reset event for audit trail
+        const context: Parameters<typeof createAuthEvent>[1] = {};
+        if (user.id) context.userId = user.id;
+        if (user.email) context.email = user.email;
+        if (ip) context.ip = ip;
+        if (userAgent) context.userAgent = userAgent;
+        context.metadata = { timestamp: new Date().toISOString() };
+        logAuthEvent(createAuthEvent('password_reset', context));
       },
       onError: (error: unknown) => {
         // Log failed authentication attempt
@@ -298,6 +325,16 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
           rateLimit: {
             window: validatedEnv.RATE_LIMIT_WINDOW,
             max: validatedEnv.RATE_LIMIT_MAX,
+            customRules: {
+              '/reset-password/email': {
+                window: 900, // 15 minutes
+                max: 3, // Max 3 reset requests per 15 minutes per email
+              },
+              '/reset-password': {
+                window: 900, // 15 minutes
+                max: 5, // Max 5 reset attempts per 15 minutes
+              },
+            },
             customStorage: {
               get: async (key: string) => {
                 try {

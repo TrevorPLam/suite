@@ -3,12 +3,13 @@
  * Follows OWASP logging requirements for enterprise audit trails
  */
 
-export type AuthEventType = 
+export type AuthEventType =
   | 'sign_in'
   | 'sign_up'
   | 'sign_out'
   | 'failed_attempt'
   | 'password_change'
+  | 'password_reset'
   | 'email_verification'
   | 'mfa_enabled'
   | 'mfa_disabled'

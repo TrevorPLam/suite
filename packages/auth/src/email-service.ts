@@ -28,6 +28,12 @@ export interface SendPasswordResetEmailOptions {
   token: string;
 }
 
+export interface SendPasswordResetNotificationEmailOptions {
+  user: { id: string; email: string; name?: string };
+  ip?: string;
+  userAgent?: string;
+}
+
 /**
  * Send an email (placeholder implementation)
  *
@@ -96,6 +102,35 @@ export async function sendPasswordResetEmail(
         <p>Or copy and paste this link into your browser:</p>
         <p style="word-break: break-all;">${url}</p>
         <p>If you didn't request this, you can safely ignore this email.</p>
+      </div>
+    `,
+  });
+}
+
+/**
+ * Send password reset notification email
+ *
+ * Called when a user successfully resets their password.
+ * Notifies the user that their password was changed for security.
+ */
+export async function sendPasswordResetNotificationEmail(
+  options: SendPasswordResetNotificationEmailOptions
+): Promise<void> {
+  const { user, ip, userAgent } = options;
+  const timestamp = new Date().toLocaleString();
+
+  await sendEmail({
+    to: user.email,
+    subject: 'Your password has been reset',
+    text: `Your password was reset on ${timestamp}${ip ? ` from IP: ${ip}` : ''}. If you didn't make this change, please contact support immediately.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Your password has been reset</h2>
+        <p>Your password was successfully reset on <strong>${timestamp}</strong>.</p>
+        ${ip ? `<p><strong>IP Address:</strong> ${ip}</p>` : ''}
+        ${userAgent ? `<p><strong>Device:</strong> ${userAgent}</p>` : ''}
+        <p>If you didn't make this change, please contact support immediately.</p>
+        <p>For your security, all active sessions have been revoked. You will need to sign in again.</p>
       </div>
     `,
   });
