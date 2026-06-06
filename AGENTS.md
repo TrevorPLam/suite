@@ -23,6 +23,12 @@ This repository is a greenfield monorepo for a productivity suite. The initial f
 
 5. **Migrations run in CI, never in Workers.** Use `APP_DOMAIN=<domain> pnpm db:migrate`. Never call `migrate()` inside a Worker. Never run `drizzle-kit push` — use `drizzle-kit migrate` only. `push` is for local schema exploration only and must never touch staging or production databases.
 
+**Implementation Status**: ✅ Implemented
+- Root `package.json` includes `db:migrate` script that delegates to `@suite/db` package
+- CI workflow (`.github/workflows/ci.yml`) runs migrations before tests with `APP_DOMAIN` set
+- Migration script (`packages/db/scripts/migrate.ts`) uses advisory locks to prevent concurrent migrations
+- Per-domain migration folders and tables are supported (calendar, drive, tasks)
+
 6. **Search uses blind indexing by default.** Implement exact‑match search via HMAC tokens. Defer semantic search until validated.
 
 7. **One Durable Object per "room" (chat, doc, board).** Never put multiple coordination units in one DO. See `.devin/rules/durable-objects-pattern.md` for detailed implementation guidelines including Hibernation API, E2EE, Alarms, RPC methods, and Hono integration.

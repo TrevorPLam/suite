@@ -698,10 +698,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] DEP-012: Add CI Migration Script with APP_DOMAIN
+### [x] DEP-012: Add CI Migration Script with APP_DOMAIN
 
 **Priority**: P0
 **Bounded Context**: CI/CD
+**Status**: Complete
 
 **Related Files**:
 - `package.json`
@@ -728,22 +729,22 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### DEP-012-01: Add migration script to package.json
+#### ✅ DEP-012-01: Add migration script to package.json
 **Target File**: `package.json`
 **Action**: Add db:migrate script that uses APP_DOMAIN environment variable.
 **Validate Command**: `pnpm typecheck`
 
-#### DEP-012-02: Update CI workflow to run migrations
+#### ✅ DEP-012-02: Update CI workflow to run migrations
 **Target File**: `.github/workflows/ci.yml`
 **Action**: Add migration step before test step that sets APP_DOMAIN and runs pnpm db:migrate.
 **Validate Command**: Review workflow syntax
 
-#### DEP-012-03: Test migration script locally
+#### ✅ DEP-012-03: Test migration script locally
 **Target File**: None
 **Action**: Run migration script locally with APP_DOMAIN set to verify it works correctly.
 **Validate Command**: `APP_DOMAIN=localhost pnpm db:migrate`
 
-#### DEP-012-04: Document AGENTS.md rule 5 compliance
+#### ✅ DEP-012-04: Document AGENTS.md rule 5 compliance
 **Target File**: `AGENTS.md`
 **Action**: Update AGENTS.md rule 5 to document CI migration script implementation.
 **Validate Command**: No validation needed
@@ -1735,3 +1736,44 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Depends On**: None
 **Blocks**: None
+
+---
+
+### [ ] CRYPTO-013: Fix Libsodium Type Declarations
+
+**Priority**: P1
+**Bounded Context**: Type Safety
+**Status**: Pending
+
+**Related Files**:
+- `packages/crypto/src/wasm-backend.ts`
+- `packages/crypto/package.json`
+
+**Definition of Done**:
+- Type declarations for libsodium added or properly handled
+- Typecheck passes without errors
+- Optional dependency pattern maintained
+
+**Out of Scope**:
+- Removing libsodium functionality
+- Changing WASM backend implementation
+
+**Rules to Follow**:
+- Maintain optional dependency pattern
+- Handle missing types gracefully
+- Don't force installation of optional dependencies
+
+**Depends On**: CRYPTO-008
+**Blocks**: Typecheck
+
+**Subtasks**:
+
+#### CRYPTO-013-01: Add type declarations for libsodium
+**Target File**: `packages/crypto/package.json`
+**Action**: Add @types/libsodium as optional dev dependency or create custom type declarations for libsodium module.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-013-02: Verify typecheck passes
+**Target File**: Root directory
+**Action**: Run typecheck to verify libsodium type error is resolved.
+**Validate Command**: `pnpm typecheck`

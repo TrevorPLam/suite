@@ -18,7 +18,8 @@
     "clean": "rimraf .nx dist coverage",
     "ci:test": "nx affected -t lint,typecheck,test,build",
     "ci:validate": "pnpm test:run && pnpm typecheck",
-    "ci:coverage": "pnpm test:coverage"
+    "ci:coverage": "pnpm test:coverage",
+    "db:migrate": "pnpm --filter @suite/db db:migrate"
   },
   "devDependencies": {
     "@changesets/cli": "catalog:",
