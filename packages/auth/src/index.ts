@@ -67,6 +67,10 @@ export { enforceSessionLimit } from './session-limits.js';
 // Step-up authentication for sensitive actions
 export { requireFreshAuth, isAuthFresh, getAuthFreshnessRemaining, type SensitiveAction, StepUpAuthRequiredError } from './step-up-auth.js';
 
+// Advanced rate limiting with token bucket algorithm
+export { checkRateLimit, checkEndpointRateLimit, applyRateLimitHeaders, createRateLimitedResponse, calculateExponentialBackoff, getRetryDelayWithJitter, configureBetterAuthRateLimit, DEFAULT_ENDPOINT_CONFIGS } from './rate-limiting.js';
+export type { RateLimitConfig, RateLimitResult, PerEndpointConfig, RateLimitOptions } from './rate-limiting.js';
+
 // Organization client is already configured with organizationClient plugin
 // Applications can use authClient.organization.createOrganization, etc.
 
