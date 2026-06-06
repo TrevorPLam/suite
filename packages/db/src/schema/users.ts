@@ -16,6 +16,7 @@ export const sessions = pgTable('sessions', {
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  activeOrganizationId: text('active_organization_id'),
 });
 
 export const accounts = pgTable('accounts', {

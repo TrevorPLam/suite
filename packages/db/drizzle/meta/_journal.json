@@ -43,6 +43,13 @@
       "when": 1780766113059,
       "tag": "0005_whole_ken_ellis",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780771761223,
+      "tag": "0006_volatile_genesis",
+      "breakpoints": true
     }
   ]
 }

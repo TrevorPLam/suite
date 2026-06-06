@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 
 // Map domain to unique advisory lock ID
 export const lockIds: Record<string, number> = {
+  shared: 1000,
   calendar: 1001,
   drive: 1002,
   tasks: 1003,

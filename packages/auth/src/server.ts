@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { organization } from 'better-auth/plugins';
 import { users, sessions, accounts } from '@suite/db';
 
 interface KVNamespace {
@@ -38,6 +39,9 @@ export function createAuth({ db, env, waitUntil, trustedOrigins }: CreateAuthOpt
       updateAge: 60 * 60 * 24, // 1 day
       storeSessionInDatabase: true, // Disable cookieCache due to better-auth#4203
     },
+    plugins: [
+      organization(),
+    ],
     advanced: {
       cookiePrefix: 'suite',
       crossSubDomainCookies: {
