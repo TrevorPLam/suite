@@ -18,15 +18,24 @@ As a Tasks user, I want to create a task so I can track work items and follow th
 - Request body:
   - `title: string`
   - `completed?: boolean`
+  - `dueDate?: string` (ISO 8601 timestamp)
+  - `priority?: 'low' | 'medium' | 'high'`
+  - `tags?: string[]`
 - Response 201:
   - `id: string`
   - `title: string`
   - `completed: boolean`
+  - `dueDate?: string`
+  - `priority?: string`
+  - `tags?: string[]`
 
 ## Validation rules
 
 - `title` must be present and trimmed.
 - `completed` defaults to `false` when omitted.
+- `dueDate` must be a valid ISO 8601 timestamp when provided.
+- `priority` must be one of 'low', 'medium', 'high' when provided.
+- `tags` must be an array of non-empty strings when provided.
 - The API should reject empty titles.
 
 ## Failure cases
@@ -37,9 +46,14 @@ As a Tasks user, I want to create a task so I can track work items and follow th
 ## Out of scope
 
 - Lists, boards, or nested subtasks.
-- Due dates and reminders.
 - Assignment, labels, or collaboration.
 - Recurrence or dependencies.
+
+## See also
+
+- [Task Due Dates](./task-due-dates.spec.md) — detailed due date validation and behavior
+- [Task Priorities](./task-priorities.spec.md) — priority levels and defaults
+- [Task Tags](./task-tags.spec.md) — tag validation and management
 
 ## Acceptance criteria
 

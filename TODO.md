@@ -384,9 +384,9 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] SPEC-001 — Reconcile Tasks create-task spec with implementation
+### [x] SPEC-001 — Reconcile Tasks create-task spec with implementation
 
-**Status:** pending  
+**Status:** done  
 **Depends on:** none  
 **Blocks:** none
 
@@ -428,8 +428,17 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| SPEC-001-a | `apps/tasks/specs/create-task.spec.md` | Move due dates, priorities, tags out of "Out of scope". Add "See also" links to dedicated specs. Extend API contract with optional fields. | `type apps\tasks\specs\create-task.spec.md` |
-| SPEC-001-b | `apps/tasks/api/src/index.test.ts` | Add comment at top: `// Contract: apps/tasks/specs/create-task.spec.md`. Ensure POST tests cover optional fields per updated spec. | `pnpm --filter @suite/tasks-api test:run -- src/index.test.ts` |
+| SPEC-001-a | `apps/tasks/specs/create-task.spec.md` | Move due dates, priorities, tags out of "Out of scope". Add "See also" links to dedicated specs. Extend API contract with optional fields. | `type apps\tasks\specs\create-task.spec.md` ✅ |
+| SPEC-001-b | `apps/tasks/api/src/index.test.ts` | Add comment at top: `// Contract: apps/tasks/specs/create-task.spec.md`. Ensure POST tests cover optional fields per updated spec. | `pnpm --filter @suite/tasks-api test:run -- src/index.test.ts` ✅ |
+
+#### Implementation notes
+
+- Updated create-task.spec.md to document optional fields (dueDate, priority, tags) in API contract
+- Added validation rules for optional fields matching existing implementation
+- Removed due dates, priorities, tags from "Out of scope" section
+- Added "See also" section with cross-references to dedicated specs
+- Added contract comment to index.test.ts referencing the spec
+- All 35 API tests pass, including tests for optional fields (create with new fields, update with new fields)
 
 ---
 

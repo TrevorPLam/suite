@@ -1,3 +1,4 @@
+// Contract: apps/tasks/specs/create-task.spec.md
 import { describe, it, expect, beforeEach } from 'vitest';
 import { resetTasks } from '@suite/domain-tasks';
 import app from './index.js';
