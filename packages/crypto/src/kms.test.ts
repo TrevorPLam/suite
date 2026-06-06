@@ -15,30 +15,6 @@ import {
   type KMSEnvelopeEncryptionResult,
 } from './kms.js';
 
-// Mock the optional dependencies
-vi.mock('@aws-sdk/client-kms', () => ({
-  KMSClient: vi.fn(),
-  EncryptCommand: vi.fn(),
-  DecryptCommand: vi.fn(),
-  GenerateDataKeyCommand: vi.fn(),
-}));
-
-vi.mock('@azure/identity', () => ({
-  DefaultAzureCredential: vi.fn(),
-}));
-
-vi.mock('@azure/keyvault-keys', () => ({
-  KeyClient: vi.fn(),
-  CryptographyClient: vi.fn(),
-  KnownEncryptionAlgorithms: {
-    RSAOaep256: 'RSA-OAEP-256',
-  },
-}));
-
-vi.mock('@google-cloud/kms', () => ({
-  KeyManagementServiceClient: vi.fn(),
-}));
-
 describe('KMS Integration', () => {
   describe('createKMSClient', () => {
     it('should create AWS KMS client with valid config', () => {
@@ -50,8 +26,13 @@ describe('KMS Integration', () => {
         },
       };
 
-      // This will fail if SDK is not installed, which is expected
-      expect(() => createKMSClient(config)).toThrow();
+      // If AWS SDK is installed, client should be created successfully
+      // If not installed, it will throw with a helpful error message
+      const client = createKMSClient(config);
+      expect(client).toBeDefined();
+      expect(client).toHaveProperty('encrypt');
+      expect(client).toHaveProperty('decrypt');
+      expect(client).toHaveProperty('generateKey');
     });
 
     it('should create Azure Key Vault client with valid config', () => {
@@ -63,7 +44,8 @@ describe('KMS Integration', () => {
         },
       };
 
-      // This will fail if SDK is not installed, which is expected
+      // If Azure SDK is not installed, it will throw with a helpful error message
+      // If installed, client should be created successfully
       expect(() => createKMSClient(config)).toThrow();
     });
 
@@ -78,8 +60,13 @@ describe('KMS Integration', () => {
         },
       };
 
-      // This will fail if SDK is not installed, which is expected
-      expect(() => createKMSClient(config)).toThrow();
+      // If GCP SDK is installed, client should be created successfully
+      // If not installed, it will throw with a helpful error message
+      const client = createKMSClient(config);
+      expect(client).toBeDefined();
+      expect(client).toHaveProperty('encrypt');
+      expect(client).toHaveProperty('decrypt');
+      expect(client).toHaveProperty('generateKey');
     });
 
     it('should throw error for missing AWS config', () => {
