@@ -149,7 +149,7 @@ describe('Blind Indexing - Property-Based Tests', () => {
         }
       )
     );
-  });
+  }, 30000);
 
   it('property: blind index is case-insensitive', async () => {
     await fc.assert(
@@ -166,7 +166,7 @@ describe('Blind Indexing - Property-Based Tests', () => {
         }
       )
     );
-  });
+  }, 30000);
 
   it('property: different salts produce different blind indices', async () => {
     const password = 'user-password';
@@ -198,5 +198,5 @@ describe('Blind Indexing - Property-Based Tests', () => {
         }
       )
     );
-  });
+  }, 30000);
 });

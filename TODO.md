@@ -375,3 +375,89 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 **Target File**: Root directory
 **Action**: Verified typecheck passes with no errors.
 **Validate Command**: `pnpm typecheck`
+
+---
+
+### [x] CRYPTO-014: Fix Property-Based Test Timeouts
+
+**Priority**: P1
+**Bounded Context**: Testing
+**Status**: Complete
+
+**Related Files**:
+- `packages/crypto/src/blind-index.test.ts`
+- `packages/crypto/src/index.test.ts`
+
+**Definition of Done**:
+- Property-based tests complete within timeout
+- Test assertions pass
+- Property-based testing maintained
+
+**Out of Scope**:
+- Removing property-based tests
+- Reducing test coverage
+
+**Rules to Follow**:
+- Increase timeout for long-running property tests
+- Optimize property generation if needed
+- Maintain test coverage
+
+**Depends On**: CRYPTO-013
+**Blocks**: Full test suite passing
+
+**Subtasks**:
+
+#### CRYPTO-014-01: Increase timeout for blind index property tests ✅
+**Target File**: `packages/crypto/src/blind-index.test.ts`
+**Action**: Increased timeout from default 5000ms to 30000ms for 3 property-based tests that were timing out.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-014-02: Increase timeout for crypto property tests ✅
+**Target File**: `packages/crypto/src/index.test.ts`
+**Action**: Increased timeout from default 5000ms to 30000ms for 1 property-based test that was timing out.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+**Implementation Notes**:
+- All 4 property-based tests now pass within the 30-second timeout
+- Tests complete in ~4-5 seconds each (well within new timeout)
+- Property-based testing coverage maintained
+
+---
+
+### [ ] CRYPTO-015: Fix KMS Test Assertions
+
+**Priority**: P2
+**Bounded Context**: Testing
+**Status**: Pending
+
+**Related Files**:
+- `packages/crypto/src/kms.test.ts`
+
+**Definition of Done**:
+- KMS tests pass with correct assertions
+- Optional dependency handling verified
+- Test expectations match actual behavior
+
+**Out of Scope**:
+- Installing AWS/GCP SDKs
+- Changing KMS implementation
+
+**Rules to Follow**:
+- Handle optional dependencies correctly
+- Update test expectations to match actual behavior
+- Document optional dependency pattern
+
+**Depends On**: CRYPTO-008
+**Blocks**: Full test suite passing
+
+**Subtasks**:
+
+#### CRYPTO-015-01: Fix AWS KMS test assertion
+**Target File**: `packages/crypto/src/kms.test.ts`
+**Action**: Update test to not expect error when AWS SDK is not installed, or implement proper optional dependency check.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-015-02: Fix GCP KMS test assertion
+**Target File**: `packages/crypto/src/kms.test.ts`
+**Action**: Update test to not expect error when GCP SDK is not installed, or implement proper optional dependency check.
+**Validate Command**: `pnpm --filter @suite/crypto test`

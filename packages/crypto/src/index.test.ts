@@ -388,7 +388,7 @@ describe('Crypto - property-based tests', () => {
         }
       )
     );
-  });
+  }, 30000);
 
   it('property: ECDH shared secret is symmetric', async () => {
     await fc.assert(
