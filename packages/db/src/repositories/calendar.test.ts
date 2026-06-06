@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { PostgresCalendarEventRepository } from './calendar.js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { calendarEvents } from '../schema/calendar.js';
+import { calendarEvents } from '../schema/calendar/index.js';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 

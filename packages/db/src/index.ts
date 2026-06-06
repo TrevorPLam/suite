@@ -49,11 +49,7 @@ export { createDbClient } from './database-factory.js';
 export { getDb, getDbOrNull, closeDb } from './connection.js';
 
 // Schema exports
-export * from './schema/calendar.js';
-export * from './schema/tasks.js';
-export * from './schema/drive.js';
-export * from './schema/users.js';
-export * from './schema/usage.js';
+export * from './schema/index.js';
 
 // Repository exports
 export * from './repositories/index.js';

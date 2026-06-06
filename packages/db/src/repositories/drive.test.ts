@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { PostgresDriveFileRepository, PostgresDriveFolderRepository } from './drive.js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { driveFiles, driveFolders } from '../schema/drive.js';
+import { driveFiles, driveFolders } from '../schema/drive/index.js';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 

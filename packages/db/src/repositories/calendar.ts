@@ -1,5 +1,5 @@
 import { eq, and, lt, gt } from 'drizzle-orm';
-import { calendarEvents, type CalendarEventSchema, type NewCalendarEventSchema } from '../schema/calendar.js';
+import { calendarEvents, type CalendarEventSchema, type NewCalendarEventSchema } from '../schema/calendar/index.js';
 import type { Repository, Database, TransactionScope } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
 

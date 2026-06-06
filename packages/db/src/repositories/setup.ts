@@ -48,9 +48,9 @@ export async function teardownMigrations(dbUrl: string): Promise<void> {
     // This is a simple approach - in production you might want
     // to use drizzle-kit's rollback command or a more sophisticated
     // migration management system
-    const { calendarEvents } = await import('../schema/calendar.js');
-    const { driveFiles, driveFolders } = await import('../schema/drive.js');
-    const { tasks } = await import('../schema/tasks.js');
+    const { calendarEvents } = await import('../schema/calendar/index.js');
+    const { driveFiles, driveFolders } = await import('../schema/drive/index.js');
+    const { tasks } = await import('../schema/tasks/index.js');
     const { users } = await import('../schema/users.js');
     const { usage } = await import('../schema/usage.js');
 

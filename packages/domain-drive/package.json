@@ -11,7 +11,9 @@
     "test": "vitest --run",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "db:generate": "drizzle-kit generate --config=../../packages/db/drizzle.drive.config.ts",
+    "db:migrate": "APP_DOMAIN=drive tsx ../../packages/db/scripts/migrate.ts"
   },
   "dependencies": {
     "@suite/crypto": "workspace:*",

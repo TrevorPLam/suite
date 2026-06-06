@@ -13,7 +13,10 @@
     "lint": "eslint src",
     "drizzle-kit": "drizzle-kit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate:calendar": "APP_DOMAIN=calendar tsx scripts/migrate.ts",
+    "db:migrate:drive": "APP_DOMAIN=drive tsx scripts/migrate.ts",
+    "db:migrate:tasks": "APP_DOMAIN=tasks tsx scripts/migrate.ts"
   },
   "dependencies": {
     "@suite/shared-kernel": "workspace:*",

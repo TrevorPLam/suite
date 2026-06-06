@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { PostgresTaskRepository } from './tasks.js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { tasks } from '../schema/tasks.js';
+import { tasks } from '../schema/tasks/index.js';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 

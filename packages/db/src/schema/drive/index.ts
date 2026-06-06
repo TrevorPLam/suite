@@ -1,5 +1,5 @@
 import { pgTable, text, integer, timestamp, uuid, index } from 'drizzle-orm/pg-core';
-import { users } from './users.js';
+import { users } from '../users.js';
 
 export const driveFiles = pgTable('drive_files', {
   id: text('id').primaryKey(),

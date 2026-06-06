@@ -1,5 +1,5 @@
 import { eq, and } from 'drizzle-orm';
-import { driveFiles, driveFolders, type DriveFileSchema, type NewDriveFileSchema, type DriveFolderSchema, type NewDriveFolderSchema } from '../schema/drive.js';
+import { driveFiles, driveFolders, type DriveFileSchema, type NewDriveFileSchema, type DriveFolderSchema, type NewDriveFolderSchema } from '../schema/drive/index.js';
 import type { QueryRepository, Database, TransactionScope } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
 

@@ -1,5 +1,5 @@
 import { eq, and } from 'drizzle-orm';
-import { tasks, type TaskSchema, type NewTaskSchema } from '../schema/tasks.js';
+import { tasks, type TaskSchema, type NewTaskSchema } from '../schema/tasks/index.js';
 import type { QueryRepository, Database, TransactionScope } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
 
