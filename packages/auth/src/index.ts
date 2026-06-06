@@ -41,8 +41,12 @@ export { validatePasswordStrength } from './password-policy.js';
 export { checkBreachedCredentials } from './breached-credentials.js';
 
 // Email service for verification and password reset
-export { sendVerificationEmail, sendPasswordResetEmail, sendPasswordResetNotificationEmail } from './email-service.js';
-export type { SendVerificationEmailOptions, SendPasswordResetEmailOptions, SendPasswordResetNotificationEmailOptions } from './email-service.js';
+export { sendVerificationEmail, sendPasswordResetEmail, sendPasswordResetNotificationEmail, sendOTPEmail } from './email-service.js';
+export type { SendVerificationEmailOptions, SendPasswordResetEmailOptions, SendPasswordResetNotificationEmailOptions, SendOTPEmailOptions } from './email-service.js';
+
+// SMS service for OTP delivery
+export { sendSMS, sendOTPSMS } from './sms-service.js';
+export type { SMSOptions, SendOTPSMSOptions } from './sms-service.js';
 
 // Session revocation utilities
 export { revokeSession, revokeAllSessions } from './session-revocation.js';
@@ -70,6 +74,10 @@ export { requireFreshAuth, isAuthFresh, getAuthFreshnessRemaining, type Sensitiv
 // Advanced rate limiting with token bucket algorithm
 export { checkRateLimit, checkEndpointRateLimit, applyRateLimitHeaders, createRateLimitedResponse, calculateExponentialBackoff, getRetryDelayWithJitter, configureBetterAuthRateLimit, DEFAULT_ENDPOINT_CONFIGS } from './rate-limiting.js';
 export type { RateLimitConfig, RateLimitResult, PerEndpointConfig, RateLimitOptions } from './rate-limiting.js';
+
+// OTP (One-Time Password) for email and SMS authentication
+export { configureOTP } from './otp.js';
+export type { OTPOptions, OTPConfig, EmailOTPProvider, SMSOTPProvider, OTPResult, ValidateOTPResult } from './otp.js';
 
 // Organization client is already configured with organizationClient plugin
 // Applications can use authClient.organization.createOrganization, etc.

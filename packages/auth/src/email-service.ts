@@ -40,6 +40,11 @@ export interface SendMagicLinkEmailOptions {
   token: string;
 }
 
+export interface SendOTPEmailOptions {
+  email: string;
+  otp: string;
+}
+
 /**
  * Send an email (placeholder implementation)
  *
@@ -165,6 +170,32 @@ export async function sendMagicLinkEmail(
         <p style="word-break: break-all;">${url}</p>
         <p>This link will expire in 30 minutes.</p>
         <p>If you didn't request this, you can safely ignore this email.</p>
+      </div>
+    `,
+  });
+}
+
+/**
+ * Send OTP email
+ *
+ * Called by OTP module when a user requests an OTP code via email.
+ */
+export async function sendOTPEmail(
+  options: SendOTPEmailOptions
+): Promise<void> {
+  const { email, otp } = options;
+
+  await sendEmail({
+    to: email,
+    subject: 'Your verification code',
+    text: `Your verification code is: ${otp}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Your verification code</h2>
+        <p>Use the following code to verify your identity:</p>
+        <p style="font-size: 32px; font-weight: bold; letter-spacing: 4px; text-align: center; margin: 24px 0;">${otp}</p>
+        <p>This code will expire in 10 minutes.</p>
+        <p>If you didn't request this code, you can safely ignore this email.</p>
       </div>
     `,
   });
