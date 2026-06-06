@@ -25,7 +25,7 @@ import {
   archiveTaskBodySchema,
   batchOperationBodySchema,
 } from './schemas.js';
-import { UsageMonitor, rateLimit, structuredLogger, ERROR_CODES } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 
 // Validate environment variables at startup
@@ -47,6 +47,9 @@ const metrics = {
   totalLatency: 0,
   requestLatencies: [] as number[],
 };
+
+// Mount request ID middleware (must be before logger to ensure logs include request ID)
+app.use('/api/*', requestId());
 
 // Middleware to collect metrics (must be early to track all requests)
 app.use('/api/*', async (c, next) => {

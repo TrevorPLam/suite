@@ -19,7 +19,7 @@ import {
 import { wireRepositories, getR2Adapter } from './bootstrap.js';
 import { validateDriveEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
-import { UsageMonitor, rateLimit, structuredLogger, ERROR_CODES } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import {
   uploadFileBodySchema,
@@ -54,6 +54,9 @@ const metrics = {
   totalLatency: 0,
   requestLatencies: [] as number[],
 };
+
+// Mount request ID middleware (must be before logger to ensure logs include request ID)
+app.use('/api/*', requestId());
 
 // Middleware to collect metrics (must be early to track all requests)
 app.use('/api/*', async (c, next) => {

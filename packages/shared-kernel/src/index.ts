@@ -14,6 +14,7 @@ export { rateLimit, clearRateLimit, clearAllRateLimits } from './rate-limit.js';
 export type { RateLimitOptions } from './rate-limit.js';
 export { structuredLogger, logger } from './logger.js';
 export type { LoggerOptions, LogLevel } from './logger.js';
+export { requestId } from './request-id.js';
 export {
   ERROR_CODES,
   AppError,

@@ -12,7 +12,7 @@ import {
 import { wireRepositories } from './bootstrap.js';
 import { validateCalendarEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
-import { UsageMonitor, rateLimit, structuredLogger, ERROR_CODES } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import { createEventBodySchema, updateEventBodySchema } from './schemas.js';
 
@@ -27,6 +27,9 @@ type Variables = {
 };
 
 const app = new Hono<{ Variables: Variables }>();
+
+// Mount request ID middleware (must be before logger to ensure logs include request ID)
+app.use('/api/*', requestId());
 
 // Middleware to collect metrics (must be early to track all requests)
 app.use('/api/*', async (c, next) => {

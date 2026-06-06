@@ -458,10 +458,10 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-012: Add Request ID Tracing
+### [x] P2-012: Add Request ID Tracing
 
-**Status**: Pending  
-**Priority**: P2  
+**Status**: Completed
+**Priority**: P2
 **Bounded Context**: Observability
 
 **Related Files**:
@@ -502,27 +502,39 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Implementation Notes**:
+- Created `packages/shared-kernel/src/request-id.ts` with middleware that generates UUID v4 request IDs
+- Middleware respects existing X-Request-Id from client for distributed tracing
+- Request ID is set in Hono context and added to response header as X-Request-Id
+- Mounted request ID middleware before logger in all three APIs (calendar, tasks, drive)
+- Lint passed with 0 errors
+- Pre-existing typecheck errors in drive-api and tasks-api test files (unrelated to this task)
+
 **Subtasks**:
 
 #### P2-012-01: Create request ID middleware
 **Target File**: `packages/shared-kernel/src/request-id.ts`
 **Action**: Create middleware that generates UUID v4, sets in context, adds to response header
 **Validate Command**: `pnpm --filter @suite/shared-kernel typecheck`
+**Status**: ✅ Complete
 
 #### P2-012-02: Mount request ID middleware in calendar API
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Import and mount requestId middleware before logger
 **Validate Command**: `curl -I http://localhost:3001/api/v1/events | grep X-Request-Id`
+**Status**: ✅ Complete
 
 #### P2-012-03: Mount request ID middleware in tasks API
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Import and mount requestId middleware before logger
 **Validate Command**: `curl -I http://localhost:3002/api/v1/tasks | grep X-Request-Id`
+**Status**: ✅ Complete
 
 #### P2-012-04: Mount request ID middleware in drive API
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Import and mount requestId middleware before logger
 **Validate Command**: `curl -I http://localhost:3003/api/v1/files | grep X-Request-Id`
+**Status**: ✅ Complete
 
 ---
 
