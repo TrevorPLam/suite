@@ -10,7 +10,10 @@
     },
     "./styles/globals.css": "./dist/styles/globals.css"
   },
-  "sideEffects": ["*.css", "*.scss"],
+  "sideEffects": [
+    "*.css",
+    "*.scss"
+  ],
   "scripts": {
     "build": "vite build",
     "typecheck": "tsc --noEmit",

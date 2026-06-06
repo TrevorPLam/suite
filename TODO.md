@@ -611,11 +611,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] UI-010: Add Governance Model
+### [x] UI-010: Add Governance Model
 
 **Priority**: P1
 **Bounded Context**: UI Package
-**Status**: Not Started
+**Status**: Completed
 
 **Related Files**:
 - `packages/ui/CONTRIBUTING.md` (create)
@@ -705,6 +705,82 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 **Target File**: `packages/ui/`
 **Action**: Create a test changeset for a hypothetical component change. Run Changesets version command to verify it generates correct version bump and CHANGELOG entry. Revert test changeset.
 **Validate Command**: `pnpm changeset version`
+
+**Implementation Notes**:
+- Installed @changesets/cli and @changesets/config to root devDependencies
+- Initialized Changesets with `npx changeset init`
+- Configured .changeset/config.json for monorepo with ignore list for shared packages (@suite/auth, @suite/crypto, @suite/db, @suite/design-tokens)
+- Set access to "restricted" (private package)
+- Tested Changesets workflow: created test changeset, ran `pnpm changeset version`, verified version bump from 0.0.0 to 0.1.0, reverted test changes
+- Lint passes with no errors
+- Typecheck has pre-existing errors in i18n files (unrelated to UI-010) - documented in new task UI-011
+- HUMAN subtasks (UI-010-01, UI-010-04, UI-010-05, UI-010-06) remain to be completed by human contributors
+
+---
+
+### [ ] UI-011: Fix i18n Typecheck Errors
+
+**Priority**: P1
+**Bounded Context**: UI Package
+**Status**: Not Started
+
+**Related Files**:
+- `packages/ui/src/i18n/config.ts`
+- `packages/ui/src/i18n/index.tsx`
+- `packages/ui/tsconfig.json`
+
+**Definition of Done**:
+- Fix TS1543 error: JSON import requires 'type: "json"' import attribute
+- Fix TS2835 error: Relative import paths need explicit file extensions
+- Typecheck passes for @suite/ui package
+- No breaking changes to i18n functionality
+
+**Out of Scope**:
+- Refactoring i18n architecture
+- Adding new i18n features
+- Changing i18n library
+
+**Rules to Follow**:
+- Follow ESM import requirements for NodeNext module resolution
+- Use explicit file extensions for relative imports
+- Maintain backward compatibility with existing i18n setup
+
+**Advanced Coding Pattern**:
+- ESM module resolution with NodeNext
+- JSON import attributes
+- Explicit file extensions
+
+**Anti-Patterns**:
+- Ignoring typecheck errors
+- Using CommonJS require() in ESM module
+- Implicit file extensions in ESM
+
+**Imports/Exports**:
+- No changes to component exports
+- i18n configuration only
+
+**Depends On**: None
+**Blocks**: None
+
+**Subtasks**:
+
+#### UI-011-01: Fix JSON import in config.ts
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/i18n/config.ts`
+**Action**: Update JSON import to use 'type: "json"' import attribute: `import en from './en.json' with { type: 'json' };`
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-011-02: Fix relative import in index.tsx
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/i18n/index.tsx`
+**Action**: Update relative import to use explicit file extension: `import i18n, { resources, defaultNS } from './config.js';`
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-011-03: Verify typecheck passes
+**Assigned To**: AGENT
+**Target File**: `packages/ui/`
+**Action**: Run typecheck to verify all i18n errors are resolved
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
 
 ---
 

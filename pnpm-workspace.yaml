@@ -5,6 +5,8 @@ packages:
   - "packages/domain-*"
 
 catalog:
+  '@changesets/cli': ^2.31.0
+  '@changesets/config': ^3.1.4
   '@hono/swagger-ui': ^0.6.1
   '@hono/zod-openapi': ^1.4.0
   '@nx/devkit': ^22.7.5
