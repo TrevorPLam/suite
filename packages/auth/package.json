@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@better-auth/infra": "^0.2.13",
+    "@better-auth/passkey": "catalog:",
     "@better-auth/scim": "catalog:",
     "@better-auth/sso": "^1.6.11",
     "@suite/db": "workspace:*",

@@ -3,6 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { organization, twoFactor } from 'better-auth/plugins';
 import { sso } from '@better-auth/sso';
 import { scim } from '@better-auth/scim';
+import { passkey } from '@better-auth/passkey';
 import { dash } from '@better-auth/infra';
 import { users, sessions, accounts } from '@suite/db';
 import { validateAuthEnv } from './env.js';
@@ -172,6 +173,15 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
       organization(),
       twoFactor(),
       sso(),
+      passkey({
+        rpID: process.env.PASSKEY_RP_ID || 'localhost',
+        rpName: 'Suite',
+        origin: process.env.BETTER_AUTH_URL || 'http://localhost:8787',
+        authenticatorSelection: {
+          residentKey: 'preferred',
+          userVerification: 'preferred',
+        },
+      }),
       // @ts-ignore - SCIM plugin has type compatibility issues with Better Auth 1.6.11
       // Plugin works at runtime but schema types are incompatible
       scim(),

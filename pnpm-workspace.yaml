@@ -5,6 +5,7 @@ packages:
   - "packages/domain-*"
 
 catalog:
+  '@better-auth/passkey': ^1.6.14
   '@better-auth/scim': ^1.6.14
   '@changesets/cli': ^2.31.0
   '@changesets/config': ^3.1.4
