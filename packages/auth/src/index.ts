@@ -43,6 +43,9 @@ export { checkBreachedCredentials } from './breached-credentials.js';
 // Session revocation utilities
 export { revokeSession, revokeAllSessions } from './session-revocation.js';
 
+// Session management with audit logging
+export { listSessions, revokeSession as revokeSessionWithAudit, revokeAllSessions as revokeAllSessionsWithAudit, revokeOtherSessions } from './session-management.js';
+
 // Organization client is already configured with organizationClient plugin
 // Applications can use authClient.organization.createOrganization, etc.
 

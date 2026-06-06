@@ -13,6 +13,9 @@ export type AuthEventType =
   | 'mfa_enabled'
   | 'mfa_disabled'
   | 'session_revoked'
+  | 'session_listed'
+  | 'all_sessions_revoked'
+  | 'other_sessions_revoked'
   | 'user_deleted';
 
 export interface AuthEvent {
