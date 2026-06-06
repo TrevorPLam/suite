@@ -1019,10 +1019,10 @@ Target File**: `.github/workflows/deploy.yml`
 
 ---
 
-### [ ] SEC-011: Add Security Headers Middleware
+### [x] SEC-011: Add Security Headers Middleware
 
-**Status**: Pending  
-**Priority**: P0  
+**Status**: Complete
+**Priority**: P0
 **Bounded Context**: API Security
 
 **Related Files**:
@@ -1065,27 +1065,37 @@ Target File**: `.github/workflows/deploy.yml`
 
 **Subtasks**:
 
-#### SEC-011-01: Add security headers to calendar API
+#### SEC-011-01: Add security headers to calendar API ✅
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Import secureHeaders from hono/secure-headers; mount with CSP, HSTS, and other OWASP headers
 **Validate Command**: `pnpm --filter @suite/calendar-api typecheck`
 
-#### SEC-011-02: Add security headers to tasks API
+#### SEC-011-02: Add security headers to tasks API ✅
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Import secureHeaders from hono/secure-headers; mount with CSP, HSTS, and other OWASP headers
 **Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
 
-#### SEC-011-03: Add security headers to drive API
+#### SEC-011-03: Add security headers to drive API ✅
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Import secureHeaders from hono/secure-headers; mount with CSP, HSTS, and other OWASP headers
 **Validate Command**: `pnpm --filter @suite/drive-api typecheck`
 
+**Implementation Notes**:
+- Added secureHeaders middleware from hono/secure-headers to all three APIs (calendar, tasks, drive)
+- Configured Content-Security-Policy with OWASP recommended directives: defaultSrc 'self', scriptSrc 'self', styleSrc 'self' with unsafe-inline for dev, imgSrc 'self' data: https:, connectSrc 'self', fontSrc 'self', objectSrc 'none', mediaSrc 'self', frameSrc 'none'
+- secureHeaders automatically sets X-Frame-Options: DENY, X-Content-Type-Options: nosniff, X-XSS-Protection: 1; mode=block, and other OWASP headers
+- Middleware mounted on /api/* routes in all three APIs
+- Typecheck passed successfully for all three APIs
+- Lint passed with pre-existing warnings (unrelated to this task)
+- Tests passed (API tests successful, web app tests have pre-existing failures unrelated to security headers)
+- Changes committed locally (push requires remote configuration)
+
 ---
 
-### [ ] SEC-012: Add Structured Logging Middleware
+### [x] SEC-012: Add Structured Logging Middleware
 
-**Status**: Pending  
-**Priority**: P0  
+**Status**: Complete
+**Priority**: P0
 **Bounded Context**: Observability
 
 **Related Files**:
@@ -1132,25 +1142,38 @@ Target File**: `.github/workflows/deploy.yml`
 
 **Subtasks**:
 
-#### SEC-012-01: Create structured logger
+#### SEC-012-01: Create structured logger ✅
 **Target File**: `packages/shared-kernel/src/logger.ts`
 **Action**: Create logger middleware that outputs JSON with timestamp, level, requestId, userId, method, path, status, duration; export logger utility
 **Validate Command**: `pnpm --filter @suite/shared-kernel test`
 
-#### SEC-012-02: Mount logger in calendar API
+#### SEC-012-02: Mount logger in calendar API ✅
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Import logger from @suite/shared-kernel and mount as app.use('*', logger()) before routes
 **Validate Command**: `pnpm --filter @suite/calendar-api typecheck`
 
-#### SEC-012-03: Mount logger in tasks API
+#### SEC-012-03: Mount logger in tasks API ✅
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Import logger from @suite/shared-kernel and mount as app.use('*', logger()) before routes
 **Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
 
-#### SEC-012-04: Mount logger in drive API
+#### SEC-012-04: Mount logger in drive API ✅
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Import logger from @suite/shared-kernel and mount as app.use('*', logger()) before routes
 **Validate Command**: `pnpm --filter @suite/drive-api typecheck`
+
+**Implementation Notes**:
+- Created structured logger middleware in shared-kernel with JSON output format
+- Logger supports log levels: debug, info, warn, error (configurable via LOG_LEVEL env var)
+- Middleware generates unique requestId for each request for correlation
+- Logs include timestamp, level, requestId, userId (when authenticated), method, path, status, duration
+- Error logs include stack trace and error context
+- Logger mounted on /api/* routes in all three APIs (calendar, tasks, drive)
+- Added @types/node dependency to shared-kernel for process.env type support
+- Fixed TypeScript strict mode compliance with exactOptionalPropertyTypes
+- Typecheck passed successfully
+- Lint passed with pre-existing warnings (unrelated to this task)
+- Tests passed successfully
 
 ---
 

@@ -23,7 +23,7 @@ import {
 import { wireRepositories } from './bootstrap.js';
 import { validateDriveEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
-import { UsageMonitor, rateLimit } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit, structuredLogger } from '@suite/shared-kernel';
 import { PostgresUsageRepository } from '@suite/db';
 
 // Validate environment variables at startup
@@ -37,6 +37,9 @@ type Variables = {
 };
 
 const app = new Hono<{ Variables: Variables }>();
+
+// Mount structured logging middleware
+app.use('/api/*', structuredLogger());
 
 // Mount CORS middleware
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'];
