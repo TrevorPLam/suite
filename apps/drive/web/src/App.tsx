@@ -4,6 +4,8 @@ import { type DriveFile, type DriveFolder } from '@suite/domain-drive';
 import { DriveFileList } from './features/DriveFileList';
 import { FolderTree } from './features/FolderTree';
 import { UploadDialog } from './features/UploadDialog';
+import { RenameDialog } from './features/RenameDialog';
+import { DeleteConfirmDialog } from './features/DeleteConfirmDialog';
 
 export function App() {
   const [files, setFiles] = useState<DriveFile[]>([]);
@@ -20,7 +22,6 @@ export function App() {
   const [uploadErrorDetails, setUploadErrorDetails] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [renamingFile, setRenamingFile] = useState<DriveFile | null>(null);
-  const [renameName, setRenameName] = useState('');
   const [renaming, setRenaming] = useState(false);
   const [renameError, setRenameError] = useState('');
   const [deleting, setDeleting] = useState<DriveFile | null>(null);
@@ -291,12 +292,11 @@ export function App() {
 
   const handleRename = useCallback((file: DriveFile) => {
     setRenamingFile(file);
-    setRenameName(file.name);
+    setRenaming(false);
     setRenameError('');
   }, []);
 
-  const handleRenameSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleRenameSubmit = useCallback(async (newName: string) => {
     if (!renamingFile) return;
 
     setRenaming(true);
@@ -306,7 +306,7 @@ export function App() {
       const response = await fetch(`/api/files/${renamingFile.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: renameName }),
+        body: JSON.stringify({ name: newName }),
       });
 
       const payload: unknown = await response.json();
@@ -342,7 +342,6 @@ export function App() {
             currentFiles.map((file) => (file.id === updatedFile.id ? updatedFile : file)),
           );
           setRenamingFile(null);
-          setRenameName('');
           setStatus(`Renamed to ${updatedFile.name}`);
           return;
         }
@@ -354,7 +353,7 @@ export function App() {
     } finally {
       setRenaming(false);
     }
-  }, [renamingFile, renameName, extractErrorMessage]);
+  }, [renamingFile, extractErrorMessage]);
 
   const handleDelete = useCallback(async (file: DriveFile) => {
     setDeleting(file);
@@ -720,157 +719,7 @@ export function App() {
           </article>
         </section>
 
-        {renamingFile && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="rename-dialog-title"
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0, 0, 0, 0.7)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 24,
-              zIndex: 1000,
-            }}
-          >
-            <article
-              style={{
-                borderRadius: 20,
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: '#111111',
-                padding: 24,
-                maxWidth: 400,
-                width: '100%',
-              }}
-            >
-              <h2 id="rename-dialog-title" style={{ margin: 0, fontSize: 24 }}>
-                Rename file
-              </h2>
-              <p style={{ margin: '8px 0 0', color: 'rgba(249, 250, 251, 0.72)' }}>
-                Rename {renamingFile.name}
-              </p>
 
-              <form onSubmit={handleRenameSubmit} style={{ display: 'grid', gap: 16, marginTop: 24 }}>
-                <label style={{ display: 'grid', gap: 8 }}>
-                  <span>New name</span>
-                  <input
-                    value={renameName}
-                    onChange={(inputEvent) => setRenameName(inputEvent.target.value)}
-                    aria-label="New file name"
-                    autoFocus
-                    style={{
-                      borderRadius: 12,
-                      border: '1px solid rgba(255, 255, 255, 0.14)',
-                      background: '#0a0a0a',
-                      color: 'inherit',
-                      padding: '12px 14px',
-                    }}
-                  />
-                </label>
-
-                <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <Button
-                    type="button"
-                    onClick={() => setRenamingFile(null)}
-                    className="bg-white/10 text-white"
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={renaming}>
-                    {renaming ? 'Renaming…' : 'Rename'}
-                  </Button>
-                </div>
-
-                {renameError ? (
-                  <div
-                    role="alert"
-                    style={{
-                      borderRadius: 12,
-                      border: '1px solid rgba(248, 113, 113, 0.35)',
-                      background: 'rgba(127, 29, 29, 0.3)',
-                      padding: 16,
-                      color: '#fecaca',
-                    }}
-                  >
-                    <p style={{ margin: 0, fontWeight: 600 }}>{renameError}</p>
-                  </div>
-                ) : null}
-              </form>
-            </article>
-          </div>
-        )}
-
-        {deleting && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-dialog-title"
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0, 0, 0, 0.7)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 24,
-              zIndex: 1000,
-            }}
-          >
-            <article
-              style={{
-                borderRadius: 20,
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: '#111111',
-                padding: 24,
-                maxWidth: 400,
-                width: '100%',
-              }}
-            >
-              <h2 id="delete-dialog-title" style={{ margin: 0, fontSize: 24 }}>
-                Delete file
-              </h2>
-              <p style={{ margin: '8px 0 0', color: 'rgba(249, 250, 251, 0.72)' }}>
-                Are you sure you want to delete {deleting.name}? This action cannot be undone.
-              </p>
-
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24 }}>
-                <Button
-                  type="button"
-                  onClick={() => setDeleting(null)}
-                  className="bg-white/10 text-white"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => handleDelete(deleting)}
-                  className="bg-red-500/20 text-red-300"
-                >
-                  Delete
-                </Button>
-              </div>
-
-              {deleteError ? (
-                <div
-                  role="alert"
-                  style={{
-                    borderRadius: 12,
-                    border: '1px solid rgba(248, 113, 113, 0.35)',
-                    background: 'rgba(127, 29, 29, 0.3)',
-                    padding: 16,
-                    color: '#fecaca',
-                    marginTop: 16,
-                  }}
-                >
-                  <p style={{ margin: 0, fontWeight: 600 }}>{deleteError}</p>
-                </div>
-              ) : null}
-            </article>
-          </div>
-        )}
 
         {creatingFolder && (
           <div
@@ -1116,6 +965,21 @@ export function App() {
           submitting={submitting}
           uploadError={uploadError}
           uploadErrorDetails={uploadErrorDetails}
+        />
+        <RenameDialog
+          open={!!renamingFile}
+          file={renamingFile}
+          onClose={() => setRenamingFile(null)}
+          onSubmit={handleRenameSubmit}
+          renaming={renaming}
+          renameError={renameError}
+        />
+        <DeleteConfirmDialog
+          open={!!deleting}
+          file={deleting}
+          onClose={() => setDeleting(null)}
+          onConfirm={() => deleting && handleDelete(deleting)}
+          deleteError={deleteError}
         />
       </div>
     </main>

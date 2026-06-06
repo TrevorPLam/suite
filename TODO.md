@@ -1586,10 +1586,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] UI-002 — Extract Drive rename and delete dialogs from App.tsx
+### [x] UI-002 — Extract Drive rename and delete dialogs from App.tsx
 
-**Status:** pending  
-**Depends on:** UI-001  
+**Status:** done
+**Depends on:** UI-001
 **Blocks:** none
 
 #### Related paths
@@ -1627,8 +1627,20 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| UI-002-a | `apps/drive/web/src/features/RenameDialog.tsx` | Extract rename dialog. | `pnpm --filter @suite/drive-web test:run -- src/App.test.tsx` |
-| UI-002-b | `apps/drive/web/src/features/DeleteConfirmDialog.tsx` | Extract delete confirmation. | `pnpm --filter @suite/drive-web test:run -- src/App.test.tsx` |
+| UI-002-a | `apps/drive/web/src/features/RenameDialog.tsx` | Extract rename dialog. | `pnpm --filter @suite/drive-web test:run -- src/App.test.tsx` ✅ |
+| UI-002-b | `apps/drive/web/src/features/DeleteConfirmDialog.tsx` | Extract delete confirmation. | `pnpm --filter @suite/drive-web test:run -- src/App.test.tsx` ✅ |
+
+#### Implementation notes
+
+- Created `apps/drive/web/src/features/RenameDialog.tsx` with dialog component managing its own form state (renameName)
+- Created `apps/drive/web/src/features/DeleteConfirmDialog.tsx` with confirmation dialog for file deletion
+- Removed inline rename and delete dialog JSX from App.tsx (~80 lines removed)
+- Removed renameName state from App.tsx; dialog now manages its own form state
+- Updated handleRename to set renamingFile without renameName (dialog initializes from file.name)
+- Updated handleRenameSubmit to accept newName parameter instead of using local state
+- Added RenameDialog and DeleteConfirmDialog components to App.tsx with proper props
+- All 5 drive-web tests pass without modification (accessibility tests still work)
+- App.tsx reduced by ~80 lines; still above 900 lines due to folder dialogs (create, rename, delete) which are out of scope for this task
 
 ---
 
