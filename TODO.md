@@ -863,10 +863,10 @@ Target File**: `.github/workflows/deploy.yml`
 
 ---
 
-### [ ] SEC-009: Add CORS Middleware to All APIs
+### [x] SEC-009: Add CORS Middleware to All APIs
 
-**Status**: Pending  
-**Priority**: P0  
+**Status**: Complete
+**Priority**: P0
 **Bounded Context**: API Security
 
 **Related Files**:
@@ -907,20 +907,31 @@ Target File**: `.github/workflows/deploy.yml`
 
 **Subtasks**:
 
-#### SEC-009-01: Add CORS to calendar API
+#### SEC-009-01: Add CORS to calendar API ✅
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Import cors from hono/cors; mount with origin: process.env.ALLOWED_ORIGINS?.split(','), credentials: true
 **Validate Command**: `pnpm --filter @suite/calendar-api typecheck`
 
-#### SEC-009-02: Add CORS to tasks API
+#### SEC-009-02: Add CORS to tasks API ✅
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Import cors from hono/cors; mount with origin: process.env.ALLOWED_ORIGINS?.split(','), credentials: true
 **Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
 
-#### SEC-009-03: Add CORS to drive API
+#### SEC-009-03: Add CORS to drive API ✅
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Import cors from hono/cors; mount with origin: process.env.ALLOWED_ORIGINS?.split(','), credentials: true
 **Validate Command**: `pnpm --filter @suite/drive-api typecheck`
+
+**Implementation Notes**:
+- Added ALLOWED_ORIGINS to calendar, tasks, and drive env schemas as optional string field
+- Imported cors from hono/cors in all three API index files
+- Mounted CORS middleware on /api/* routes with credentials: true
+- Origin configuration reads from ALLOWED_ORIGINS env var (comma-separated) or defaults to localhost:5173 and localhost:3000 for development
+- CORS middleware mounted before auth handler to ensure preflight requests are handled
+- Typecheck passed successfully
+- Lint passed with pre-existing warnings (unrelated to this task)
+- API tests passed (calendar, tasks, drive APIs)
+- Web app tests failed due to pre-existing AuthProvider issue (unrelated to CORS changes)
 
 ---
 

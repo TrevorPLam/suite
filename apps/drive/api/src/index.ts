@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import {
   createFolder,
   deleteDriveFile,
@@ -35,6 +36,13 @@ type Variables = {
 };
 
 const app = new Hono<{ Variables: Variables }>();
+
+// Mount CORS middleware
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'];
+app.use('/api/*', cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 
 // Mount Better Auth handler
 mountAuth(app);
