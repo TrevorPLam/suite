@@ -13,7 +13,7 @@ import { wireRepositories } from './bootstrap.js';
 import { validateCalendarEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger } from '@suite/shared-kernel';
-import { PostgresUsageRepository } from '@suite/db';
+import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import { createEventBodySchema, updateEventBodySchema } from './schemas.js';
 
 // Validate environment variables at startup
@@ -156,7 +156,33 @@ async function readRequestBody(c: { req: { json: () => Promise<unknown> } }) {
   }
 }
 
-app.get('/api/health', (c) => c.json({ ok: true, app: 'calendar' }));
+app.get('/api/health', async (c) => {
+  const db = getDbOrNull();
+  let dbStatus = 'ok';
+  let dbLatency: number | undefined;
+
+  if (db) {
+    try {
+      const start = performance.now();
+      await db.execute('SELECT 1');
+      dbLatency = performance.now() - start;
+    } catch (_error) {
+      dbStatus = 'error';
+    }
+  } else {
+    dbStatus = 'error';
+  }
+
+  const health = {
+    ok: dbStatus === 'ok',
+    app: 'calendar',
+    db: dbStatus,
+    ...(dbLatency !== undefined && { dbLatency: `${dbLatency.toFixed(2)}ms` }),
+  };
+
+  const statusCode = dbStatus === 'ok' ? 200 : 503;
+  return c.json(health, statusCode);
+});
 
 app.get('/api/events', async (c) => {
   const range = readEventRange(c.req.query());

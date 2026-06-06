@@ -616,11 +616,21 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P1-012: Add Database Connectivity to Health Checks
+### [x] P1-012: Add Database Connectivity to Health Checks
 
-**Status**: Pending  
-**Priority**: P1  
+**Status**: Complete
+**Priority**: P1
 **Bounded Context**: Observability
+
+**Implementation Notes**:
+- Updated calendar API /api/health to query database with SELECT 1 and measure latency
+- Updated tasks API /api/health to query database with SELECT 1 and measure latency
+- Updated drive API /api/health to query database with SELECT 1 and measure latency
+- Health check returns { ok, app, db, dbLatency } with db: "ok" or db: "error"
+- Returns 503 status code when database is unavailable (fail-fast pattern)
+- Latency measured in milliseconds using performance.now()
+- Calendar and Tasks API typecheck and lint pass
+- Drive API has pre-existing test type errors in index.test.ts (unrelated to health check changes) - documented as INF-002
 
 **Related Files**:
 - `apps/calendar/api/src/index.ts`
@@ -660,17 +670,17 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 **Subtasks**:
 
-#### P1-012-01: Add database check to calendar health
+#### P1-012-01: Add database check to calendar health ✅
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Modify /api/health to query database and return db: "ok" or db: "error" with latency
 **Validate Command**: `curl http://localhost:3001/api/health`
 
-#### P1-012-02: Add database check to tasks health
+#### P1-012-02: Add database check to tasks health ✅
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Modify /api/health to query database and return db: "ok" or db: "error" with latency
 **Validate Command**: `curl http://localhost:3002/api/health`
 
-#### P1-012-03: Add database check to drive health
+#### P1-012-03: Add database check to drive health ✅
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Modify /api/health to query database and return db: "ok" or db: "error" with latency
 **Validate Command**: `curl http://localhost:3003/api/health`

@@ -20,7 +20,7 @@ import { wireRepositories, getR2Adapter } from './bootstrap.js';
 import { validateDriveEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger } from '@suite/shared-kernel';
-import { PostgresUsageRepository } from '@suite/db';
+import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import {
   uploadFileBodySchema,
   renameFileBodySchema,
@@ -127,7 +127,33 @@ function readDriveError(error: unknown): { status: 400 | 404 | 500; body: Record
   };
 }
 
-app.get('/api/health', (c) => c.json({ ok: true, app: 'drive' }));
+app.get('/api/health', async (c) => {
+  const db = getDbOrNull();
+  let dbStatus = 'ok';
+  let dbLatency: number | undefined;
+
+  if (db) {
+    try {
+      const start = performance.now();
+      await db.execute('SELECT 1');
+      dbLatency = performance.now() - start;
+    } catch (_error) {
+      dbStatus = 'error';
+    }
+  } else {
+    dbStatus = 'error';
+  }
+
+  const health = {
+    ok: dbStatus === 'ok',
+    app: 'drive',
+    db: dbStatus,
+    ...(dbLatency !== undefined && { dbLatency: `${dbLatency.toFixed(2)}ms` }),
+  };
+
+  const statusCode = dbStatus === 'ok' ? 200 : 503;
+  return c.json(health, statusCode);
+});
 
 app.get('/api/files', async (c) => {
   const files = await listDriveFiles();
