@@ -59,13 +59,17 @@ export function TaskRow({
 }: TaskRowProps) {
   if (editingTaskId === task.id) {
     return (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSaveEdit(task);
-        }}
-        style={{ display: 'grid', gap: 8 }}
-      >
+      <div style={{ display: 'grid', gap: 8 }}>
+        <p style={{ margin: 0, color: 'rgba(249, 250, 251, 0.5)', fontSize: 12 }}>
+          Press Escape to cancel editing
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSaveEdit(task);
+          }}
+          style={{ display: 'grid', gap: 8 }}
+        >
         <input
           value={editTitle}
           onChange={(e) => onEditTitleChange(e.target.value)}
@@ -145,6 +149,7 @@ export function TaskRow({
           </Button>
         </div>
       </form>
+      </div>
     );
   }
 

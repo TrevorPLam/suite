@@ -141,6 +141,17 @@ export function App() {
     void loadEvents();
   }, [selectedDate, viewMode]);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && editingEventId) {
+        cancelEditing();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editingEventId]);
+
   async function loadEvents() {
     setLoading(true);
     setError('');
@@ -429,6 +440,11 @@ export function App() {
                 <p style={{ margin: '8px 0 0', color: 'rgba(249, 250, 251, 0.72)' }}>
                   {editingEventId ? 'Update the selected event and save it back to the same ID.' : 'Create a new event while keeping the browse view available beside you.'}
                 </p>
+                {editingEventId && (
+                  <p style={{ margin: '4px 0 0', color: 'rgba(249, 250, 251, 0.5)', fontSize: 12 }}>
+                    Press Escape to cancel editing
+                  </p>
+                )}
               </div>
 
               {editingEventId ? (
