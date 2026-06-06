@@ -45,3 +45,13 @@ export {
   isNotFoundError,
   isConflictError,
 } from './errors.js';
+export {
+  CircuitBreaker,
+  CircuitBreakerError,
+  createCircuitBreaker,
+} from './circuit-breaker.js';
+export type {
+  CircuitState,
+  CircuitBreakerConfig,
+  CircuitBreakerStats,
+} from './circuit-breaker.js';

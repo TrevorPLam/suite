@@ -1,5 +1,9 @@
 import { setDriveFileRepository, setDriveFolderRepository, setDriveKeyProviderFromEnv, setDriveStorage, type StorageAdapter } from '@suite/domain-drive';
 import { PostgresDriveFileRepository, PostgresDriveFolderRepository } from '@suite/db';
+import { createCircuitBreaker, type CircuitBreaker } from '@suite/shared-kernel';
+
+// Circuit breaker for R2 operations
+let r2CircuitBreaker: CircuitBreaker | null = null;
 
 // R2 Storage Adapter for Cloudflare R2
 class R2StorageAdapter implements StorageAdapter {
@@ -10,19 +14,52 @@ class R2StorageAdapter implements StorageAdapter {
   }
 
   async put(key: string, data: ReadableStream | Uint8Array | ArrayBuffer): Promise<void> {
-    await this.r2Bucket.put(key, data);
+    if (!r2CircuitBreaker) {
+      r2CircuitBreaker = createCircuitBreaker({
+        failureThreshold: 5,
+        timeoutMs: 30000,
+        successThreshold: 2,
+        logger: (message, data) => console.log(`[R2 Circuit Breaker] ${message}`, data),
+      });
+    }
+
+    return r2CircuitBreaker.execute(async () => {
+      await this.r2Bucket.put(key, data);
+    });
   }
 
   async get(key: string): Promise<ReadableStream | null> {
-    const object = await this.r2Bucket.get(key);
-    if (!object) {
-      return null;
+    if (!r2CircuitBreaker) {
+      r2CircuitBreaker = createCircuitBreaker({
+        failureThreshold: 5,
+        timeoutMs: 30000,
+        successThreshold: 2,
+        logger: (message, data) => console.log(`[R2 Circuit Breaker] ${message}`, data),
+      });
     }
-    return object.body;
+
+    return r2CircuitBreaker.execute(async () => {
+      const object = await this.r2Bucket.get(key);
+      if (!object) {
+        return null;
+      }
+      return object.body;
+    });
   }
 
   async delete(key: string): Promise<void> {
-    await this.r2Bucket.delete(key);
+    if (!r2CircuitBreaker) {
+      r2CircuitBreaker = createCircuitBreaker({
+        failureThreshold: 5,
+        timeoutMs: 30000,
+        successThreshold: 2,
+        logger: (message, data) => console.log(`[R2 Circuit Breaker] ${message}`, data),
+      });
+    }
+
+    return r2CircuitBreaker.execute(async () => {
+      await this.r2Bucket.delete(key);
+    });
   }
 }
 
