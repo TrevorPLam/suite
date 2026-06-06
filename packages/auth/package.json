@@ -13,7 +13,7 @@
     "lint": "eslint src"
   },
   "dependencies": {
-    "better-auth": "^1.1.10",
+    "better-auth": "1.6.11",
     "hono": "^4.6.0",
     "@suite/db": "workspace:*"
   },

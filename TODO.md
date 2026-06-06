@@ -79,9 +79,9 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] DEP-001: Fix Kysely Dependency Incompatibility
+### [x] DEP-001: Fix Kysely Dependency Incompatibility
 
-**Status**: Pending
+**Status**: Complete
 **Priority**: P1
 **Bounded Context**: Dependencies
 
@@ -114,6 +114,15 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 **Issue Context**:
 Discovered during SEC-001 validation. better-auth/kysely-adapter imports DEFAULT_MIGRATION_LOCK_TABLE and DEFAULT_MIGRATION_TABLE from kysely@0.29.2, but these exports don't exist in that version. This prevents wrangler deploy --dry-run from succeeding.
+
+**Implementation Notes**:
+- Pinned better-auth from ^1.1.10 to 1.6.11 in packages/auth/package.json
+- better-auth 1.6.11 uses kysely peer dep range ^0.28.17 only (not ^0.29.x)
+- This resolves the incompatibility since kysely@0.28.x exports DEFAULT_MIGRATION_TABLE from main package
+- The auth package uses drizzle adapter, not kysely adapter, so this pinning is safe
+- All wrangler deploy --dry-run commands now pass for calendar, tasks, and drive APIs
+- Typecheck and lint passed successfully
+- No test failures introduced
 
 ---
 
