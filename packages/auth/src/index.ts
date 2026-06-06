@@ -31,6 +31,15 @@ export { authClient, signIn, signUp, signOut, useSession } from './client.js';
 export { mountAuth } from './mount.js';
 export type { Session, User as BetterAuthUser } from 'better-auth/types';
 
+// Environment validation
+export { validateAuthEnv } from './env.js';
+
+// Password policy validation
+export { validatePasswordStrength } from './password-policy.js';
+
+// Breached credential checking
+export { checkBreachedCredentials } from './breached-credentials.js';
+
 // Organization client is already configured with organizationClient plugin
 // Applications can use authClient.organization.createOrganization, etc.
 

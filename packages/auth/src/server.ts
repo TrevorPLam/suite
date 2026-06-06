@@ -42,6 +42,11 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false,
+      onError: (_error) => {
+        // Account enumeration protection: always return generic error message
+        // This prevents attackers from determining if an email exists
+        throw new Error('Invalid email or password');
+      },
     },
     socialProviders: {
       ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? {
