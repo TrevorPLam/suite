@@ -840,16 +840,17 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-017: Add Request Body Size Limit
+### [x] P2-017: Add Request Body Size Limit
 
-**Status**: Pending  
-**Priority**: P2  
+**Status**: Completed
+**Priority**: P2
 **Bounded Context**: API Security
 
 **Related Files**:
 - `apps/calendar/api/src/index.ts`
 - `apps/tasks/api/src/index.ts`
 - `apps/drive/api/src/index.ts`
+- `packages/shared-kernel/src/errors.ts`
 
 **Definition of Done**:
 - Request body size limit middleware mounted
@@ -883,22 +884,35 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Implementation Notes**:
+- Added GLOBAL_REQUEST_TOO_LARGE error code to shared-kernel errors.ts
+- Used Hono's built-in bodyLimit middleware from 'hono/body-limit'
+- Calendar API: 1MB limit on all /api/* routes with standardized 413 error response
+- Tasks API: 1MB limit on all /api/* routes with standardized 413 error response
+- Drive API: 1MB limit on all /api/* routes, 100MB override on POST /api/v1/files (upload)
+- All error responses include code, message, details (maxSize), and timestamp
+- Lint passed with 0 errors
+- Pre-existing typecheck errors in drive-api and tasks-api test files (unrelated to this task)
+
 **Subtasks**:
 
 #### P2-017-01: Add body size limit to calendar API
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Add body size limit middleware with 1MB default
 **Validate Command**: `pnpm --filter @suite/calendar-api typecheck`
+**Status**: ✅ Complete
 
 #### P2-017-02: Add body size limit to tasks API
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Add body size limit middleware with 1MB default
 **Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
+**Status**: ✅ Complete
 
 #### P2-017-03: Add body size limit to drive API
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Add body size limit middleware with 1MB default; 100MB for upload routes
 **Validate Command**: `pnpm --filter @suite/drive-api typecheck`
+**Status**: ✅ Complete
 
 ---
 

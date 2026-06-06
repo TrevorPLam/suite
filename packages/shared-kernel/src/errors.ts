@@ -23,6 +23,7 @@ export const ERROR_CODES = {
   GLOBAL_INVALID_REQUEST: 'global_invalid_request',
   GLOBAL_IDEMPOTENCY_CONFLICT: 'global_idempotency_conflict',
   GLOBAL_REQUEST_TIMEOUT: 'global_request_timeout',
+  GLOBAL_REQUEST_TOO_LARGE: 'global_request_too_large',
 
   // Calendar Domain Errors
   CALENDAR_EVENT_NOT_FOUND: 'calendar_event_not_found',

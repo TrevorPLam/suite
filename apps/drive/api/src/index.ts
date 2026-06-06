@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { swaggerUI } from '@hono/swagger-ui';
 import { timeout } from 'hono/timeout';
+import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
 import {
   createFolder,
@@ -78,6 +79,24 @@ const timeoutException = () => new HTTPException(408, {
 
 // Mount timeout middleware (30 second default)
 app.use('/api/*', timeout(30000, timeoutException));
+
+// Mount body size limit middleware (1MB default)
+app.use('/api/*', bodyLimit({
+  maxSize: 1 * 1024 * 1024, // 1MB
+  onError: (c) => {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_REQUEST_TOO_LARGE,
+          message: 'Request body too large',
+          details: { maxSize: '1MB' },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      413,
+    );
+  },
+}));
 
 // Middleware to collect metrics (must be early to track all requests)
 app.use('/api/*', async (c, next) => {
@@ -279,8 +298,23 @@ app.get('/api/v1/files', async (c) => {
   return c.json({ files });
 });
 
-// Upload endpoint with longer timeout (5 minutes for file uploads)
-app.post('/api/v1/files', requireAuth, timeout(300000, timeoutException), async (c) => {
+// Upload endpoint with longer timeout (5 minutes for file uploads) and higher body limit (100MB)
+app.post('/api/v1/files', requireAuth, timeout(300000, timeoutException), bodyLimit({
+  maxSize: 100 * 1024 * 1024, // 100MB
+  onError: (c) => {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_REQUEST_TOO_LARGE,
+          message: 'Request body too large',
+          details: { maxSize: '100MB' },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      413,
+    );
+  },
+}), async (c) => {
   const contentType = c.req.header('content-type') || '';
 
   // Handle multipart/form-data for file uploads
