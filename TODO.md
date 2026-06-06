@@ -527,11 +527,20 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P1-011: Add React Error Boundaries
+### [x] P1-011: Add React Error Boundaries
 
-**Status**: Pending  
-**Priority**: P1  
+**Status**: Complete
+**Priority**: P1
 **Bounded Context**: Web
+
+**Implementation Notes**:
+- Created ErrorBoundary class component for all three web apps (calendar, tasks, drive)
+- Implemented getDerivedStateFromError for fallback UI rendering
+- Implemented componentDidCatch for error logging to console
+- Added retry button to reset error state and recover
+- Wrapped App with ErrorBoundary in main.tsx for all three apps
+- All typechecks pass for calendar-web, tasks-web, and drive-web
+- Used override modifier on componentDidCatch and render methods to satisfy lint rules
 
 **Related Files**:
 - `apps/calendar/web/src/ErrorBoundary.tsx` (create)
@@ -575,35 +584,35 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 **Subtasks**:
 
-#### P1-011-01: Create calendar ErrorBoundary
+#### P1-011-01: Create calendar ErrorBoundary ✅
 **Target File**: `apps/calendar/web/src/ErrorBoundary.tsx`
 **Action**: Create ErrorBoundary component with componentDidCatch, error state, fallback UI, and retry button
-**Validate Command**: `pnpm --filter @suite/calendar-web typecheck`
+**Validate Command**: `pnpm --filter @suite/calendar-web typecheck` (passed)
 
-#### P1-011-02: Wrap calendar App with ErrorBoundary
+#### P1-011-02: Wrap calendar App with ErrorBoundary ✅
 **Target File**: `apps/calendar/web/src/main.tsx`
 **Action**: Import ErrorBoundary and wrap <App /> with <ErrorBoundary>
-**Validate Command**: `pnpm --filter @suite/calendar-web typecheck`
+**Validate Command**: `pnpm --filter @suite/calendar-web typecheck` (passed)
 
-#### P1-011-03: Create tasks ErrorBoundary
+#### P1-011-03: Create tasks ErrorBoundary ✅
 **Target File**: `apps/tasks/web/src/ErrorBoundary.tsx`
 **Action**: Create ErrorBoundary component with componentDidCatch, error state, fallback UI, and retry button
-**Validate Command**: `pnpm --filter @suite/tasks-web typecheck`
+**Validate Command**: `pnpm --filter @suite/tasks-web typecheck` (passed)
 
-#### P1-011-04: Wrap tasks App with ErrorBoundary
+#### P1-011-04: Wrap tasks App with ErrorBoundary ✅
 **Target File**: `apps/tasks/web/src/main.tsx`
 **Action**: Import ErrorBoundary and wrap <App /> with <ErrorBoundary>
-**Validate Command**: `pnpm --filter @suite/tasks-web typecheck`
+**Validate Command**: `pnpm --filter @suite/tasks-web typecheck` (passed)
 
-#### P1-011-05: Create drive ErrorBoundary
+#### P1-011-05: Create drive ErrorBoundary ✅
 **Target File**: `apps/drive/web/src/ErrorBoundary.tsx`
 **Action**: Create ErrorBoundary component with componentDidCatch, error state, fallback UI, and retry button
-**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+**Validate Command**: `pnpm --filter @suite/drive-web typecheck` (passed)
 
-#### P1-011-06: Wrap drive App with ErrorBoundary
+#### P1-011-06: Wrap drive App with ErrorBoundary ✅
 **Target File**: `apps/drive/web/src/main.tsx`
 **Action**: Import ErrorBoundary and wrap <App /> with <ErrorBoundary>
-**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+**Validate Command**: `pnpm --filter @suite/drive-web typecheck` (passed)
 
 ---
 
