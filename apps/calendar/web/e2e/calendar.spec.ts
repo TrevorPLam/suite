@@ -7,7 +7,7 @@ test.describe('Calendar E2E', () => {
 
   test('creates an event', async ({ page }) => {
     // Already authenticated via storageState
-    await expect(page.getByRole('button', { name: 'Sign Out' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
     // Create an event
     await page.getByLabel('Title').fill('E2E Test Event');
@@ -22,9 +22,9 @@ test.describe('Calendar E2E', () => {
   test('displays sign in form when not authenticated', async ({ page }) => {
     // This test does not use storageState
     test.use({ storageState: undefined });
-    await expect(page.getByLabel('Email')).toBeVisible();
+    await expect(page.getByLabel('Email address')).toBeVisible();
     await expect(page.getByLabel('Password')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
   });
 
   test.describe('Error Flows', () => {
@@ -41,7 +41,7 @@ test.describe('Calendar E2E', () => {
     });
 
     test('validates invalid date format', async ({ page }) => {
-      await expect(page.getByRole('button', { name: 'Sign Out' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
       // Try to create event with invalid date
       await page.getByLabel('Title').fill('Invalid Date Event');
@@ -54,7 +54,7 @@ test.describe('Calendar E2E', () => {
     });
 
     test('validates end date before start date', async ({ page }) => {
-      await expect(page.getByRole('button', { name: 'Sign Out' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
       // Try to create event with end before start
       await page.getByLabel('Title').fill('Time Travel Event');
@@ -67,7 +67,7 @@ test.describe('Calendar E2E', () => {
     });
 
     test('handles API network errors gracefully', async ({ page }) => {
-      await expect(page.getByRole('button', { name: 'Sign Out' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
       // Mock API failure
       await page.route('**/api/events', route => {
@@ -85,7 +85,7 @@ test.describe('Calendar E2E', () => {
     });
 
     test('handles API server errors gracefully', async ({ page }) => {
-      await expect(page.getByRole('button', { name: 'Sign Out' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
       // Mock 500 error
       await page.route('**/api/events', route => {
@@ -105,14 +105,14 @@ test.describe('Calendar E2E', () => {
 
   test.describe('Edge Cases', () => {
     test('displays empty calendar state', async ({ page }) => {
-      await expect(page.getByRole('button', { name: 'Sign Out' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
       // Verify empty state message
       await expect(page.getByText('No events scheduled')).toBeVisible();
     });
 
     test('handles large number of events', async ({ page }) => {
-      await expect(page.getByRole('button', { name: 'Sign Out' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
       // Create multiple events
       for (let i = 1; i <= 10; i++) {
@@ -143,7 +143,7 @@ test.describe('Calendar E2E', () => {
     });
 
     test('handles special characters in event title', async ({ page }) => {
-      await expect(page.getByRole('button', { name: 'Sign Out' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
       // Create event with special characters
       await page.getByLabel('Title').fill('Event with <script>alert("xss")</script> & special chars');

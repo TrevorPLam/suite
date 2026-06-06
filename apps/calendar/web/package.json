@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@suite/auth": "workspace:*",
-    "@suite/domain-calendar": "workspace:*",
     "@suite/ui": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

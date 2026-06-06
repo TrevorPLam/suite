@@ -36,14 +36,32 @@ export default defineConfig({
   ],
   webServer: [
     {
+      command: 'pnpm --filter @suite/calendar-api dev',
+      url: 'http://localhost:8787',
+      timeout: 120000,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
       command: 'pnpm --filter @suite/calendar-web dev',
       url: 'http://localhost:5173',
       timeout: 120000,
       reuseExistingServer: !process.env.CI,
     },
     {
+      command: 'pnpm --filter @suite/tasks-api dev',
+      url: 'http://localhost:8788',
+      timeout: 120000,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
       command: 'pnpm --filter @suite/tasks-web dev',
       url: 'http://localhost:5174',
+      timeout: 120000,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: 'pnpm --filter @suite/drive-api dev',
+      url: 'http://localhost:8789',
       timeout: 120000,
       reuseExistingServer: !process.env.CI,
     },

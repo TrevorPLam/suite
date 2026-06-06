@@ -156,9 +156,6 @@ importers:
       '@suite/auth':
         specifier: workspace:*
         version: link:../../../packages/auth
-      '@suite/domain-calendar':
-        specifier: workspace:*
-        version: link:../../../packages/domain-calendar
       '@suite/ui':
         specifier: workspace:*
         version: link:../../../packages/ui

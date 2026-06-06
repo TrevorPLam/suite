@@ -217,7 +217,74 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] DEP-005: Fix E2E Test Authentication
+### [!] DEP-012: Enable Workers Node.js Compatibility
+
+**Priority**: P0
+**Bounded Context**: Infrastructure
+
+**Related Files**:
+- `apps/calendar/api/wrangler.toml`
+- `apps/tasks/api/wrangler.toml`
+- `apps/drive/api/wrangler.toml`
+- `packages/db/src/connection.ts`
+
+**Definition of Done**:
+- All wrangler.toml files have nodejs_compat flag enabled
+- API servers start successfully in Workers runtime
+- Postgres package works in Workers environment
+- E2E tests can run with API servers
+
+**Out of Scope**:
+- Replacing postgres package with Workers-native solution (future work - see @suite/db assessment)
+- Implementing custom Node.js polyfills
+
+**Rules to Follow**:
+- Cloudflare Workers requires nodejs_compat flag for Node.js modules
+- Postgres package uses Node.js modules (events, buffer, async_hooks, stream)
+- Enable compatibility flag in wrangler.toml configuration
+
+**Depends On**: None
+**Blocks**: DEP-005 (E2E authentication), Production deployment
+
+**Subtasks**:
+
+#### DEP-012-01: Enable nodejs_compat in calendar API
+**Target File**: `apps/calendar/api/wrangler.toml`
+**Action**: Add `compatibility_flags = ["nodejs_compat"]` to wrangler.toml to enable Node.js module compatibility for postgres package.
+**Validate Command**: `wrangler dev src/index.ts` (should start without errors)
+
+#### DEP-012-02: Enable nodejs_compat in tasks API
+**Target File**: `apps/tasks/api/wrangler.toml`
+**Action**: Add `compatibility_flags = ["nodejs_compat"]` to wrangler.toml to enable Node.js module compatibility for postgres package.
+**Validate Command**: `wrangler dev src/index.ts` (should start without errors)
+
+#### DEP-012-03: Enable nodejs_compat in drive API
+**Target File**: `apps/drive/api/wrangler.toml`
+**Action**: Add `compatibility_flags = ["nodejs_compat"]` to wrangler.toml to enable Node.js module compatibility for postgres package.
+**Validate Command**: `wrangler dev src/index.ts` (should start without errors)
+
+#### DEP-012-04: Test API servers start successfully
+**Target File**: Root directory
+**Action**: Test that all three API servers start successfully with nodejs_compat flag enabled. Verify no warnings about missing Node.js modules.
+**Validate Command**: `pnpm --filter @suite/calendar-api dev`, `pnpm --filter @suite/tasks-api dev`, `pnpm --filter @suite/drive-api dev`
+
+#### DEP-012-05: Verify E2E tests work with API servers
+**Target File**: Root directory
+**Action**: Run E2E tests to verify API servers work correctly with nodejs_compat flag. Authentication should work and tests should pass.
+**Validate Command**: `npx playwright test --project=chromium`
+
+**Implementation Notes**:
+- Added nodejs_compat flag to all three wrangler.toml files
+- API servers still fail to start with "process is not defined" error
+- Postgres package uses Node.js-specific APIs that are not compatible with Workers even with nodejs_compat
+- This is a deeper architectural issue: @suite/db package uses Node.js-only postgres client
+- Requires replacing postgres package with Workers-native solution (e.g., Workers D1 or external Postgres with HTTP API)
+- Estimated 2-3 weeks to implement Workers-compatible database layer (per @suite/db assessment)
+- Task marked as blocked [!] pending database layer refactor
+
+---
+
+### [!] DEP-005: Fix E2E Test Authentication
 
 **Priority**: P0
 **Bounded Context**: Testing
@@ -225,8 +292,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 **Related Files**:
 - `playwright.global-setup.ts`
 - `playwright.config.ts`
-- `apps/calendar/web/src/auth-provider.tsx` (if exists)
+- `apps/calendar/web/src/auth-provider.tsx`
 - `apps/calendar/web/src/App.tsx`
+- `apps/calendar/web/package.json`
+- `packages/auth/package.json`
+- `packages/auth/src/client.ts`
 
 **Definition of Done**:
 - Playwright global setup successfully authenticates
@@ -243,7 +313,7 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 - Use Playwright storageState for session persistence
 - Follow Playwright best practices for authentication
 
-**Depends On**: None
+**Depends On**: DEP-012 (Workers Node.js compatibility)
 **Blocks**: E2E test execution
 
 **Subtasks**:
@@ -272,6 +342,16 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 **Target File**: All E2E test files
 **Action**: Run full E2E test suite to verify all tests pass with authentication working. Fix any remaining test failures related to authentication or session handling.
 **Validate Command**: `npx playwright test`
+
+**Implementation Notes**:
+- Fixed authentication selectors in playwright.global-setup.ts (Email address, Sign in, Sign out)
+- Removed @suite/domain-calendar from calendar web dependencies (Buffer not defined in browser)
+- Split @suite/auth package into client/server entry points (added /client export)
+- Fixed process.env usage in auth/client.ts (removed Node.js process references)
+- Added API servers to Playwright webServer configuration
+- Discovered API servers fail to start due to missing nodejs_compat flag in wrangler.toml
+- Created DEP-012 to enable Workers Node.js compatibility (blocks this task)
+- Task marked as blocked [!] pending DEP-012 completion
 
 ---
 
@@ -580,7 +660,7 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] DEP-010: Fix API Endpoint Inconsistencies
+### [x] DEP-010: Fix API Endpoint Inconsistencies
 
 **Priority**: P0
 **Bounded Context**: API
@@ -639,6 +719,14 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 **Target File**: `apps/tasks/web/src/App.tsx`
 **Action**: Update error handling to process standardized error object format from Tasks API.
 **Validate Command**: `pnpm --filter @suite/tasks-web typecheck`
+
+**Implementation Notes**:
+- Fixed Drive folder creation endpoint from /api/folders to /api/v1/folders in apps/drive/web/src/App.tsx:441
+- Fixed Tasks delete endpoint from /api/tasks to /api/v1/tasks in apps/tasks/web/src/App.tsx:462
+- Standardized Tasks API error responses in apps/tasks/api/src/index.ts to use ERROR_CODES format with code, message, details, timestamp
+- Updated Tasks web app error handling in apps/tasks/web/src/App.tsx to handle both standardized error object format and legacy string format
+- E2E tests skipped due to DEP-012 (Workers Node.js compatibility blocking API servers)
+- Typecheck passed successfully for all packages
 
 ---
 

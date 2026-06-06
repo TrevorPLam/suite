@@ -59,6 +59,15 @@ function extractErrorMessage(value: unknown, fallback: string): string {
   if (typeof value === 'object' && value !== null) {
     const candidate = value as Record<string, unknown>;
 
+    // Handle standardized error object format
+    if (typeof candidate.error === 'object' && candidate.error !== null) {
+      const errorObj = candidate.error as Record<string, unknown>;
+      if (typeof errorObj.message === 'string' && errorObj.message.trim().length > 0) {
+        return errorObj.message;
+      }
+    }
+
+    // Handle legacy string error format
     if (typeof candidate.error === 'string' && candidate.error.trim().length > 0) {
       return candidate.error;
     }
@@ -459,7 +468,7 @@ export function App() {
     removeTask(task.id);
 
     try {
-      const response = await fetch(`${API_BASE}/api/tasks/${task.id}`, {
+      const response = await fetch(`${API_BASE}/api/v1/tasks/${task.id}`, {
         method: 'DELETE',
       });
 

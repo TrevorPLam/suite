@@ -438,7 +438,7 @@ export function App() {
         body.parentId = currentFolderId;
       }
 
-      const response = await fetch(`${API_BASE}/api/folders`, {
+      const response = await fetch(`${API_BASE}/api/v1/folders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

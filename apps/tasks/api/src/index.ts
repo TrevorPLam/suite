@@ -317,16 +317,26 @@ app.post('/api/v1/tasks', requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json({
+      error: {
+        code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+        message: 'Invalid JSON body',
+        details: [],
+        timestamp: new Date().toISOString(),
+      },
+    }, 400);
   }
 
   const result = createTaskBodySchema.safeParse(body);
 
   if (!result.success) {
     return c.json({
-      error: 'Invalid task payload',
-      expected: ['title', 'completed?'],
-      details: result.error.errors,
+      error: {
+        code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+        message: 'Invalid task payload',
+        details: result.error.errors.map((e) => e.message),
+        timestamp: new Date().toISOString(),
+      },
     }, 400);
   }
 
