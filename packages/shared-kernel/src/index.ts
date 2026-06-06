@@ -55,3 +55,15 @@ export type {
   CircuitBreakerConfig,
   CircuitBreakerStats,
 } from './circuit-breaker.js';
+export {
+  BaseDurableObject,
+  ExampleChatRoomDO,
+} from './durable-object.js';
+export type {
+  DurableObjectEnv,
+  DurableObjectState,
+  DurableObjectStorage,
+  DurableObjectNamespace,
+  DurableObjectId,
+  WebSocketPair,
+} from './durable-object.js';

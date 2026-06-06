@@ -25,7 +25,7 @@ This repository is a greenfield monorepo for a productivity suite. The initial f
 
 6. **Search uses blind indexing by default.** Implement exact‑match search via HMAC tokens. Defer semantic search until validated.
 
-7. **One Durable Object per "room" (chat, doc, board).** Never put multiple coordination units in one DO.
+7. **One Durable Object per "room" (chat, doc, board).** Never put multiple coordination units in one DO. See `.devin/rules/durable-objects-pattern.md` for detailed implementation guidelines including Hibernation API, E2EE, Alarms, RPC methods, and Hono integration.
 
 8. **Every PR must pass `nx affected -t typecheck,test,lint`.** No exceptions.
 
