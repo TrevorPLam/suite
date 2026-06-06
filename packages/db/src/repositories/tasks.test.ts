@@ -34,8 +34,8 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
         completed: false,
         archived: false,
         dueDate: null,
-        priority: null,
-        tags: null,
+        priority: 'medium',
+        tags: [],
       });
 
       expect(task).toBeDefined();
@@ -50,7 +50,7 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
         title: 'Task with optional fields',
         completed: false,
         archived: false,
-        dueDate: new Date('2026-06-10T10:00:00Z'),
+        dueDate: '2026-06-10T10:00:00Z',
         priority: 'high',
         tags: ['urgent', 'work'],
       });
@@ -58,7 +58,7 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
       expect(task).toBeDefined();
       expect(task.id).toBeDefined();
       expect(task.title).toBe('Task with optional fields');
-      expect(task.dueDate).toEqual(new Date('2026-06-10T10:00:00Z'));
+      expect(task.dueDate).toBe('2026-06-10T10:00:00Z');
       expect(task.priority).toBe('high');
       expect(task.tags).toEqual(['urgent', 'work']);
     });
@@ -71,8 +71,8 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
         completed: false,
         archived: false,
         dueDate: null,
-        priority: null,
-        tags: null,
+        priority: 'medium',
+        tags: [],
       });
 
       const found = await repository.findById(created.id);
@@ -90,9 +90,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
   describe('findAll', () => {
     it('should return all tasks', async () => {
-      await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: null, tags: null });
-      await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: null, tags: null });
-      await repository.create({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: null, tags: null });
+      await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] });
+      await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] });
+      await repository.create({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] });
 
       const allTasks = await repository.findAll();
 
@@ -113,8 +113,8 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
         completed: false,
         archived: false,
         dueDate: null,
-        priority: null,
-        tags: null,
+        priority: 'medium',
+        tags: [],
       });
 
       const updated = await repository.update(created.id, {
@@ -139,18 +139,18 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
         completed: false,
         archived: false,
         dueDate: null,
-        priority: null,
-        tags: null,
+        priority: 'medium',
+        tags: [],
       });
 
       const updated = await repository.update(created.id, {
-        dueDate: new Date('2026-06-15T14:00:00Z'),
+        dueDate: '2026-06-15T14:00:00Z',
         priority: 'medium',
         tags: ['review'],
       });
 
       expect(updated).toBeDefined();
-      expect(updated?.dueDate).toEqual(new Date('2026-06-15T14:00:00Z'));
+      expect(updated?.dueDate).toBe('2026-06-15T14:00:00Z');
       expect(updated?.priority).toBe('medium');
       expect(updated?.tags).toEqual(['review']);
     });
@@ -163,8 +163,8 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
         completed: false,
         archived: false,
         dueDate: null,
-        priority: null,
-        tags: null,
+        priority: 'medium',
+        tags: [],
       });
 
       const deleted = await repository.delete(created.id);
@@ -183,9 +183,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
   describe('findWhere', () => {
     it('should find tasks matching criteria', async () => {
-      await repository.create({ title: 'Task 1', completed: false, archived: false, priority: 'high', dueDate: null, tags: null });
-      await repository.create({ title: 'Task 2', completed: true, archived: false, priority: 'high', dueDate: null, tags: null });
-      await repository.create({ title: 'Task 3', completed: false, archived: false, priority: 'low', dueDate: null, tags: null });
+      await repository.create({ title: 'Task 1', completed: false, archived: false, priority: 'high', dueDate: null, tags: [] });
+      await repository.create({ title: 'Task 2', completed: true, archived: false, priority: 'high', dueDate: null, tags: [] });
+      await repository.create({ title: 'Task 3', completed: false, archived: false, priority: 'low', dueDate: null, tags: [] });
 
       const highPriorityTasks = await repository.findWhere({ priority: 'high' });
 
@@ -194,8 +194,8 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
     });
 
     it('should return all tasks when no criteria provided', async () => {
-      await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: null, tags: null });
-      await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: null, tags: null });
+      await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] });
+      await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] });
 
       const allTasks = await repository.findWhere({});
 
@@ -205,9 +205,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
   describe('count', () => {
     it('should count all tasks', async () => {
-      await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: null, tags: null });
-      await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: null, tags: null });
-      await repository.create({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: null, tags: null });
+      await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] });
+      await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] });
+      await repository.create({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] });
 
       const count = await repository.count();
 
@@ -215,9 +215,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
     });
 
     it('should count tasks matching criteria', async () => {
-      await repository.create({ title: 'Task 1', completed: false, archived: false, priority: 'high', dueDate: null, tags: null });
-      await repository.create({ title: 'Task 2', completed: true, archived: false, priority: 'high', dueDate: null, tags: null });
-      await repository.create({ title: 'Task 3', completed: false, archived: false, priority: 'low', dueDate: null, tags: null });
+      await repository.create({ title: 'Task 1', completed: false, archived: false, priority: 'high', dueDate: null, tags: [] });
+      await repository.create({ title: 'Task 2', completed: true, archived: false, priority: 'high', dueDate: null, tags: [] });
+      await repository.create({ title: 'Task 3', completed: false, archived: false, priority: 'low', dueDate: null, tags: [] });
 
       const highPriorityCount = await repository.count({ priority: 'high' });
 

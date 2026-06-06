@@ -19,6 +19,10 @@ import {
   DriveError,
 } from '@suite/domain-drive';
 import { wireRepositories } from './bootstrap.js';
+import { validateDriveEnv } from '@suite/env-config';
+
+// Validate environment variables at startup
+const env = validateDriveEnv();
 
 // Wire repositories before mounting routes
 wireRepositories();

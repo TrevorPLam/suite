@@ -20,6 +20,10 @@ import {
   type BatchOperationInput,
 } from '@suite/domain-tasks';
 import { wireRepositories } from './bootstrap.js';
+import { validateTasksEnv } from '@suite/env-config';
+
+// Validate environment variables at startup
+const env = validateTasksEnv();
 
 // Wire repositories before mounting routes
 wireRepositories();

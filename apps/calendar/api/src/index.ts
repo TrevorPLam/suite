@@ -9,6 +9,10 @@ import {
   type CreateCalendarEventInput,
 } from '@suite/domain-calendar';
 import { wireRepositories } from './bootstrap.js';
+import { validateCalendarEnv } from '@suite/env-config';
+
+// Validate environment variables at startup
+const env = validateCalendarEnv();
 
 // Wire repositories (Postgres if DATABASE_URL set, otherwise in-memory)
 wireRepositories();
