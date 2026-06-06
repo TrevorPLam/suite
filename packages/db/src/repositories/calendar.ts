@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, and, or, lt, gt } from 'drizzle-orm';
 import { getDb } from '../connection.js';
 import { calendarEvents, type CalendarEventSchema, type NewCalendarEventSchema } from '../schema/calendar.js';
 import type { Repository, QueryRepository } from '../index.js';
@@ -74,5 +74,23 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
     }
     const results = await this.findWhere(criteria);
     return results.length;
+  }
+
+  async findOverlapping(startAt: Date, endAt: Date, excludeId?: string): Promise<CalendarEventSchema[]> {
+    // Find events that overlap with the given range
+    // Overlap condition: (event.start < candidate.end) AND (event.end > candidate.start)
+    const conditions = [
+      lt(calendarEvents.startAt, endAt),
+      gt(calendarEvents.endAt, startAt),
+    ];
+
+    if (excludeId) {
+      conditions.push(eq(calendarEvents.id, excludeId));
+    }
+
+    return this.db
+      .select()
+      .from(calendarEvents)
+      .where(and(...conditions));
   }
 }

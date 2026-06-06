@@ -613,9 +613,9 @@ export { Textarea } from './components/ui/textarea'
 
 ## Phase 2: Domain Package Database Integration
 
-### [ ] DOM-01: Integrate database into calendar domain package
+### [x] DOM-01: Integrate database into calendar domain package
 
-**Status**: Not started  
+**Status**: Complete  
 **Related Files**: packages/domain-calendar/src/lib/calendar-events.ts, packages/domain-calendar/src/index.ts
 
 **Definition of Done**:
@@ -670,25 +670,36 @@ export type { CalendarEvent, CreateCalendarEventInput, UpdateCalendarEventInput,
 
 **Subtasks**:
 
-#### DOM-01.1: Update calendar domain to use repository
+#### ✅ DOM-01.1: Update calendar domain to use repository
 **Target**: packages/domain-calendar/src/lib/calendar-events.ts
 **Action**: Refactor to accept repository injection instead of in-memory Map.
 **Validate**: `pnpm --filter @suite/domain-calendar test`
 
-#### DOM-01.2: Create database-specific reset function
+#### ✅ DOM-01.2: Create database-specific reset function
 **Target**: packages/domain-calendar/src/lib/calendar-events.ts
 **Action**: Add resetCalendarEventsDB function that truncates database table.
 **Validate**: `pnpm --filter @suite/domain-calendar test`
 
-#### DOM-01.3: Update domain tests for database
+#### ✅ DOM-01.3: Update domain tests for database
 **Target**: packages/domain-calendar/src/lib/calendar-events.test.ts
 **Action**: Update tests to use database repository and reset function.
 **Validate**: `pnpm --filter @suite/domain-calendar test`
 
-#### DOM-01.4: Add conflict detection with database queries
+#### ✅ DOM-01.4: Add conflict detection with database queries
 **Target**: packages/domain-calendar/src/lib/calendar-events.ts
 **Action**: Implement conflict detection using database range queries.
 **Validate**: `pnpm --filter @suite/domain-calendar test`
+
+**Implementation Notes**:
+- Added @suite/db workspace dependency to domain-calendar package
+- Created InMemoryCalendarEventRepository for backward compatibility and testing
+- Implemented repository injection pattern with setCalendarEventRepository/getCalendarEventRepository
+- Made all domain functions async to support repository operations
+- Added resetCalendarEventsDB function for database-specific cleanup
+- Added findOverlapping method to PostgresCalendarEventRepository for efficient conflict detection
+- Updated assertNoConflict to use database-specific conflict detection when available
+- All 20 tests passing with in-memory repository
+- Typecheck passing for both domain-calendar and db packages
 
 ---
 
