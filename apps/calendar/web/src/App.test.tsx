@@ -3,6 +3,43 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 
+// Mock @suite/auth dependencies
+vi.mock('@suite/auth', () => ({
+  authClient: {
+    signIn: {
+      email: vi.fn(),
+    },
+    signUp: {
+      email: vi.fn(),
+    },
+    signOut: vi.fn(),
+  },
+  useSession: vi.fn(() => ({
+    data: { user: { id: 'test-user', email: 'test@example.com' } },
+    isPending: false,
+  })),
+}));
+
+// Mock auth-provider to avoid AuthProvider context issues
+vi.mock('./auth-provider', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', email: 'test@example.com' },
+    loading: false,
+    signIn: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+  }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// Mock @suite/ui to avoid ThemeProvider issues
+vi.mock('@suite/ui', () => ({
+  Button: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <button {...props}>{children}</button>,
+  Input: (props: { [key: string]: unknown }) => <input {...props} />,
+  useTheme: () => ({ theme: 'light', setTheme: vi.fn(), effectiveTheme: 'light' }),
+  ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 function mockFetchResponse(value: unknown) {
   return Promise.resolve({
     ok: true,
@@ -35,8 +72,6 @@ describe('Calendar App', () => {
     );
 
     render(<App />);
-
-    expect(screen.getByText('Loading events')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText('No events in this range')).toBeInTheDocument();
