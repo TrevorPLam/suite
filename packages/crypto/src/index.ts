@@ -22,3 +22,14 @@ export { constantTimeEqual, constantTimeEqualSync } from './constant-time.js';
 
 // Memory zeroization for secure key cleanup
 export { secureZeroize } from './memory.js';
+
+// Key wrapping (AES-KW, AES-KWP, envelope encryption)
+export {
+  wrapKey,
+  unwrapKey,
+  wrapKeyPadded,
+  unwrapKeyPadded,
+  envelopeEncrypt,
+  envelopeDecrypt,
+} from './key-wrapping.js';
+export type { EnvelopeEncryptionResult } from './key-wrapping.js';
