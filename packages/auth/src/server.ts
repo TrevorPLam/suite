@@ -5,6 +5,7 @@ import { dash } from '@better-auth/infra';
 import { users, sessions, accounts } from '@suite/db';
 import { validateAuthEnv } from './env.js';
 import { logAuthEvent, createAuthEvent } from './audit-log.js';
+import { generateDeviceFingerprint, detectAnomalousDevice, logDeviceAnomaly } from './device-fingerprinting.js';
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
@@ -138,12 +139,22 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
               const ip = request?.headers.get('cf-connecting-ip') || undefined;
               const userAgent = request?.headers.get('user-agent') || undefined;
               
-              if (user) {
+              if (user && ip && userAgent && user.id) {
+                // Generate device fingerprint
+                const deviceFingerprint = await generateDeviceFingerprint(userAgent, ip);
+                
+                // Detect anomalous device
+                const isAnomalous = await detectAnomalousDevice(user.id, deviceFingerprint, auth);
+                if (isAnomalous) {
+                  logDeviceAnomaly(user.id, user.email || '', deviceFingerprint, ip, userAgent);
+                }
+                
                 const context: Parameters<typeof createAuthEvent>[1] = {};
                 if (user.id) context.userId = user.id;
                 if (user.email) context.email = user.email;
                 if (ip) context.ip = ip;
                 if (userAgent) context.userAgent = userAgent;
+                context.metadata = { deviceFingerprint, isAnomalous };
                 logAuthEvent(createAuthEvent('sign_in', context));
               }
             },
@@ -159,12 +170,19 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
               const ip = request?.headers.get('cf-connecting-ip') || undefined;
               const userAgent = request?.headers.get('user-agent') || undefined;
               
-              if (user) {
+              if (user && ip && userAgent && user.id) {
+                // Generate device fingerprint
+                const deviceFingerprint = await generateDeviceFingerprint(userAgent, ip);
+                
+                // First device is never anomalous for new users
+                const isAnomalous = false;
+                
                 const context: Parameters<typeof createAuthEvent>[1] = {};
                 if (user.id) context.userId = user.id;
                 if (user.email) context.email = user.email;
                 if (ip) context.ip = ip;
                 if (userAgent) context.userAgent = userAgent;
+                context.metadata = { deviceFingerprint, isAnomalous };
                 logAuthEvent(createAuthEvent('sign_up', context));
               }
             },

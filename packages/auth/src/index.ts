@@ -46,6 +46,9 @@ export { revokeSession, revokeAllSessions } from './session-revocation.js';
 // Session management with audit logging
 export { listSessions, revokeSession as revokeSessionWithAudit, revokeAllSessions as revokeAllSessionsWithAudit, revokeOtherSessions } from './session-management.js';
 
+// Device fingerprinting for session security
+export { generateDeviceFingerprint, detectAnomalousDevice, logDeviceAnomaly } from './device-fingerprinting.js';
+
 // Organization client is already configured with organizationClient plugin
 // Applications can use authClient.organization.createOrganization, etc.
 

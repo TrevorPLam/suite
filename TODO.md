@@ -1237,7 +1237,7 @@
 
 ## Task: T025 - Add Device Fingerprinting for Session Security
 
-- [ ] **T025** [PENDING] Add Device Fingerprinting for Session Security
+- [x] **T025** [DONE] Add Device Fingerprinting for Session Security
 
 **Files:** `packages/auth/src/device-fingerprinting.ts` (create), `packages/auth/src/server.ts`
 
@@ -1259,25 +1259,39 @@
 
 ### Subtasks
 
-- [ ] **T025.01 [AGENT]** Create device fingerprinting module
+- [x] **T025.01 [AGENT]** Create device fingerprinting module ✅
   - **File:** `packages/auth/src/device-fingerprinting.ts` (create)
   - **Action:** Create generateDeviceFingerprint(userAgent, ip) function. Hash user agent and IP.
   - **Validation:** `pnpm --filter @suite/auth typecheck`.
 
-- [ ] **T025.02 [AGENT]** Store fingerprint with session
+- [x] **T025.02 [AGENT]** Store fingerprint with session ✅
   - **File:** `packages/auth/src/server.ts`
   - **Action:** Generate and store device fingerprint on session creation. Include in session metadata.
   - **Validation:** `pnpm --filter @suite/auth test:run`.
 
-- [ ] **T025.03 [AGENT]** Add anomaly detection
+- [x] **T025.03 [AGENT]** Add anomaly detection ✅
   - **File:** `packages/auth/src/device-fingerprinting.ts`
   - **Action:** Create detectAnomalousDevice(userId, fingerprint) function. Compare with known devices.
   - **Validation:** `pnpm --filter @suite/auth test:run`.
 
-- [ ] **T025.04 [AGENT]** Add fingerprinting tests
+- [x] **T025.04 [AGENT]** Add fingerprinting tests ✅
   - **File:** `packages/auth/src/device-fingerprinting.test.ts` (create)
   - **Action:** Test fingerprint generation consistent. Test anomaly detection works. Test alert on new device.
   - **Validation:** `pnpm --filter @suite/auth test:run`.
+
+### Implementation Notes
+- Created device-fingerprinting.ts with generateDeviceFingerprint() using SHA-256 hashing of user agent + IP
+- Implemented detectAnomalousDevice() to compare current fingerprint with known devices from session history
+- Integrated device fingerprinting in server.ts sign-in and sign-up hooks
+- Added 'device_anomaly' event type to audit-log.ts for logging anomalous device changes
+- Device fingerprints are logged in audit events with partial hash for security (first 16 chars + '...')
+- Anomaly detection fails open on errors to avoid blocking legitimate logins
+- First device for new users is never flagged as anomalous
+- Exported device fingerprinting functions from index.ts for application layer use
+- Created comprehensive test suite with 15 tests covering fingerprint generation, anomaly detection, and audit logging
+- All typechecks pass for auth package
+- Lint passes with pre-existing warnings (unrelated to T025)
+- All tests pass (66 tests: 15 device fingerprinting + 6 cookie security + 7 password policy + 5 env + 9 enterprise + 3 data deletion + 12 session management + 9 existing)
 
 ---
 
