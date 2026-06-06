@@ -399,6 +399,9 @@ importers:
 
   packages/domain-tasks:
     dependencies:
+      '@suite/crypto':
+        specifier: workspace:*
+        version: link:../crypto
       '@suite/db':
         specifier: workspace:*
         version: link:../db

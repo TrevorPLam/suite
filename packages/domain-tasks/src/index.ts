@@ -17,6 +17,16 @@ export {
   getTaskRepository,
 } from './lib/tasks.js';
 
+export {
+  setTaskKeyProvider,
+  getTaskKeyProvider,
+  isEncryptionEnabled,
+  sealTask,
+  unsealTask,
+  sealTasks,
+  unsealTasks,
+} from './lib/tasks-crypto.js';
+
 export type {
   CreateTaskInput,
   TaskErrorCode,

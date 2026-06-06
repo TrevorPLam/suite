@@ -20,6 +20,8 @@ import {
   type SearchTasksInput,
   type BatchOperationInput,
 } from './tasks.js';
+import { sealTask, unsealTask, setTaskKeyProvider } from './tasks-crypto.js';
+import { generateAESKey } from '@suite/crypto';
 
 describe('tasks - create', () => {
   beforeEach(() => {
@@ -798,5 +800,71 @@ describe('tasks - batch operations', () => {
     const results = await batchComplete(input);
 
     expect(results).toHaveLength(0);
+  });
+});
+
+describe('tasks - encryption', () => {
+  it('should encrypt task title so it is not equal to plaintext', async () => {
+    const testKey = await generateAESKey(false);
+    setTaskKeyProvider(async () => testKey);
+
+    const task: import('./tasks.js').TaskItem = {
+      id: 'test-id',
+      title: 'Buy groceries',
+      completed: false,
+      archived: false,
+      dueDate: null,
+      priority: 'medium',
+      tags: ['shopping', 'home'],
+    };
+
+    const encrypted = await sealTask(task);
+
+    // Encrypted title should not equal plaintext
+    expect(encrypted.encryptedTitle).toBeDefined();
+    expect(encrypted.encryptedTitle.ciphertext).not.toBe(task.title);
+    expect(encrypted.encryptedTitle.iv).toBeDefined();
+  });
+
+  it('should decrypt task title back to original plaintext', async () => {
+    const testKey = await generateAESKey(false);
+    setTaskKeyProvider(async () => testKey);
+
+    const task: import('./tasks.js').TaskItem = {
+      id: 'test-id',
+      title: 'Buy groceries',
+      completed: false,
+      archived: false,
+      dueDate: null,
+      priority: 'medium',
+      tags: ['shopping', 'home'],
+    };
+
+    const encrypted = await sealTask(task);
+    const decrypted = await unsealTask(encrypted);
+
+    expect(decrypted.title).toBe(task.title);
+    expect(decrypted.tags).toEqual(task.tags);
+  });
+
+  it('should encrypt and decrypt empty tags array', async () => {
+    const testKey = await generateAESKey(false);
+    setTaskKeyProvider(async () => testKey);
+
+    const task: import('./tasks.js').TaskItem = {
+      id: 'test-id',
+      title: 'Buy groceries',
+      completed: false,
+      archived: false,
+      dueDate: null,
+      priority: 'medium',
+      tags: [],
+    };
+
+    const encrypted = await sealTask(task);
+    const decrypted = await unsealTask(encrypted);
+
+    expect(decrypted.title).toBe(task.title);
+    expect(decrypted.tags).toEqual([]);
   });
 });

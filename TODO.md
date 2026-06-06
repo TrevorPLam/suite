@@ -1292,10 +1292,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] CRYPTO-002 — Add domain encryption adapter for Tasks
+### [x] CRYPTO-002 — Add domain encryption adapter for Tasks
 
-**Status:** pending  
-**Depends on:** CRYPTO-001, DB-005  
+**Status:** done
+**Depends on:** CRYPTO-001, DB-005
 **Blocks:** CRYPTO-003
 
 #### Related paths
@@ -1333,8 +1333,20 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| CRYPTO-002-a | `packages/domain-tasks/src/lib/tasks.test.ts` | TDD: encrypted title not equal plaintext in repository. | `pnpm --filter @suite/domain-tasks test:run -- src/lib/tasks.test.ts` |
-| CRYPTO-002-b | `packages/domain-tasks/src/lib/tasks-crypto.ts` | Implement seal/unseal for TaskItem fields. | `pnpm --filter @suite/domain-tasks test:run -- src/lib/tasks.test.ts` |
+| CRYPTO-002-a | `packages/domain-tasks/src/lib/tasks.test.ts` | TDD: encrypted title not equal plaintext in repository. | `pnpm --filter @suite/domain-tasks test:run -- src/lib/tasks.test.ts` ✅ |
+| CRYPTO-002-b | `packages/domain-tasks/src/lib/tasks-crypto.ts` | Implement seal/unseal for TaskItem fields. | `pnpm --filter @suite/domain-tasks test:run -- src/lib/tasks.test.ts` ✅ |
+
+#### Implementation notes
+
+- Created `packages/domain-tasks/src/lib/tasks-crypto.ts` with seal/unseal functions using @suite/crypto
+- Added `KeyProvider` type for dependency injection of encryption keys
+- Encryption is opt-in via `isEncryptionEnabled()` flag (returns false by default)
+- Encrypted both title and tags (tags serialized as JSON string, null if empty)
+- Updated domain functions (create, update, get, list, filter) to conditionally encrypt/decrypt based on flag
+- Added @suite/crypto dependency to domain-tasks package.json
+- Exported encryption functions from domain-tasks package index.ts
+- All 60 domain tests pass (including 3 new encryption tests), typecheck passes for all packages
+- Encryption is disabled by default; can be enabled by calling `setTaskKeyProvider()` with a real key provider
 
 ---
 

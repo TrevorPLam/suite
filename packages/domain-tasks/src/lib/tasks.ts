@@ -1,5 +1,6 @@
 import type { QueryRepository } from '@suite/db';
 import { generateUUID } from '@suite/shared-kernel';
+import { sealTask, unsealTask, sealTasks, unsealTasks, setTaskKeyProvider, isEncryptionEnabled, type EncryptedTaskItem } from './tasks-crypto.js';
 
 export type TaskPriority = 'low' | 'medium' | 'high';
 
@@ -250,12 +251,28 @@ export async function resetTasksDB(): Promise<void> {
 
 export async function listTasks(): Promise<TaskItem[]> {
   const tasks = await currentRepository.findAll();
-  return tasks.reverse().map(snapshot);
+  const reversedTasks = tasks.reverse();
+
+  // Decrypt if encryption is enabled
+  if (isEncryptionEnabled()) {
+    const decryptedTasks = await unsealTasks(reversedTasks as unknown as EncryptedTaskItem[]);
+    return decryptedTasks.map(snapshot);
+  }
+
+  return reversedTasks.map(snapshot);
 }
 
 export async function getTask(id: string): Promise<TaskItem | null> {
   const task = await currentRepository.findById(id);
-  return task ? snapshot(task) : null;
+  if (!task) return null;
+
+  // Decrypt if encryption is enabled
+  if (isEncryptionEnabled()) {
+    const decryptedTask = await unsealTask(task as unknown as EncryptedTaskItem);
+    return snapshot(decryptedTask);
+  }
+
+  return snapshot(task);
 }
 
 export async function createTask(input: CreateTaskInput): Promise<TaskItem> {
@@ -268,7 +285,26 @@ export async function createTask(input: CreateTaskInput): Promise<TaskItem> {
     tags: validateTags(input.tags),
   };
 
-  const created = await currentRepository.create(taskInput);
+  // Encrypt before storage if encryption is enabled
+  let taskToCreate = taskInput;
+  if (isEncryptionEnabled()) {
+    const taskWithId: TaskItem = {
+      id: generateUUID(),
+      ...taskInput,
+    };
+    const encryptedTask = await sealTask(taskWithId);
+    // EncryptedTask has encryptedTitle/encryptedTags instead of title/tags, but repository expects title/tags
+    // We need to pass the encrypted task as unknown to satisfy the type system
+    taskToCreate = encryptedTask as unknown as Omit<TaskItem, 'id'>;
+  }
+
+  const created = await currentRepository.create(taskToCreate);
+
+  // Decrypt if encryption is enabled
+  if (isEncryptionEnabled()) {
+    const decryptedTask = await unsealTask(created as unknown as EncryptedTaskItem);
+    return snapshot(decryptedTask);
+  }
 
   return snapshot(created);
 }
@@ -292,6 +328,12 @@ export async function updateTaskCompletion(id: string, input: UpdateTaskCompleti
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
       `No task exists for id "${id}"`,
     ]);
+  }
+
+  // Decrypt if encryption is enabled
+  if (isEncryptionEnabled()) {
+    const decryptedTask = await unsealTask(updated as unknown as EncryptedTaskItem);
+    return snapshot(decryptedTask);
   }
 
   return snapshot(updated);
@@ -328,12 +370,46 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
     updates.tags = validateTags(input.tags);
   }
 
+  // If encryption is enabled and we're updating title/tags, we need to re-encrypt
+  if (isEncryptionEnabled() && (input.title !== undefined || input.tags !== undefined)) {
+    // Get the existing task with decrypted values
+    const decryptedExisting = await unsealTask(existingTask as unknown as EncryptedTaskItem);
+    
+    // Build the full task with updates
+    const updatedTask: TaskItem = {
+      ...decryptedExisting,
+      ...updates,
+    };
+
+    // Re-encrypt the entire task
+    const encryptedTask = await sealTask(updatedTask);
+    
+    // Update with encrypted data
+    const updated = await currentRepository.update(id, encryptedTask as unknown as Partial<TaskItem>);
+
+    if (!updated) {
+      throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
+        `No task exists for id "${id}"`,
+      ]);
+    }
+
+    // Decrypt the result
+    const decryptedTask = await unsealTask(updated as unknown as EncryptedTaskItem);
+    return snapshot(decryptedTask);
+  }
+
   const updated = await currentRepository.update(id, updates);
 
   if (!updated) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
       `No task exists for id "${id}"`,
     ]);
+  }
+
+  // Decrypt if encryption is enabled
+  if (isEncryptionEnabled()) {
+    const decryptedTask = await unsealTask(updated as unknown as EncryptedTaskItem);
+    return snapshot(decryptedTask);
   }
 
   return snapshot(updated);
@@ -360,6 +436,12 @@ export async function archiveTask(id: string, input: ArchiveTaskInput): Promise<
     ]);
   }
 
+  // Decrypt if encryption is enabled
+  if (isEncryptionEnabled()) {
+    const decryptedTask = await unsealTask(updated as unknown as EncryptedTaskItem);
+    return snapshot(decryptedTask);
+  }
+
   return snapshot(updated);
 }
 
@@ -382,35 +464,49 @@ export async function deleteTask(id: string): Promise<void> {
 export type TaskFilter = 'all' | 'active' | 'completed' | 'archived';
 
 export async function filterTasks(filter: TaskFilter): Promise<TaskItem[]> {
+  let tasks: TaskItem[];
+
   // Use database-specific filtering if available
   if (currentRepository.findWhere) {
     switch (filter) {
       case 'active':
-        return currentRepository.findWhere({ completed: false, archived: false });
+        tasks = await currentRepository.findWhere({ completed: false, archived: false });
+        break;
       case 'completed':
-        return currentRepository.findWhere({ completed: true, archived: false });
+        tasks = await currentRepository.findWhere({ completed: true, archived: false });
+        break;
       case 'archived':
-        return currentRepository.findWhere({ archived: true });
+        tasks = await currentRepository.findWhere({ archived: true });
+        break;
       case 'all':
       default:
-        return currentRepository.findWhere({ archived: false });
+        tasks = await currentRepository.findWhere({ archived: false });
+        break;
+    }
+  } else {
+    // Fallback to in-memory filtering
+    const allTasks = await listTasks();
+
+    switch (filter) {
+      case 'active':
+        return allTasks.filter((task) => !task.completed && !task.archived);
+      case 'completed':
+        return allTasks.filter((task) => task.completed && !task.archived);
+      case 'archived':
+        return allTasks.filter((task) => task.archived);
+      case 'all':
+      default:
+        return allTasks.filter((task) => !task.archived);
     }
   }
 
-  // Fallback to in-memory filtering
-  const allTasks = await listTasks();
-
-  switch (filter) {
-    case 'active':
-      return allTasks.filter((task) => !task.completed && !task.archived);
-    case 'completed':
-      return allTasks.filter((task) => task.completed && !task.archived);
-    case 'archived':
-      return allTasks.filter((task) => task.archived);
-    case 'all':
-    default:
-      return allTasks.filter((task) => !task.archived);
+  // Decrypt if encryption is enabled
+  if (isEncryptionEnabled()) {
+    const decryptedTasks = await unsealTasks(tasks as unknown as EncryptedTaskItem[]);
+    return decryptedTasks.map(snapshot);
   }
+
+  return tasks.map(snapshot);
 }
 
 export async function searchTasks(input: SearchTasksInput): Promise<TaskItem[]> {
