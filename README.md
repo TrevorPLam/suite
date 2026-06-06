@@ -87,8 +87,8 @@ suite/
 pnpm install
 
 # Set up environment variables
-cp .env.example .env
-# Edit .env with your configuration
+# Create .env file with required variables for your environment
+# See individual app specs for required environment variables
 ```
 
 ### Development
@@ -145,10 +145,12 @@ pnpm test:coverage
 
 ## Documentation
 
-- [Architecture Decisions](docs/architecture.md)
-- [Development Workflow](docs/development.md)
-- [Testing Commands](docs/testing-commands.md)
-- [Implementation Roadmap](TODO.md)
+- [Documentation Index](docs/README.md) - Maps docs/ paths to .planning/ files
+- [Full Plan](.planning/00-vision-00-vision-and-principles.md) - Vision and principles
+- [Schema Reference](.planning/03-data-24-database-schema-reference.md) - Database schema (mandatory for domain work)
+- [Testing Strategy](.planning/02-monorepo-25-testing-strategy.md) - Testing guidelines
+- [Developer Onboarding](.planning/08-execution-36-developer-onboarding.md) - Setup guide
+- [Implementation Roadmap](TODO.md) - Current task list
 
 ## Contributing
 

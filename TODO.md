@@ -240,9 +240,9 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ## Phase 1 — Documentation and spec alignment
 
-### [ ] DOC-001 — Restore docs/ symlink or rewrite references
+### [x] DOC-001 — Restore docs/ symlink or rewrite references
 
-**Status:** pending  
+**Status:** done  
 **Depends on:** none  
 **Blocks:** DOC-002
 
