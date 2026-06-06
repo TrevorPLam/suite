@@ -1,0 +1,102 @@
+/**
+ * Email Service Interface
+ *
+ * This module provides a placeholder interface for sending emails.
+ * In production, this should be configured with an actual email provider
+ * (e.g., Resend, Postmark, SendGrid, or the self-hosted Stalwart Mail Server).
+ *
+ * For now, this is a no-op implementation that logs email content.
+ * TODO: Integrate with actual email provider when Mail app is deployed.
+ */
+
+export interface EmailOptions {
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
+}
+
+export interface SendVerificationEmailOptions {
+  user: { id: string; email: string; name?: string };
+  url: string;
+  token: string;
+}
+
+export interface SendPasswordResetEmailOptions {
+  user: { id: string; email: string; name?: string };
+  url: string;
+  token: string;
+}
+
+/**
+ * Send an email (placeholder implementation)
+ *
+ * In production, this should integrate with an actual email provider.
+ * For now, this logs the email content to console for development.
+ */
+export async function sendEmail(options: EmailOptions): Promise<void> {
+  // TODO: Integrate with actual email provider
+  // Options: Resend, Postmark, SendGrid, or self-hosted Stalwart Mail Server
+  console.log('[Email Service] Email would be sent:', {
+    to: options.to,
+    subject: options.subject,
+    text: options.text,
+    html: options.html,
+  });
+}
+
+/**
+ * Send verification email
+ *
+ * Called by Better Auth when a user needs to verify their email address.
+ */
+export async function sendVerificationEmail(
+  options: SendVerificationEmailOptions,
+  _request?: Request
+): Promise<void> {
+  const { user, url } = options;
+
+  await sendEmail({
+    to: user.email,
+    subject: 'Verify your email address',
+    text: `Click the link to verify your email: ${url}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Verify your email address</h2>
+        <p>Click the link below to verify your email address:</p>
+        <p><a href="${url}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Verify Email</a></p>
+        <p>Or copy and paste this link into your browser:</p>
+        <p style="word-break: break-all;">${url}</p>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+      </div>
+    `,
+  });
+}
+
+/**
+ * Send password reset email
+ *
+ * Called by Better Auth when a user requests a password reset.
+ */
+export async function sendPasswordResetEmail(
+  options: SendPasswordResetEmailOptions,
+  _request?: Request
+): Promise<void> {
+  const { user, url } = options;
+
+  await sendEmail({
+    to: user.email,
+    subject: 'Reset your password',
+    text: `Click the link to reset your password: ${url}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Reset your password</h2>
+        <p>Click the link below to reset your password:</p>
+        <p><a href="${url}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Reset Password</a></p>
+        <p>Or copy and paste this link into your browser:</p>
+        <p style="word-break: break-all;">${url}</p>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+      </div>
+    `,
+  });
+}

@@ -8,6 +8,7 @@ import { logAuthEvent, createAuthEvent } from './audit-log.js';
 import { generateDeviceFingerprint, detectAnomalousDevice, logDeviceAnomaly } from './device-fingerprinting.js';
 import { extractGeolocationFromCF, detectLocationAnomaly, logLocationAnomaly, type GeolocationData } from './geolocation.js';
 import { extractClientIP } from './ip-binding.js';
+import { sendVerificationEmail, sendPasswordResetEmail } from './email-service.js';
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
@@ -85,7 +86,25 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
     },
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: false,
+      requireEmailVerification: true,
+      sendVerificationEmail: async ({ user, url, token }: { user: { id: string; email: string; name?: string }; url: string; token: string }, request?: Request) => {
+        // Use waitUntil for non-blocking email sending in Workers
+        if (waitUntil) {
+          waitUntil(sendVerificationEmail({ user, url, token }, request));
+        } else {
+          // In Node.js environments, send synchronously (but don't await to prevent timing attacks)
+          void sendVerificationEmail({ user, url, token }, request);
+        }
+      },
+      sendResetPasswordEmail: async ({ user, url, token }: { user: { id: string; email: string; name?: string }; url: string; token: string }, request?: Request) => {
+        // Use waitUntil for non-blocking email sending in Workers
+        if (waitUntil) {
+          waitUntil(sendPasswordResetEmail({ user, url, token }, request));
+        } else {
+          // In Node.js environments, send synchronously (but don't await to prevent timing attacks)
+          void sendPasswordResetEmail({ user, url, token }, request);
+        }
+      },
       onError: (error: unknown) => {
         // Log failed authentication attempt
         const err = error as { email?: string; ip?: string; userAgent?: string };
@@ -94,7 +113,7 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
         if (err.ip !== undefined) context.ip = err.ip;
         if (err.userAgent !== undefined) context.userAgent = err.userAgent;
         logAuthEvent(createAuthEvent('failed_attempt', context));
-        
+
         // Account enumeration protection: always return generic error message
         // This prevents attackers from determining if an email exists
         throw new Error('Invalid email or password');
