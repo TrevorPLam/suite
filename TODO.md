@@ -999,10 +999,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] AUTH-002 — Replicate auth mount on Tasks and Drive APIs
+### [x] AUTH-002 — Replicate auth mount on Tasks and Drive APIs
 
-**Status:** pending  
-**Depends on:** AUTH-001  
+**Status:** done
+**Depends on:** AUTH-001
 **Blocks:** AUTH-003
 
 #### Related paths
@@ -1040,9 +1040,19 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| AUTH-002-a | `packages/auth/src/mount.ts` | Extract `mountAuth` from calendar implementation. | `pnpm --filter @suite/auth test:run` |
-| AUTH-002-b | `apps/tasks/api/src/index.ts` | Import and mount auth. | `pnpm --filter @suite/tasks-api test:run -- src/index.test.ts` |
-| AUTH-002-c | `apps/drive/api/src/index.ts` | Import and mount auth. | `pnpm --filter @suite/drive-api test:run -- src/index.test.ts` |
+| AUTH-002-a | `packages/auth/src/mount.ts` | Extract `mountAuth` from calendar implementation. | `pnpm --filter @suite/auth test:run` ✅ |
+| AUTH-002-b | `apps/tasks/api/src/index.ts` | Import and mount auth. | `pnpm --filter @suite/tasks-api test:run -- src/index.test.ts` ✅ |
+| AUTH-002-c | `apps/drive/api/src/index.ts` | Import and mount auth. | `pnpm --filter @suite/drive-api test:run -- src/index.test.ts` ✅ |
+
+#### Implementation notes
+
+- Created `packages/auth/src/mount.ts` with shared `mountAuth()` function
+- Exported `mountAuth` from `@suite/auth` package index.ts
+- Updated calendar API to import `mountAuth` from `@suite/auth` instead of local auth-routes.ts
+- Added `@suite/auth` dependency to tasks-api and drive-api package.json
+- Imported and called `mountAuth()` in tasks and drive API index.ts before domain routes
+- All three APIs now expose `/api/auth/**` routes with identical behavior
+- All 267 tests pass, typecheck passes for all packages
 
 ---
 

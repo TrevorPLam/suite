@@ -15,6 +15,7 @@
     "@suite/domain-tasks": "workspace:*",
     "@suite/env-config": "workspace:*",
     "@suite/db": "workspace:*",
+    "@suite/auth": "workspace:*",
     "hono": "^4.11.7"
   },
   "devDependencies": {

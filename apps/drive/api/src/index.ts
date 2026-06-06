@@ -20,6 +20,7 @@ import {
 } from '@suite/domain-drive';
 import { wireRepositories } from './bootstrap.js';
 import { validateDriveEnv } from '@suite/env-config';
+import { mountAuth } from '@suite/auth';
 
 // Validate environment variables at startup
 const env = validateDriveEnv();
@@ -28,6 +29,9 @@ const env = validateDriveEnv();
 wireRepositories();
 
 const app = new Hono();
+
+// Mount Better Auth handler
+mountAuth(app);
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;

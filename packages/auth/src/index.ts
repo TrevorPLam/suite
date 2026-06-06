@@ -28,4 +28,5 @@ export { auth, getSession, requireSession } from './server.js';
 export { authMiddleware } from './middleware.js';
 export { requireAuth } from './protected.js';
 export { authClient, signIn, signUp, signOut, useSession } from './client.js';
+export { mountAuth } from './mount.js';
 export type { Session, User as BetterAuthUser } from 'better-auth/types';

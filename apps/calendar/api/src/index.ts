@@ -10,7 +10,7 @@ import {
 } from '@suite/domain-calendar';
 import { wireRepositories } from './bootstrap.js';
 import { validateCalendarEnv } from '@suite/env-config';
-import { mountAuth } from './auth-routes.js';
+import { mountAuth } from '@suite/auth';
 
 // Validate environment variables at startup
 const env = validateCalendarEnv();

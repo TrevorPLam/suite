@@ -149,6 +149,9 @@ importers:
 
   apps/drive/api:
     dependencies:
+      '@suite/auth':
+        specifier: workspace:*
+        version: link:../../../packages/auth
       '@suite/db':
         specifier: workspace:*
         version: link:../../../packages/db
@@ -228,6 +231,9 @@ importers:
 
   apps/tasks/api:
     dependencies:
+      '@suite/auth':
+        specifier: workspace:*
+        version: link:../../../packages/auth
       '@suite/db':
         specifier: workspace:*
         version: link:../../../packages/db

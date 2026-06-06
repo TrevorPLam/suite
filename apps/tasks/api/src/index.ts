@@ -21,6 +21,7 @@ import {
 } from '@suite/domain-tasks';
 import { wireRepositories } from './bootstrap.js';
 import { validateTasksEnv } from '@suite/env-config';
+import { mountAuth } from '@suite/auth';
 
 // Validate environment variables at startup
 const env = validateTasksEnv();
@@ -29,6 +30,9 @@ const env = validateTasksEnv();
 wireRepositories();
 
 const app = new Hono();
+
+// Mount Better Auth handler
+mountAuth(app);
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
