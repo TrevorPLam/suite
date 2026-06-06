@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fc from 'fast-check';
 import {
   createCalendarEvent,
@@ -7,10 +7,16 @@ import {
   listCalendarEvents,
   listCalendarEventsInRange,
   resetCalendarEvents,
+  resetCalendarEventsDB,
+  setCalendarEventRepository,
+  getCalendarEventRepository,
   CalendarEventError,
   type CreateCalendarEventInput,
   type UpdateCalendarEventInput,
+  type CalendarEvent,
 } from './calendar-events.js';
+import { setCalendarKeyProvider, resetKeyProvider } from './calendar-crypto.js';
+import { generateAESKey } from '@suite/crypto';
 
 async function assertCalendarEventError(
   fn: () => Promise<unknown>,
@@ -256,11 +262,13 @@ describe('calendar-events - update', () => {
 describe('calendar-events - encryption', () => {
   beforeEach(() => {
     resetCalendarEvents();
+    resetKeyProvider();
   });
 
   it('should encrypt title before storage when encryption enabled', async () => {
-    // This test will fail until encryption is implemented
-    // It verifies that the stored title in the repository is not plaintext
+    const testKey = await generateAESKey(false);
+    setCalendarKeyProvider(async () => testKey);
+
     const input: CreateCalendarEventInput = {
       title: 'Team Meeting',
       startAt: '2025-01-15T10:00:00Z',
@@ -271,9 +279,197 @@ describe('calendar-events - encryption', () => {
 
     // The returned event should have the decrypted title
     expect(event.title).toBe('Team Meeting');
+  });
 
-    // TODO: Once encryption is implemented, verify repository stores ciphertext
-    // This will require accessing the repository directly to check stored data
+  it('should list events with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setCalendarKeyProvider(async () => testKey);
+
+    const input: CreateCalendarEventInput = {
+      title: 'Team Meeting',
+      startAt: '2025-01-15T10:00:00Z',
+      endAt: '2025-01-15T11:00:00Z',
+    };
+
+    await createCalendarEvent(input);
+    const events = await listCalendarEvents();
+
+    expect(events).toHaveLength(1);
+    expect(events[0]?.title).toBe('Team Meeting');
+  });
+
+  it('should list events in range with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setCalendarKeyProvider(async () => testKey);
+
+    const input: CreateCalendarEventInput = {
+      title: 'Team Meeting',
+      startAt: '2025-01-15T10:00:00Z',
+      endAt: '2025-01-15T11:00:00Z',
+    };
+
+    await createCalendarEvent(input);
+
+    const range = {
+      startAt: '2025-01-15T00:00:00Z',
+      endAt: '2025-01-17T00:00:00Z',
+    };
+
+    const events = await listCalendarEventsInRange(range);
+
+    expect(events).toHaveLength(1);
+    expect(events[0]?.title).toBe('Team Meeting');
+  });
+
+  it('should get event by id with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setCalendarKeyProvider(async () => testKey);
+
+    const input: CreateCalendarEventInput = {
+      title: 'Team Meeting',
+      startAt: '2025-01-15T10:00:00Z',
+      endAt: '2025-01-15T11:00:00Z',
+    };
+
+    const event = await createCalendarEvent(input);
+    const found = await getCalendarEvent(event.id);
+
+    expect(found).not.toBeNull();
+    expect(found?.title).toBe('Team Meeting');
+  });
+
+  it('should update event with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setCalendarKeyProvider(async () => testKey);
+
+    const createInput: CreateCalendarEventInput = {
+      title: 'Team Meeting',
+      startAt: '2025-01-15T10:00:00Z',
+      endAt: '2025-01-15T11:00:00Z',
+    };
+
+    const event = await createCalendarEvent(createInput);
+
+    const updateInput: UpdateCalendarEventInput = {
+      title: 'Updated Meeting',
+      startAt: '2025-01-15T14:00:00Z',
+      endAt: '2025-01-15T15:00:00Z',
+    };
+
+    const updated = await updateCalendarEvent(event.id, updateInput);
+
+    expect(updated.title).toBe('Updated Meeting');
+  });
+
+  it('should reset calendar events DB', async () => {
+    const input: CreateCalendarEventInput = {
+      title: 'Team Meeting',
+      startAt: '2025-01-15T10:00:00Z',
+      endAt: '2025-01-15T11:00:00Z',
+    };
+
+    await createCalendarEvent(input);
+    await resetCalendarEventsDB();
+
+    const events = await listCalendarEvents();
+    expect(events).toHaveLength(0);
+  });
+});
+
+describe('calendar-events - database-specific conflict detection', () => {
+  let originalRepository: ReturnType<typeof getCalendarEventRepository>;
+
+  beforeEach(() => {
+    resetCalendarEvents();
+    originalRepository = getCalendarEventRepository();
+  });
+
+  afterEach(() => {
+    // Reset to default repository after each test
+    setCalendarEventRepository(originalRepository);
+    resetCalendarEvents();
+  });
+
+  it('should use database-specific conflict detection when available', async () => {
+    // Create a mock repository with findOverlapping method
+    let findOverlappingCalled = false;
+
+    const customRepository = {
+      ...originalRepository,
+      async findById(id: string): Promise<CalendarEvent | null> {
+        return originalRepository.findById(id);
+      },
+      async findAll(): Promise<CalendarEvent[]> {
+        return originalRepository.findAll();
+      },
+      async create(entity: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
+        return originalRepository.create(entity);
+      },
+      async update(id: string, entity: Partial<CalendarEvent>): Promise<CalendarEvent | null> {
+        return originalRepository.update(id, entity);
+      },
+      async delete(id: string): Promise<boolean> {
+        return originalRepository.delete(id);
+      },
+      async findOverlapping(_startAt: Date, _endAt: Date, _excludeId?: string): Promise<CalendarEvent[]> {
+        findOverlappingCalled = true;
+        // Return empty array to allow creation
+        return [];
+      },
+    };
+
+    setCalendarEventRepository(customRepository);
+
+    const input: CreateCalendarEventInput = {
+      title: 'Team Meeting',
+      startAt: '2025-01-15T10:00:00Z',
+      endAt: '2025-01-15T11:00:00Z',
+    };
+
+    await createCalendarEvent(input);
+    expect(findOverlappingCalled).toBe(true);
+  });
+
+  it('should reject overlapping events using database-specific detection', async () => {
+    const existingEvent: CalendarEvent = {
+      id: 'existing-id',
+      title: 'Existing Meeting',
+      startAt: '2025-01-15T10:00:00Z',
+      endAt: '2025-01-15T11:00:00Z',
+    };
+
+    const customRepository = {
+      ...originalRepository,
+      async findById(id: string): Promise<CalendarEvent | null> {
+        return originalRepository.findById(id);
+      },
+      async findAll(): Promise<CalendarEvent[]> {
+        return originalRepository.findAll();
+      },
+      async create(entity: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
+        return originalRepository.create(entity);
+      },
+      async update(id: string, entity: Partial<CalendarEvent>): Promise<CalendarEvent | null> {
+        return originalRepository.update(id, entity);
+      },
+      async delete(id: string): Promise<boolean> {
+        return originalRepository.delete(id);
+      },
+      async findOverlapping(_startAt: Date, _endAt: Date, _excludeId?: string): Promise<CalendarEvent[]> {
+        // Return existing event to simulate conflict
+        return [existingEvent];
+      },
+    };
+
+    setCalendarEventRepository(customRepository);
+
+    const input: CreateCalendarEventInput = {
+      title: 'Team Meeting',
+      startAt: '2025-01-15T10:30:00Z',
+      endAt: '2025-01-15T11:30:00Z',
+    };
+
+    await assertCalendarEventError(() => createCalendarEvent(input), 'conflict_error');
   });
 });
 

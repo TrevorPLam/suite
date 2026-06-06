@@ -19,6 +19,9 @@ jobs:
       tasks-changed: ${{ steps.changes.outputs.tasks }}
       drive-changed: ${{ steps.changes.outputs.drive }}
       db-changed: ${{ steps.changes.outputs.db }}
+      calendar-web-changed: ${{ steps.changes.outputs.calendar-web }}
+      tasks-web-changed: ${{ steps.changes.outputs.tasks-web }}
+      drive-web-changed: ${{ steps.changes.outputs.drive-web }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -46,6 +49,9 @@ jobs:
           echo "tasks=$(nx affected:print --type=apps --projects=tasks-api --base=HEAD~1 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
           echo "drive=$(nx affected:print --type=apps --projects=drive-api --base=HEAD~1 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
           echo "db=$(nx affected:print --type=packages --projects=db --base=HEAD~1 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
+          echo "calendar-web=$(nx affected:print --type=apps --projects=calendar-web --base=HEAD~1 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
+          echo "tasks-web=$(nx affected:print --type=apps --projects=tasks-web --base=HEAD~1 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
+          echo "drive-web=$(nx affected:print --type=apps --projects=drive-web --base=HEAD~1 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
 
   # Migration job - run before API deployments
   # Drizzle migrations run all migration files in sequence for the shared database
@@ -177,12 +183,12 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy apps/drive/api
 
-  # Pages deployment jobs (future - web apps not yet implemented)
+  # Pages deployment jobs
   deploy-calendar-web:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [detect-changes, deploy-calendar-api]
-    if: false  # Disabled until web app is implemented
+    if: needs.detect-changes.outputs.calendar-web-changed != ''
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -215,7 +221,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [detect-changes, deploy-tasks-api]
-    if: false  # Disabled until web app is implemented
+    if: needs.detect-changes.outputs.tasks-web-changed != ''
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -248,7 +254,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [detect-changes, deploy-drive-api]
-    if: false  # Disabled until web app is implemented
+    if: needs.detect-changes.outputs.drive-web-changed != ''
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fc from 'fast-check';
 import {
   createTask,
@@ -13,6 +13,9 @@ import {
   batchComplete,
   batchArchive,
   resetTasks,
+  resetTasksDB,
+  setTaskRepository,
+  getTaskRepository,
   TaskError,
   type CreateTaskInput,
   type UpdateTaskCompletionInput,
@@ -20,8 +23,9 @@ import {
   type ArchiveTaskInput,
   type SearchTasksInput,
   type BatchOperationInput,
+  type TaskItem,
 } from './tasks.js';
-import { sealTask, unsealTask, setTaskKeyProvider } from './tasks-crypto.js';
+import { sealTask, unsealTask, setTaskKeyProvider, resetKeyProvider } from './tasks-crypto.js';
 import { generateAESKey } from '@suite/crypto';
 
 describe('tasks - create', () => {
@@ -805,6 +809,11 @@ describe('tasks - batch operations', () => {
 });
 
 describe('tasks - encryption', () => {
+  beforeEach(() => {
+    resetTasks();
+    resetKeyProvider();
+  });
+
   it('should encrypt task title so it is not equal to plaintext', async () => {
     const testKey = await generateAESKey(false);
     setTaskKeyProvider(async () => testKey);
@@ -867,6 +876,201 @@ describe('tasks - encryption', () => {
 
     expect(decrypted.title).toBe(task.title);
     expect(decrypted.tags).toEqual([]);
+  });
+
+  it('should create task with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setTaskKeyProvider(async () => testKey);
+
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+    };
+
+    const task = await createTask(input);
+    expect(task.title).toBe('Buy groceries');
+  });
+
+  it('should list tasks with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setTaskKeyProvider(async () => testKey);
+
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+    };
+
+    await createTask(input);
+    const tasks = await listTasks();
+
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]?.title).toBe('Buy groceries');
+  });
+
+  it('should get task by id with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setTaskKeyProvider(async () => testKey);
+
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+    };
+
+    const task = await createTask(input);
+    const found = await getTask(task.id);
+
+    expect(found).not.toBeNull();
+    expect(found?.title).toBe('Buy groceries');
+  });
+
+  it('should update task completion with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setTaskKeyProvider(async () => testKey);
+
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+    };
+
+    const task = await createTask(input);
+    const updated = await updateTaskCompletion(task.id, { completed: true });
+
+    expect(updated.completed).toBe(true);
+  });
+
+  it('should update task with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setTaskKeyProvider(async () => testKey);
+
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+    };
+
+    const task = await createTask(input);
+    const updated = await updateTask(task.id, { title: 'Buy milk' });
+
+    expect(updated.title).toBe('Buy milk');
+  });
+
+  it('should update task tags with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setTaskKeyProvider(async () => testKey);
+
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+      tags: ['shopping'],
+    };
+
+    const task = await createTask(input);
+    const updated = await updateTask(task.id, { tags: ['shopping', 'urgent'] });
+
+    expect(updated.tags).toEqual(['shopping', 'urgent']);
+  });
+
+  it('should archive task with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setTaskKeyProvider(async () => testKey);
+
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+    };
+
+    const task = await createTask(input);
+    const archived = await archiveTask(task.id, { archived: true });
+
+    expect(archived.archived).toBe(true);
+  });
+
+  it('should filter tasks with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setTaskKeyProvider(async () => testKey);
+
+    await createTask({ title: 'First task' });
+    await createTask({ title: 'Second task', completed: true });
+
+    const tasks = await filterTasks('active');
+
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]?.title).toBe('First task');
+  });
+
+  it('should reset tasks DB', async () => {
+    const input: CreateTaskInput = {
+      title: 'Buy groceries',
+    };
+
+    await createTask(input);
+    await resetTasksDB();
+
+    const tasks = await listTasks();
+    expect(tasks).toHaveLength(0);
+  });
+});
+
+describe('tasks - database-specific filtering', () => {
+  let originalRepository: ReturnType<typeof getTaskRepository>;
+
+  beforeEach(() => {
+    resetTasks();
+    originalRepository = getTaskRepository();
+  });
+
+  afterEach(() => {
+    setTaskRepository(originalRepository);
+    resetTasks();
+  });
+
+  it('should use database-specific filtering when available', async () => {
+    let findWhereCalled = false;
+
+    const customRepository = {
+      ...originalRepository,
+      async findById(id: string): Promise<TaskItem | null> {
+        return originalRepository.findById(id);
+      },
+      async findAll(): Promise<TaskItem[]> {
+        return originalRepository.findAll();
+      },
+      async create(entity: Omit<TaskItem, 'id'>): Promise<TaskItem> {
+        return originalRepository.create(entity);
+      },
+      async update(id: string, entity: Partial<TaskItem>): Promise<TaskItem | null> {
+        return originalRepository.update(id, entity);
+      },
+      async delete(id: string): Promise<boolean> {
+        return originalRepository.delete(id);
+      },
+      async findWhere(_criteria: Partial<TaskItem>): Promise<TaskItem[]> {
+        findWhereCalled = true;
+        return [];
+      },
+      async count(_criteria?: Partial<TaskItem>): Promise<number> {
+        return 0;
+      },
+    };
+
+    setTaskRepository(customRepository);
+
+    await createTask({ title: 'Test task' });
+    await filterTasks('active');
+
+    expect(findWhereCalled).toBe(true);
+  });
+});
+
+describe('tasks - blind index search', () => {
+  beforeEach(() => {
+    resetTasks();
+  });
+
+  it('should search tasks by blind index', async () => {
+    await createTask({ title: 'Buy groceries', tags: ['shopping'] });
+    await createTask({ title: 'Pay bills', tags: ['finance'] });
+
+    const input: SearchTasksInput = {
+      blindIndex: 'some-blind-index',
+    };
+
+    const results = await searchTasks(input);
+
+    // No tasks have blind index set, so should return empty
+    expect(results).toHaveLength(0);
   });
 });
 

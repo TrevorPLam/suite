@@ -54,6 +54,19 @@ describe('calendar-crypto - encryption activation', () => {
     delete process.env.ENCRYPTION_KEY;
   });
 
+  it('should throw error when ENCRYPTION_KEY is invalid base64', async () => {
+    process.env.ENCRYPTION_KEY = 'not-valid-base64!!!';
+    await expect(setCalendarKeyProviderFromEnv()).rejects.toThrow('Invalid ENCRYPTION_KEY');
+    delete process.env.ENCRYPTION_KEY;
+  });
+
+  it('should throw error when ENCRYPTION_KEY is wrong length', async () => {
+    // Too short for AES-256 (needs 32 bytes)
+    process.env.ENCRYPTION_KEY = btoa('short');
+    await expect(setCalendarKeyProviderFromEnv()).rejects.toThrow('Invalid ENCRYPTION_KEY');
+    delete process.env.ENCRYPTION_KEY;
+  });
+
   it('should actually encrypt when encryption is enabled', async () => {
     const testKey = await generateAESKey(false);
     setCalendarKeyProvider(async () => testKey);

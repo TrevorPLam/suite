@@ -7,19 +7,30 @@ import {
   renameDriveFile,
   deleteDriveFile,
   resetDriveFiles,
+  resetDriveFilesDB,
   resetDriveFolders,
+  resetDriveFoldersDB,
   createFolder,
   listFolders,
   renameFolder,
   deleteFolder,
   moveFile,
   searchFiles,
+  getDriveOverview,
+  setDriveFileRepository,
+  getDriveFileRepository,
+  setDriveFolderRepository,
+  getDriveFolderRepository,
+  setDriveStorage,
+  getDriveStorage,
   DriveError,
   resetKeyProvider,
+  setDriveKeyProvider,
   type UploadDriveFileInput,
   type RenameDriveFileInput,
   type CreateFolderInput,
 } from './index.js';
+import { generateAESKey } from '@suite/crypto';
 
 describe('drive - upload', () => {
   beforeEach(() => {
@@ -632,6 +643,205 @@ describe('drive - search', () => {
 
     const results = await searchFiles({ query: 'file' });
     expect(results).toHaveLength(2);
+  });
+});
+
+describe('drive - encryption', () => {
+  beforeEach(() => {
+    resetDriveFiles();
+    resetDriveFolders();
+    resetKeyProvider();
+  });
+
+  it('should list files with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setDriveKeyProvider(async () => testKey);
+
+    await uploadDriveFile({ name: 'document.pdf', size: 1024 });
+    const files = await listDriveFiles();
+
+    expect(files).toHaveLength(1);
+    expect(files[0]?.name).toBe('document.pdf');
+  });
+
+  it('should get file by id with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setDriveKeyProvider(async () => testKey);
+
+    const file = await uploadDriveFile({ name: 'document.pdf', size: 1024 });
+    const found = await getDriveFile(file.id);
+
+    expect(found).not.toBeNull();
+    expect(found?.name).toBe('document.pdf');
+  });
+
+  it('should rename file with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setDriveKeyProvider(async () => testKey);
+
+    const file = await uploadDriveFile({ name: 'document.pdf', size: 1024 });
+    const renamed = await renameDriveFile({ id: file.id, name: 'renamed.pdf' });
+
+    expect(renamed).not.toBeNull();
+    expect(renamed?.name).toBe('renamed.pdf');
+  });
+
+  it('should create folder with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setDriveKeyProvider(async () => testKey);
+
+    const folder = await createFolder({ name: 'Documents' });
+    expect(folder.name).toBe('Documents');
+  });
+
+  it('should list folders with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setDriveKeyProvider(async () => testKey);
+
+    await createFolder({ name: 'Documents' });
+    const folders = await listFolders();
+
+    expect(folders).toHaveLength(1);
+    expect(folders[0]?.name).toBe('Documents');
+  });
+
+  it('should rename folder with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setDriveKeyProvider(async () => testKey);
+
+    const folder = await createFolder({ name: 'OldName' });
+    const renamed = await renameFolder({ id: folder.id, name: 'NewName' });
+
+    expect(renamed).not.toBeNull();
+    expect(renamed?.name).toBe('NewName');
+  });
+
+  it('should search files with encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setDriveKeyProvider(async () => testKey);
+
+    await uploadDriveFile({ name: 'document.pdf', size: 1024 });
+    const results = await searchFiles({ query: 'doc' });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.name).toBe('document.pdf');
+  });
+
+  it('should reset files DB', async () => {
+    await uploadDriveFile({ name: 'document.pdf', size: 1024 });
+    await resetDriveFilesDB();
+
+    const files = await listDriveFiles();
+    expect(files).toHaveLength(0);
+  });
+
+  it('should reset folders DB', async () => {
+    await createFolder({ name: 'Documents' });
+    await resetDriveFoldersDB();
+
+    const folders = await listFolders();
+    expect(folders).toHaveLength(0);
+  });
+
+  it('should search files by blind index', async () => {
+    await uploadDriveFile({ name: 'document.pdf', size: 1024 });
+    const results = await searchFiles({ blindIndex: 'some-blind-index' });
+
+    // No files have blind index set, so should return empty
+    expect(results).toHaveLength(0);
+  });
+
+  it('should get drive overview', async () => {
+    await uploadDriveFile({ name: 'document.pdf', size: 1024 });
+    const overview = await getDriveOverview();
+
+    expect(overview.name).toBe('Drive');
+    expect(overview.description).toBe('Starter drive domain package');
+    expect(overview.files).toHaveLength(1);
+  });
+
+  it('should set and get storage adapter', () => {
+    const mockAdapter = {
+      put: async () => {},
+      get: async () => null,
+      delete: async () => {},
+    };
+
+    setDriveStorage(mockAdapter);
+    const retrieved = getDriveStorage();
+
+    expect(retrieved).toBe(mockAdapter);
+  });
+
+  it('should delete file from storage when adapter is set', async () => {
+    let deleteCalled = false;
+    const mockAdapter = {
+      put: async () => {},
+      get: async () => null,
+      delete: async () => {
+        deleteCalled = true;
+      },
+    };
+
+    setDriveStorage(mockAdapter);
+    const file = await uploadDriveFile({ name: 'document.pdf', size: 1024 });
+    await deleteDriveFile(file.id);
+
+    expect(deleteCalled).toBe(true);
+  });
+
+  it('should store file bytes when adapter is set', async () => {
+    let putCalled = false;
+    const mockAdapter = {
+      put: async () => {
+        putCalled = true;
+      },
+      get: async () => null,
+      delete: async () => {},
+    };
+
+    setDriveStorage(mockAdapter);
+    await uploadDriveFile({ name: 'document.pdf', size: 1024, bytes: new Uint8Array([1, 2, 3]) });
+
+    expect(putCalled).toBe(true);
+  });
+
+  it('should set and get file repository', () => {
+    const originalRepo = getDriveFileRepository();
+    const mockRepo = {
+      findById: async () => null,
+      findAll: async () => [],
+      create: async () => ({ id: 'test', name: 'test', size: 0, createdAt: '', modifiedAt: '' }),
+      update: async () => null,
+      delete: async () => false,
+      findWhere: async () => [],
+      count: async () => 0,
+    };
+
+    setDriveFileRepository(mockRepo);
+    const retrieved = getDriveFileRepository();
+
+    expect(retrieved).toBe(mockRepo);
+    setDriveFileRepository(originalRepo);
+  });
+
+  it('should set and get folder repository', () => {
+    const originalRepo = getDriveFolderRepository();
+    const mockRepo = {
+      findById: async () => null,
+      findAll: async () => [],
+      create: async () => ({ id: 'test', name: 'test', createdAt: '' }),
+      update: async () => null,
+      delete: async () => false,
+      findWhere: async () => [],
+      count: async () => 0,
+    };
+
+    setDriveFolderRepository(mockRepo);
+    const retrieved = getDriveFolderRepository();
+
+    expect(retrieved).toBe(mockRepo);
+    setDriveFolderRepository(originalRepo);
   });
 });
 
