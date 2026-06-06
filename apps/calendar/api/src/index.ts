@@ -8,13 +8,13 @@ import {
   listCalendarEventsInRange,
   updateCalendarEvent,
   type CalendarEventRange,
-  type CreateCalendarEventInput,
 } from '@suite/domain-calendar';
 import { wireRepositories } from './bootstrap.js';
 import { validateCalendarEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger } from '@suite/shared-kernel';
 import { PostgresUsageRepository } from '@suite/db';
+import { createEventBodySchema, updateEventBodySchema } from './schemas.js';
 
 // Validate environment variables at startup
 validateCalendarEnv();
@@ -109,38 +109,6 @@ function readEventRange(searchParams: Record<string, string>): CalendarEventRang
   };
 }
 
-function parseCreateCalendarEventBody(body: unknown): CreateCalendarEventInput | null {
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-
-  const { title, startAt, endAt } = body as Record<string, unknown>;
-
-  if (!isNonEmptyString(title) || !isValidIsoTimestamp(startAt) || !isValidIsoTimestamp(endAt)) {
-    return null;
-  }
-
-  if (Date.parse(endAt) <= Date.parse(startAt)) {
-    return null;
-  }
-
-  return {
-    title: title.trim(),
-    startAt,
-    endAt,
-  };
-}
-
-function parseEventBody(body: unknown): CreateCalendarEventInput | null {
-  const payload = parseCreateCalendarEventBody(body);
-
-  if (!payload) {
-    return null;
-  }
-
-  return payload;
-}
-
 function readCalendarError(error: unknown): { status: CalendarResponseStatus; body: Record<string, unknown> } {
   if (error instanceof CalendarEventError) {
     if (error.code === 'conflict_error') {
@@ -222,20 +190,20 @@ app.post('/api/events', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseCreateCalendarEventBody(body);
+  const result = createEventBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json(
       {
         error: 'Invalid event payload',
-        expected: ['title', 'startAt', 'endAt'],
+        details: result.error.errors,
       },
       400,
     );
   }
 
   try {
-    const event = await createCalendarEvent(payload);
+    const event = await createCalendarEvent(result.data);
     return c.json({ event }, 201);
   } catch (error) {
     const response = readCalendarError(error);
@@ -263,20 +231,20 @@ app.put('/api/events/:id', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseEventBody(body);
+  const result = updateEventBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json(
       {
         error: 'Invalid event payload',
-        expected: ['title', 'startAt', 'endAt'],
+        details: result.error.errors,
       },
       400,
     );
   }
 
   try {
-    const event = await updateCalendarEvent(id, payload);
+    const event = await updateCalendarEvent(id, result.data);
     return c.json({ event });
   } catch (error) {
     const response = readCalendarError(error);

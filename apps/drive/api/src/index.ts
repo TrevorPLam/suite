@@ -12,11 +12,6 @@ import {
   renameDriveFile,
   renameFolder,
   searchFiles,
-  type CreateFolderInput,
-  type MoveFileInput,
-  type RenameDriveFileInput,
-  type RenameFolderInput,
-  type SearchFilesInput,
   type UploadDriveFileInput,
   uploadDriveFile,
   DriveError,
@@ -26,6 +21,14 @@ import { validateDriveEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger } from '@suite/shared-kernel';
 import { PostgresUsageRepository } from '@suite/db';
+import {
+  uploadFileBodySchema,
+  renameFileBodySchema,
+  createFolderBodySchema,
+  renameFolderBodySchema,
+  moveFileBodySchema,
+  searchFilesQuerySchema,
+} from './schemas.js';
 
 // Validate environment variables at startup
 validateDriveEnv();
@@ -94,142 +97,6 @@ app.use('/api/*', async (c, next) => {
   }
   await next();
 });
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
-}
-
-function parseUploadDriveFileBody(body: unknown): UploadDriveFileInput | null {
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-
-  const { name, size, folderId, mimeType } = body as Record<string, unknown>;
-
-  if (!isNonEmptyString(name) || typeof size !== 'number' || !Number.isInteger(size) || size < 0) {
-    return null;
-  }
-
-  const result: UploadDriveFileInput = {
-    name: name.trim(),
-    size,
-  };
-
-  if (folderId !== undefined) {
-    if (typeof folderId !== 'string' || folderId.trim().length === 0) {
-      return null;
-    }
-    result.folderId = folderId.trim();
-  }
-
-  if (mimeType !== undefined) {
-    if (typeof mimeType !== 'string' || mimeType.trim().length === 0) {
-      return null;
-    }
-    result.mimeType = mimeType.trim();
-  }
-
-  return result;
-}
-
-function parseRenameDriveFileBody(body: unknown, id: string): RenameDriveFileInput | null {
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-
-  const { name } = body as Record<string, unknown>;
-
-  if (!isNonEmptyString(name)) {
-    return null;
-  }
-
-  return {
-    id,
-    name: name.trim(),
-  };
-}
-
-function parseCreateFolderBody(body: unknown): CreateFolderInput | null {
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-
-  const { name, parentId } = body as Record<string, unknown>;
-
-  if (!isNonEmptyString(name)) {
-    return null;
-  }
-
-  const result: CreateFolderInput = {
-    name: name.trim(),
-  };
-
-  if (parentId !== undefined) {
-    if (typeof parentId !== 'string' || parentId.trim().length === 0) {
-      return null;
-    }
-    result.parentId = parentId.trim();
-  }
-
-  return result;
-}
-
-function parseRenameFolderBody(body: unknown, id: string): RenameFolderInput | null {
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-
-  const { name } = body as Record<string, unknown>;
-
-  if (!isNonEmptyString(name)) {
-    return null;
-  }
-
-  return {
-    id,
-    name: name.trim(),
-  };
-}
-
-function parseMoveFileBody(body: unknown, id: string): MoveFileInput | null {
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-
-  const { folderId } = body as Record<string, unknown>;
-
-  const result: MoveFileInput = { id };
-
-  if (folderId !== undefined) {
-    if (typeof folderId !== 'string' || folderId.trim().length === 0) {
-      return null;
-    }
-    result.folderId = folderId.trim();
-  }
-
-  return result;
-}
-
-function parseSearchFilesQuery(query: Record<string, string>): SearchFilesInput | null {
-  const { q, folderId } = query;
-
-  if (!q || typeof q !== 'string' || q.trim().length === 0) {
-    return null;
-  }
-
-  const result: SearchFilesInput = {
-    query: q.trim(),
-  };
-
-  if (folderId !== undefined) {
-    if (typeof folderId !== 'string' || folderId.trim().length === 0) {
-      return null;
-    }
-    result.folderId = folderId.trim();
-  }
-
-  return result;
-}
 
 function readDriveError(error: unknown): { status: 400 | 404 | 500; body: Record<string, unknown> } {
   if (error instanceof DriveError) {
@@ -332,28 +199,27 @@ app.post('/api/files', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseUploadDriveFileBody(body);
+  const result = uploadFileBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json({
       error: 'Invalid file payload',
-      expected: ['name', 'size'],
-      optional: ['folderId', 'mimeType'],
+      details: result.error.errors,
     }, 400);
   }
 
   // File size limit: 100MB
   const MAX_FILE_SIZE = 100 * 1024 * 1024;
-  if (payload.size > MAX_FILE_SIZE) {
+  if (result.data.size > MAX_FILE_SIZE) {
     return c.json({
       error: 'File size exceeds limit',
       maxSize: MAX_FILE_SIZE,
-      actualSize: payload.size,
+      actualSize: result.data.size,
     }, 413);
   }
 
   try {
-    const file = await uploadDriveFile(payload);
+    const file = await uploadDriveFile(result.data);
     return c.json(file, 201);
   } catch (error) {
     const response = readDriveError(error);
@@ -376,21 +242,22 @@ app.put('/api/files/:id', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseRenameDriveFileBody(body, id);
+  const result = renameFileBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json({
       error: 'Invalid rename payload',
-      expected: ['name'],
+      details: result.error.errors,
     }, 400);
   }
 
   try {
-    const result = await renameDriveFile(payload);
-    if (!result) {
+    const payload = { id, name: result.data.name };
+    const renamed = await renameDriveFile(payload);
+    if (!renamed) {
       return c.json({ error: 'File not found' }, 404);
     }
-    return c.json(result);
+    return c.json(renamed);
   } catch (error) {
     const response = readDriveError(error);
     return c.json(response.body, response.status);
@@ -462,18 +329,17 @@ app.post('/api/folders', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseCreateFolderBody(body);
+  const result = createFolderBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json({
       error: 'Invalid folder payload',
-      expected: ['name'],
-      optional: ['parentId'],
+      details: result.error.errors,
     }, 400);
   }
 
   try {
-    const folder = await createFolder(payload);
+    const folder = await createFolder(result.data);
     return c.json(folder, 201);
   } catch (error) {
     const response = readDriveError(error);
@@ -496,21 +362,22 @@ app.put('/api/folders/:id', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseRenameFolderBody(body, id);
+  const result = renameFolderBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json({
       error: 'Invalid rename payload',
-      expected: ['name'],
+      details: result.error.errors,
     }, 400);
   }
 
   try {
-    const result = await renameFolder(payload);
-    if (!result) {
+    const payload = { id, name: result.data.name };
+    const renamed = await renameFolder(payload);
+    if (!renamed) {
       return c.json({ error: 'Folder not found' }, 404);
     }
-    return c.json(result);
+    return c.json(renamed);
   } catch (error) {
     const response = readDriveError(error);
     return c.json(response.body, response.status);
@@ -549,21 +416,25 @@ app.post('/api/files/:id/move', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseMoveFileBody(body, id);
+  const result = moveFileBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json({
       error: 'Invalid move payload',
-      optional: ['folderId'],
+      details: result.error.errors,
     }, 400);
   }
 
   try {
-    const result = await moveFile(payload);
-    if (!result) {
+    const payload: { id: string; folderId?: string } = { id };
+    if (result.data.folderId !== undefined) {
+      payload.folderId = result.data.folderId;
+    }
+    const moved = await moveFile(payload);
+    if (!moved) {
       return c.json({ error: 'File not found' }, 404);
     }
-    return c.json(result);
+    return c.json(moved);
   } catch (error) {
     const response = readDriveError(error);
     return c.json(response.body, response.status);
@@ -573,17 +444,16 @@ app.post('/api/files/:id/move', requireAuth, async (c) => {
 // Search endpoint
 app.get('/api/files/search', async (c) => {
   const query = c.req.query();
-  const payload = parseSearchFilesQuery(query);
+  const result = searchFilesQuerySchema.safeParse(query);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json({
       error: 'Invalid search query',
-      expected: ['q'],
-      optional: ['folderId'],
+      details: result.error.errors,
     }, 400);
   }
 
-  const results = await searchFiles(payload);
+  const results = await searchFiles(result.data);
   return c.json({ files: results });
 });
 
