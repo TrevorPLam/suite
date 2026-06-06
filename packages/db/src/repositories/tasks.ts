@@ -2,6 +2,7 @@ import { eq, and } from 'drizzle-orm';
 import { getDb } from '../connection.js';
 import { tasks, type TaskSchema, type NewTaskSchema } from '../schema/tasks.js';
 import type { Repository, QueryRepository } from '../index.js';
+import { generateUUID } from '@suite/shared-kernel';
 
 export type TaskRepository = QueryRepository<TaskSchema>;
 
@@ -27,7 +28,7 @@ export class PostgresTaskRepository implements TaskRepository {
 
   async create(entity: Omit<TaskSchema, 'id'>): Promise<TaskSchema> {
     const newEntity: NewTaskSchema = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       ...entity,
     };
     const results = await this.db.insert(tasks).values(newEntity).returning();
