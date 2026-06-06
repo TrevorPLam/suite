@@ -13,6 +13,7 @@ import {
   deleteFolder,
   moveFile,
   searchFiles,
+  DriveError,
   type UploadDriveFileInput,
   type RenameDriveFileInput,
   type CreateFolderInput,
@@ -58,7 +59,10 @@ describe('drive - upload', () => {
       size: 1024,
     };
 
-    await expect(uploadDriveFile(input)).rejects.toThrow('name contains invalid characters');
+    await expect(uploadDriveFile(input)).rejects.toThrow(DriveError);
+    await expect(uploadDriveFile(input)).rejects.toMatchObject({
+      code: 'validation_error',
+    });
   });
 
   it('should reject file name exceeding 255 characters', async () => {
@@ -67,15 +71,24 @@ describe('drive - upload', () => {
       size: 1024,
     };
 
-    await expect(uploadDriveFile(input)).rejects.toThrow('name contains invalid characters');
+    await expect(uploadDriveFile(input)).rejects.toThrow(DriveError);
+    await expect(uploadDriveFile(input)).rejects.toMatchObject({
+      code: 'validation_error',
+    });
   });
 
   it('should reject file name that is . or ..', async () => {
     const input1: UploadDriveFileInput = { name: '.', size: 1024 };
-    await expect(uploadDriveFile(input1)).rejects.toThrow('name contains invalid characters');
+    await expect(uploadDriveFile(input1)).rejects.toThrow(DriveError);
+    await expect(uploadDriveFile(input1)).rejects.toMatchObject({
+      code: 'validation_error',
+    });
 
     const input2: UploadDriveFileInput = { name: '..', size: 1024 };
-    await expect(uploadDriveFile(input2)).rejects.toThrow('name contains invalid characters');
+    await expect(uploadDriveFile(input2)).rejects.toThrow(DriveError);
+    await expect(uploadDriveFile(input2)).rejects.toMatchObject({
+      code: 'validation_error',
+    });
   });
 
   it('should accept file with valid mimeType', async () => {
@@ -107,7 +120,10 @@ describe('drive - upload', () => {
       mimeType: 'invalid',
     };
 
-    await expect(uploadDriveFile(input)).rejects.toThrow('mimeType must be a valid MIME type');
+    await expect(uploadDriveFile(input)).rejects.toThrow(DriveError);
+    await expect(uploadDriveFile(input)).rejects.toMatchObject({
+      code: 'validation_error',
+    });
   });
 
   it('should set createdAt and modifiedAt on upload', async () => {
@@ -158,7 +174,10 @@ describe('drive - upload', () => {
       folderId: 'non-existent-folder',
     };
 
-    await expect(uploadDriveFile(input)).rejects.toThrow('folder not found');
+    await expect(uploadDriveFile(input)).rejects.toThrow(DriveError);
+    await expect(uploadDriveFile(input)).rejects.toMatchObject({
+      code: 'not_found_error',
+    });
   });
 });
 
@@ -293,7 +312,10 @@ describe('drive - rename', () => {
       name: 'invalid<>.pdf',
     };
 
-    await expect(renameDriveFile(renameInput)).rejects.toThrow('name contains invalid characters');
+    await expect(renameDriveFile(renameInput)).rejects.toThrow(DriveError);
+    await expect(renameDriveFile(renameInput)).rejects.toMatchObject({
+      code: 'validation_error',
+    });
   });
 
   it('should return null for non-existent file', async () => {
@@ -406,12 +428,18 @@ describe('drive - folders', () => {
       parentId: 'non-existent',
     };
 
-    await expect(createFolder(input)).rejects.toThrow('parent folder not found');
+    await expect(createFolder(input)).rejects.toThrow(DriveError);
+    await expect(createFolder(input)).rejects.toMatchObject({
+      code: 'not_found_error',
+    });
   });
 
   it('should reject invalid folder name', async () => {
     const input: CreateFolderInput = { name: 'invalid<>' };
-    await expect(createFolder(input)).rejects.toThrow('name contains invalid characters');
+    await expect(createFolder(input)).rejects.toThrow(DriveError);
+    await expect(createFolder(input)).rejects.toMatchObject({
+      code: 'validation_error',
+    });
   });
 
   it('should list all folders', async () => {
@@ -499,7 +527,10 @@ describe('drive - move file', () => {
   it('should reject non-existent folder', async () => {
     const file = await uploadDriveFile({ name: 'file.txt', size: 100 });
 
-    await expect(moveFile({ id: file.id, folderId: 'non-existent' })).rejects.toThrow('folder not found');
+    await expect(moveFile({ id: file.id, folderId: 'non-existent' })).rejects.toThrow(DriveError);
+    await expect(moveFile({ id: file.id, folderId: 'non-existent' })).rejects.toMatchObject({
+      code: 'not_found_error',
+    });
   });
 
   it('should return null for non-existent file', async () => {

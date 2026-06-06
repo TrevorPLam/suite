@@ -30,8 +30,14 @@ export type RenameDriveFileInput = {
   name: string;
 };
 
+export type DriveErrorCode = 'validation_error' | 'not_found_error';
+
 export class DriveError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    public readonly code: DriveErrorCode,
+    public readonly details: string[] = [],
+  ) {
     super(message);
     this.name = 'DriveError';
   }
@@ -300,29 +306,41 @@ export async function uploadDriveFile(input: UploadDriveFileInput): Promise<Driv
   const name = input.name.trim();
 
   if (!isNonEmptyString(name)) {
-    throw new DriveError('name must be a non-empty string');
+    throw new DriveError('name must be a non-empty string', 'validation_error', [
+      'name must be a non-empty string',
+    ]);
   }
 
   if (!isValidFileName(name)) {
-    throw new DriveError('name contains invalid characters or exceeds length limit');
+    throw new DriveError('name contains invalid characters or exceeds length limit', 'validation_error', [
+      'name contains invalid characters or exceeds length limit',
+    ]);
   }
 
   if (!Number.isFinite(input.size) || !Number.isInteger(input.size)) {
-    throw new DriveError('size must be an integer');
+    throw new DriveError('size must be an integer', 'validation_error', [
+      'size must be an integer',
+    ]);
   }
 
   if (input.size < 0) {
-    throw new DriveError('size must be non-negative');
+    throw new DriveError('size must be non-negative', 'validation_error', [
+      'size must be non-negative',
+    ]);
   }
 
   if (input.mimeType && !isValidMimeType(input.mimeType)) {
-    throw new DriveError('mimeType must be a valid MIME type (e.g., application/pdf)');
+    throw new DriveError('mimeType must be a valid MIME type (e.g., application/pdf)', 'validation_error', [
+      'mimeType must be a valid MIME type (e.g., application/pdf)',
+    ]);
   }
 
   if (input.folderId) {
     const folder = await currentFolderRepository.findById(input.folderId);
     if (!folder) {
-      throw new DriveError('folder not found');
+      throw new DriveError('folder not found', 'not_found_error', [
+        `No folder exists for id "${input.folderId}"`,
+      ]);
     }
   }
 
@@ -348,11 +366,15 @@ export async function renameDriveFile(input: RenameDriveFileInput): Promise<Driv
   const name = input.name.trim();
 
   if (!isNonEmptyString(name)) {
-    throw new DriveError('name must be a non-empty string');
+    throw new DriveError('name must be a non-empty string', 'validation_error', [
+      'name must be a non-empty string',
+    ]);
   }
 
   if (!isValidFileName(name)) {
-    throw new DriveError('name contains invalid characters or exceeds length limit');
+    throw new DriveError('name contains invalid characters or exceeds length limit', 'validation_error', [
+      'name contains invalid characters or exceeds length limit',
+    ]);
   }
 
   const updated = await currentFileRepository.update(input.id, {
@@ -372,17 +394,23 @@ export async function createFolder(input: CreateFolderInput): Promise<DriveFolde
   const name = input.name.trim();
 
   if (!isNonEmptyString(name)) {
-    throw new DriveError('name must be a non-empty string');
+    throw new DriveError('name must be a non-empty string', 'validation_error', [
+      'name must be a non-empty string',
+    ]);
   }
 
   if (!isValidFileName(name)) {
-    throw new DriveError('name contains invalid characters or exceeds length limit');
+    throw new DriveError('name contains invalid characters or exceeds length limit', 'validation_error', [
+      'name contains invalid characters or exceeds length limit',
+    ]);
   }
 
   if (input.parentId) {
     const parent = await currentFolderRepository.findById(input.parentId);
     if (!parent) {
-      throw new DriveError('parent folder not found');
+      throw new DriveError('parent folder not found', 'not_found_error', [
+        `No folder exists for id "${input.parentId}"`,
+      ]);
     }
   }
 
@@ -409,11 +437,15 @@ export async function renameFolder(input: RenameFolderInput): Promise<DriveFolde
   const name = input.name.trim();
 
   if (!isNonEmptyString(name)) {
-    throw new DriveError('name must be a non-empty string');
+    throw new DriveError('name must be a non-empty string', 'validation_error', [
+      'name must be a non-empty string',
+    ]);
   }
 
   if (!isValidFileName(name)) {
-    throw new DriveError('name contains invalid characters or exceeds length limit');
+    throw new DriveError('name contains invalid characters or exceeds length limit', 'validation_error', [
+      'name contains invalid characters or exceeds length limit',
+    ]);
   }
 
   const updated = await currentFolderRepository.update(input.id, { name });
@@ -441,7 +473,9 @@ export async function moveFile(input: MoveFileInput): Promise<DriveFile | null> 
   if (input.folderId) {
     const folder = await currentFolderRepository.findById(input.folderId);
     if (!folder) {
-      throw new DriveError('folder not found');
+      throw new DriveError('folder not found', 'not_found_error', [
+        `No folder exists for id "${input.folderId}"`,
+      ]);
     }
   }
 

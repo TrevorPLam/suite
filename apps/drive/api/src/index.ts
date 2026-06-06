@@ -16,6 +16,7 @@ import {
   type SearchFilesInput,
   type UploadDriveFileInput,
   uploadDriveFile,
+  DriveError,
 } from '@suite/domain-drive';
 
 const app = new Hono();
@@ -156,6 +157,35 @@ function parseSearchFilesQuery(query: Record<string, string>): SearchFilesInput 
   return result;
 }
 
+function readDriveError(error: unknown): { status: 400 | 404 | 500; body: Record<string, unknown> } {
+  if (error instanceof DriveError) {
+    if (error.code === 'not_found_error') {
+      return {
+        status: 404,
+        body: {
+          error: error.message,
+          details: error.details,
+        },
+      };
+    }
+
+    return {
+      status: 400,
+      body: {
+        error: error.message,
+        details: error.details,
+      },
+    };
+  }
+
+  return {
+    status: 500,
+    body: {
+      error: 'Unable to process drive operation',
+    },
+  };
+}
+
 app.get('/api/health', (c) => c.json({ ok: true, app: 'drive' }));
 
 app.get('/api/files', async (c) => {
@@ -196,10 +226,8 @@ app.post('/api/files', async (c) => {
     const file = await uploadDriveFile(payload);
     return c.json(file, 201);
   } catch (error) {
-    if (error instanceof Error) {
-      return c.json({ error: error.message }, 400);
-    }
-    return c.json({ error: 'Unknown error' }, 500);
+    const response = readDriveError(error);
+    return c.json(response.body, response.status);
   }
 });
 
@@ -234,10 +262,8 @@ app.put('/api/files/:id', async (c) => {
     }
     return c.json(result);
   } catch (error) {
-    if (error instanceof Error) {
-      return c.json({ error: error.message }, 400);
-    }
-    return c.json({ error: 'Unknown error' }, 500);
+    const response = readDriveError(error);
+    return c.json(response.body, response.status);
   }
 });
 
@@ -287,10 +313,8 @@ app.post('/api/folders', async (c) => {
     const folder = await createFolder(payload);
     return c.json(folder, 201);
   } catch (error) {
-    if (error instanceof Error) {
-      return c.json({ error: error.message }, 400);
-    }
-    return c.json({ error: 'Unknown error' }, 500);
+    const response = readDriveError(error);
+    return c.json(response.body, response.status);
   }
 });
 
@@ -325,10 +349,8 @@ app.put('/api/folders/:id', async (c) => {
     }
     return c.json(result);
   } catch (error) {
-    if (error instanceof Error) {
-      return c.json({ error: error.message }, 400);
-    }
-    return c.json({ error: 'Unknown error' }, 500);
+    const response = readDriveError(error);
+    return c.json(response.body, response.status);
   }
 });
 
@@ -380,10 +402,8 @@ app.post('/api/files/:id/move', async (c) => {
     }
     return c.json(result);
   } catch (error) {
-    if (error instanceof Error) {
-      return c.json({ error: error.message }, 400);
-    }
-    return c.json({ error: 'Unknown error' }, 500);
+    const response = readDriveError(error);
+    return c.json(response.body, response.status);
   }
 });
 

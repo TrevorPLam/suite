@@ -1871,10 +1871,10 @@ rm .devin/rules/tech-stack.md
 
 ---
 
-### [ ] DEBT-04: Add error codes to drive domain
+### [x] DEBT-04: Add error codes to drive domain
 
-**Status**: Not started  
-**Related Files**: packages/domain-drive/src/index.ts
+**Status**: Complete
+**Related Files**: packages/domain-drive/src/index.ts, apps/drive/api/src/index.ts
 
 **Definition of Done**:
 - DriveError uses error codes like other domains
@@ -1921,30 +1921,46 @@ export { DriveError }
 export type { DriveErrorCode }
 ```
 
-**Depends On**: None  
+**Depends On**: None
 **Blocks**: Consistent error handling across domains
 
 **Subtasks**:
 
-#### DEBT-04.1: Add error codes to DriveError
+#### ✅ DEBT-04.1: Add error codes to DriveError
 **Target**: packages/domain-drive/src/index.ts
 **Action**: Update DriveError to include code and details fields.
 **Validate**: `pnpm --filter @suite/domain-drive typecheck`
 
-#### DEBT-04.2: Update drive functions to use error codes
+#### ✅ DEBT-04.2: Update drive functions to use error codes
 **Target**: packages/domain-drive/src/index.ts
 **Action**: Update all functions to throw DriveError with appropriate codes.
 **Validate**: `pnpm --filter @suite/domain-drive test`
 
-#### DEBT-04.3: Update drive API error mapping
+#### ✅ DEBT-04.3: Update drive API error mapping
 **Target**: apps/drive/api/src/index.ts
 **Action**: Update readDriveError to map error codes to HTTP status codes.
 **Validate**: `pnpm --filter @suite/drive-api test`
 
-#### DEBT-04.4: Update drive tests to check error codes
+#### ✅ DEBT-04.4: Update drive tests to check error codes
 **Target**: packages/domain-drive/src/index.test.ts
 **Action**: Update tests to check error.code instead of message strings.
 **Validate**: `pnpm --filter @suite/domain-drive test`
+
+**Implementation Notes**:
+- Added DriveErrorCode type with 'validation_error' | 'not_found_error' values
+- Updated DriveError class to include code and details fields (matching calendar/tasks pattern)
+- Updated all DriveError instantiations in domain functions:
+  - uploadDriveFile: validation_error for name/size/mimeType issues, not_found_error for folder
+  - renameDriveFile: validation_error for name issues
+  - createFolder: validation_error for name issues, not_found_error for parent folder
+  - renameFolder: validation_error for name issues
+  - moveFile: not_found_error for folder
+- Added readDriveError function in drive API to map error codes to HTTP status codes (404 for not_found, 400 for validation)
+- Updated all API endpoints to use readDriveError for consistent error responses
+- Updated 9 test assertions to check error.code instead of message strings
+- All 47 tests passing
+- Typecheck passing for all packages
+- Error handling now consistent across all three domain packages (calendar, tasks, drive)
 
 ---
 
