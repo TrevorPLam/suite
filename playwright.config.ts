@@ -7,7 +7,8 @@ const __dirname = dirname(__filename);
 
 export default defineConfig({
   globalSetup: join(__dirname, './playwright.global-setup.ts'),
-  testDir: './e2e',
+  testDir: './apps',
+  testMatch: '**/e2e/**/*.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -17,6 +18,7 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     storageState: '.auth/storage-state.json',
+    screenshot: 'only-on-failure',
   },
   projects: [
     {
