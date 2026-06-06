@@ -19,6 +19,7 @@
 
 import { secureZeroize } from './memory.js';
 import type { KeyMetadata, KeyStatus, KeyUsage, AlgorithmIdentifier } from './agility.js';
+import { logKeyCreated, logKeyUsed, logKeyDeleted, logKeyRotated } from './audit.js';
 
 /**
  * Re-export KeyMetadata and related types from agility module
@@ -57,11 +58,11 @@ export function createKeyMetadata(
   expiresAt: Date | null = null,
   isPostQuantum: boolean = false
 ): KeyMetadata {
-  return {
+  const metadata: KeyMetadata = {
     id: crypto.randomUUID(),
     version: 1,
     algorithm,
-    status: 'active',
+    status: 'active' as KeyStatus,
     usage,
     createdAt: new Date(),
     expiresAt,
@@ -69,6 +70,14 @@ export function createKeyMetadata(
     keySize,
     isPostQuantum,
   };
+
+  // Log key creation event
+  logKeyCreated(metadata.id, algorithm, keySize, {
+    isPostQuantum,
+    expiresAt: expiresAt?.toISOString(),
+  });
+
+  return metadata;
 }
 
 /**
@@ -115,9 +124,11 @@ export function rotateKey(oldKey: KeyMetadata, newKeyMaterial?: KeyMetadata): Ke
   // Mark old key as disabled (not deleted, but no longer primary)
   oldKey.status = 'disabled';
 
+  let newKey: KeyMetadata;
+
   // If new key material provided, use it; otherwise create new version of same key
   if (newKeyMaterial) {
-    return {
+    newKey = {
       ...newKeyMaterial,
       id: crypto.randomUUID(),
       version: incrementVersion(oldKey.version),
@@ -125,17 +136,26 @@ export function rotateKey(oldKey: KeyMetadata, newKeyMaterial?: KeyMetadata): Ke
       createdAt: new Date(),
       isPrimary: true, // New key becomes primary
     };
+  } else {
+    // Create new version of same key
+    newKey = {
+      ...oldKey,
+      id: crypto.randomUUID(),
+      version: incrementVersion(oldKey.version),
+      status: 'active',
+      createdAt: new Date(),
+      isPrimary: true,
+    };
   }
 
-  // Create new version of same key
-  return {
-    ...oldKey,
-    id: crypto.randomUUID(),
-    version: incrementVersion(oldKey.version),
-    status: 'active',
-    createdAt: new Date(),
-    isPrimary: true,
-  };
+  // Log key rotation event
+  logKeyRotated(oldKey.id, newKey.id, {
+    oldVersion: oldKey.version,
+    newVersion: newKey.version,
+    algorithm: newKey.algorithm,
+  });
+
+  return newKey;
 }
 
 /**
@@ -157,11 +177,23 @@ export function getActiveKey(keys: KeyMetadata[]): KeyMetadata | null {
   // First try to find primary key
   const primaryKey = keys.find((k) => k.isPrimary && k.status === 'active');
   if (primaryKey) {
+    // Log key usage event
+    logKeyUsed(primaryKey.id, 'getActiveKey', primaryKey.algorithm, {
+      version: primaryKey.version,
+      isPrimary: primaryKey.isPrimary,
+    });
     return primaryKey;
   }
 
   // Fallback to first active key
   const activeKey = keys.find((k) => k.status === 'active');
+  if (activeKey) {
+    // Log key usage event
+    logKeyUsed(activeKey.id, 'getActiveKey', activeKey.algorithm, {
+      version: activeKey.version,
+      isPrimary: activeKey.isPrimary,
+    });
+  }
   return activeKey || null;
 }
 
@@ -226,10 +258,19 @@ export function cryptoShredKey(
   }
 
   // Mark key as destroyed in metadata
-  return {
+  const shreddedKey = {
     ...key,
-    status: 'destroyed',
+    status: 'destroyed' as KeyStatus,
   };
+
+  // Log key deletion event
+  logKeyDeleted(key.id, {
+    algorithm: key.algorithm,
+    version: key.version,
+    hadKeyMaterial: !!keyMaterial,
+  });
+
+  return shreddedKey;
 }
 
 /**

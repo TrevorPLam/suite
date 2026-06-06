@@ -489,11 +489,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] CRYPTO-011: Add Audit Logging
+### [~] CRYPTO-011: Add Audit Logging
 
 **Priority**: P2
 **Bounded Context**: Enterprise
-**Status**: Not Started
+**Status**: In Progress (AGENT subtasks complete, HUMAN subtasks pending)
 
 **Related Files**:
 - `packages/crypto/src/index.ts`
@@ -544,37 +544,37 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### CRYPTO-011-01: Define audit logging interface
+#### ✅ CRYPTO-011-01: Define audit logging interface
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/audit.ts` (create)
 **Action**: Define AuditLogger interface with methods: logKeyCreated, logKeyUsed, logKeyDeleted, logSecurityEvent. Define AuditEvent interface with fields: timestamp, eventType, keyId, operation, metadata. Create factory function for custom log handlers.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-011-02: Implement console audit logger
+#### ✅ CRYPTO-011-02: Implement console audit logger
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/audit.ts`
 **Action**: Implement ConsoleAuditLogger class implementing AuditLogger interface. Log events to console with structured format. Include timestamp, event type, and metadata. Redact sensitive data.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-011-03: Implement key lifecycle logging
+#### ✅ CRYPTO-011-03: Implement key lifecycle logging
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/key-lifecycle.ts`
 **Action**: Add audit logging calls to key lifecycle functions. Log: key creation (createKeyMetadata), key usage (getActiveKey), key deletion (cryptoShredKey). Use optional audit logger if provided.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-011-04: Implement security event logging
+#### ✅ CRYPTO-011-04: Implement security event logging
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/errors.ts`
 **Action**: Add audit logging calls to error handling. Log: failed operations, invalid keys, suspicious activity patterns. Use optional audit logger if provided.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-011-05: Add audit logging tests
+#### ✅ CRYPTO-011-05: Add audit logging tests
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/audit.test.ts` (create)
 **Action**: Add tests for audit logging. Test: console logger output, custom log handler, key lifecycle logging, security event logging, sensitive data redaction.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-011-06: Export audit logging functions
+#### ✅ CRYPTO-011-06: Export audit logging functions
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/index.ts`
 **Action**: Export AuditLogger interface, ConsoleAuditLogger, createAuditLogger, setAuditLogger from audit module.

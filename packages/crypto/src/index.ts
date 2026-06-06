@@ -78,3 +78,24 @@ export {
   envelopeEncryptWithKMS,
   envelopeDecryptWithKMS,
 } from './kms.js';
+
+// Audit logging (optional, disabled by default)
+export {
+  type AuditLogger,
+  type AuditEvent,
+  type AuditEventMetadata,
+  AuditEventType,
+  createAuditEvent,
+  setAuditLogger,
+  getAuditLogger,
+  logKeyCreated,
+  logKeyUsed,
+  logKeyDeleted,
+  logKeyRotated,
+  logKeyExpired,
+  logSecurityEvent,
+  ConsoleAuditLogger,
+  createConsoleAuditLogger,
+  CustomAuditLogger,
+  createCustomAuditLogger,
+} from './audit.js';

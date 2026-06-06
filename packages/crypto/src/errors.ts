@@ -3,6 +3,8 @@
  * Provides structured error codes, taxonomy, and context for cryptographic operations
  */
 
+import { logSecurityEvent, AuditEventType } from './audit.js';
+
 /**
  * Error codes for cryptographic operations
  * Each error code identifies a specific type of failure
@@ -164,7 +166,42 @@ export function createCryptoError(
   context: ErrorContext = {}
 ): CryptoError {
   const category = ERROR_CODE_CATEGORIES[code];
-  return new CryptoError(code, message, category, context);
+  const error = new CryptoError(code, message, category, context);
+
+  // Log security event for certain error types
+  if (
+    code === CryptoErrorCode.INVALID_KEY ||
+    code === CryptoErrorCode.INVALID_PUBLIC_KEY ||
+    code === CryptoErrorCode.INVALID_PRIVATE_KEY ||
+    code === CryptoErrorCode.INVALID_CIPHERTEXT ||
+    code === CryptoErrorCode.INVALID_IV
+  ) {
+    const metadata: Record<string, string | number | boolean | undefined> = {
+      errorCode: code,
+    };
+    if (context.operation !== undefined) metadata.operation = context.operation;
+    if (context.algorithm !== undefined) metadata.algorithm = context.algorithm;
+    if (context.keyId !== undefined) metadata.keyId = context.keyId;
+
+    logSecurityEvent(AuditEventType.INVALID_KEY, 'createCryptoError', metadata);
+  } else if (
+    code === CryptoErrorCode.ENCRYPTION_FAILED ||
+    code === CryptoErrorCode.DECRYPTION_FAILED ||
+    code === CryptoErrorCode.KEY_GENERATION_FAILED ||
+    code === CryptoErrorCode.KEY_DERIVATION_FAILED ||
+    code === CryptoErrorCode.ECDH_DERIVATION_FAILED
+  ) {
+    const metadata: Record<string, string | number | boolean | undefined> = {
+      errorCode: code,
+    };
+    if (context.operation !== undefined) metadata.operation = context.operation;
+    if (context.algorithm !== undefined) metadata.algorithm = context.algorithm;
+    if (context.keyId !== undefined) metadata.keyId = context.keyId;
+
+    logSecurityEvent(AuditEventType.OPERATION_FAILED, 'createCryptoError', metadata);
+  }
+
+  return error;
 }
 
 /**
