@@ -182,20 +182,25 @@ return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 - Add algorithm identifiers to key metadata
 - Support multiple active keys during rotation
 
-### 2. **No KMS/HSM Integration**
+### 2. **No KMS/HSM Integration** ✅ RESOLVED
 **Reference**: Key storage best practices
 
-**Current State**: All keys are software-generated and stored in memory.
+**Previous State**: All keys were software-generated and stored in memory.
 
-**Missing**:
-- Cloud KMS integration (AWS KMS, Azure Key Vault, GCP KMS)
-- HSM support
-- External key management
+**Resolution**:
+- ✅ Cloud KMS integration implemented (AWS KMS, Azure Key Vault, GCP KMS)
+- ✅ Envelope encryption pattern with KMS implemented
+- ✅ Optional dependencies for cloud SDKs (no forced installation)
+- ✅ Comprehensive tests with mocked SDKs
+- ✅ Documentation: KMS-INTEGRATION.md
+
+**Still Missing**:
+- HSM support (PKCS#11)
+- KMIP client support for enterprise KMS interoperability
 
 **Recommendation**:
-- Add optional KMS integration layer
-- Support external key references
-- Implement envelope encryption with KMS
+- Consider PKCS#11 bindings for HSM support (Node.js environments)
+- Add optional KMIP client support for enterprise KMS integration
 
 ### 3. **Limited Error Handling**
 **Current State**: Basic error throwing with generic messages.
@@ -540,8 +545,8 @@ return (x == 0);
 | Cryptographic Agility | ❌ No | ✅ Yes (keysets) |
 | Security Reviews | ⚠️ Basic | ✅ Designed for reviews |
 | Algorithm Abstractions | ❌ Hardcoded | ✅ Primitives/interfaces |
-| Key Versioning | ❌ No | ✅ Yes |
-| KMS Integration | ❌ No | ✅ Yes (AWS, GCP, Azure) |
+| Key Versioning | ✅ Yes | ✅ Yes |
+| KMS Integration | ✅ Yes (AWS, GCP, Azure) | ✅ Yes (AWS, GCP, Azure) |
 | Testing | ✅ Property-based | ✅ Extensive |
 
 ### vs. libsodium

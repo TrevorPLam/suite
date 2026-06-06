@@ -13,7 +13,11 @@
     "lint": "eslint src"
   },
   "optionalDependencies": {
-    "libsodium": "^0.7.15"
+    "libsodium": "^0.7.15",
+    "@aws-sdk/client-kms": "^3.709.0",
+    "@azure/identity": "^4.0.1",
+    "@azure/keyvault-keys": "^5.0.0",
+    "@google-cloud/kms": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
