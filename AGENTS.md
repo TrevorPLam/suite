@@ -11,6 +11,28 @@ This repository is a greenfield monorepo for a productivity suite. The initial f
 - API layers stay thin and only orchestrate validation, auth, and domain calls.
 - Prefer workspace packages over published registry dependencies for local code.
 
+## AI Agent Rules — Sovereign Suite (Do Not Violate)
+
+1. **Never import across domain boundaries.** `packages/domain-*` may NOT import from another `packages/domain-*`. Use HTTP calls (Service Bindings) for cross‑domain needs.
+
+2. **Every feature begins with a spec.** Before writing code, create `apps/<app>/specs/<feature>.spec.md` with: user story, API contract, validation rules, error cases, out‑of‑scope.
+
+3. **API routes are thin.** `apps/*/api` contain only request validation, auth checks, and calls to domain packages. No business logic.
+
+4. **Use the shared auth package.** Never implement custom sign‑in logic. Import from `@suite/auth/server` and `@suite/auth/client`.
+
+5. **Migrations run in CI, never in Workers.** Use `APP_DOMAIN=<domain> pnpm db:migrate`. Never call `migrate()` inside a Worker.
+
+6. **Search uses blind indexing by default.** Implement exact‑match search via HMAC tokens. Defer semantic search until validated.
+
+7. **One Durable Object per "room" (chat, doc, board).** Never put multiple coordination units in one DO.
+
+8. **Every PR must pass `pnx affected --target=typecheck,test,lint`.** No exceptions.
+
+9. **E2EE crypto is non‑negotiable.** All user content must be encrypted with AES‑256‑GCM before storage. Use `@suite/crypto`.
+
+10. **Free tier limits must be monitored.** Each API must implement `UsageMonitor` middleware that blocks requests when limits approach 80%.
+
 ## Commands
 - `pnpm install`
 - `pnpm dev`

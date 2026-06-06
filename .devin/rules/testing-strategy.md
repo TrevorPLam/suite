@@ -1,136 +1,193 @@
 ---
 trigger: model_decision
-description: Testing strategy and framework setup for the Suite monorepo
+description: Testing strategy using Vitest for unit tests and Playwright for E2E tests
 ---
 
-# Testing Strategy Rules
+# Testing Strategy
 
-## Current State Assessment
+The 2026 testing stack uses Vitest for unit tests and Playwright for E2E tests. This split is forced by tool capabilities, not preference.
 
-The repository has a complete Vitest-based test suite with CI integration and coverage enforcement. Tests are colocated with the code they exercise and stay close to the owning bounded context.
+## Tool Split
 
-- **Framework**: Vitest v2.1.8 with per-package configurations
-- **Domain tests**: Node environment with 90% coverage thresholds
-- **API tests**: Node environment with 80% coverage thresholds
-- **Web tests**: `happy-dom` for React component tests with 70% coverage thresholds
-- **CI**: GitHub Actions workflow with PR checks (affected tests) and main branch validation (full tests + coverage)
+### Vitest (Unit Tests)
+Use Vitest for everything that doesn't need a real browser:
+- Server Actions as plain functions
+- Zod schema validation
+- Utility functions
+- Synchronous React components
+- Client components with React Testing Library
 
-## Test Ownership Matrix
+### Playwright (E2E Tests)
+Use Playwright for everything that requires a real browser:
+- Auth flows
+- Form submissions that hit real endpoints
+- Stripe checkout redirects
+- Async Server Components (Vitest cannot render these)
+- Anything depending on cookies, middleware, or Next.js router
 
-| Package / App | Test Location | Environment | Coverage Threshold | Notes |
-|---|---|---|---|---|
-| `packages/domain-calendar` | `src/**/*.test.ts` | Node | 90% lines/functions, 85% branches | In-memory calendar logic and conflict detection |
-| `packages/domain-tasks` | `src/**/*.test.ts` | Node | 90% lines/functions, 85% branches | In-memory task logic |
-| `packages/domain-drive` | `src/**/*.test.ts` | Node | 90% lines/functions, 85% branches | In-memory drive logic |
-| `apps/calendar/api` | `src/**/*.test.ts` | Node | 80% lines/functions, 75% branches | Hono API routes |
-| `apps/tasks/api` | `src/**/*.test.ts` | Node | 80% lines/functions, 75% branches | Hono API routes |
-| `apps/drive/api` | `src/**/*.test.ts` | Node | 80% lines/functions, 75% branches | Hono API routes |
-| `apps/calendar/web` | `src/**/*.test.tsx` | `happy-dom` | 70% lines/functions, 65% branches | React component and interaction tests |
-| `apps/tasks/web` | `src/**/*.test.tsx` | `happy-dom` | 70% lines/functions, 65% branches | React component and interaction tests |
-| `apps/drive/web` | `src/**/*.test.tsx` | `happy-dom` | 70% lines/functions, 65% branches | React component and interaction tests |
-| `packages/ui` | `src/**/*.test.tsx` | `happy-dom` | 70% lines/functions, 65% branches | Shared UI primitives when needed |
+## Why Vitest, Not Jest
 
-## Architecture Decisions
+By 2026, the community has moved from Jest to Vitest:
+- Faster cold starts
+- Native ESM support
+- Nearly identical API to Jest (easy migration)
+- Vite-native integration
+- Every new Next.js testing tutorial uses Vitest
 
-### 1. Test Placement
+## Vitest Configuration
 
-- **Colocation is the default**. Tests live next to the code they protect.
-- Each package has its own `vitest.config.ts` for independent execution.
-- Suggested patterns:
-  - `packages/domain-*/src/**/*.test.ts`
-  - `apps/*/api/src/**/*.test.ts`
-  - `apps/*/web/src/**/*.test.tsx`
-  - `packages/ui/src/**/*.test.tsx`
+```typescript
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
 
-### 2. Shared Testing Package
-
-- **No `packages/testing` exists yet**.
-- Introduce it **only when** reusable helpers or factories are needed by **two or more** bounded contexts.
-- Current helpers (reset, factories, builders) are small enough to stay local to each domain package.
-
-### 3. Environment Split
-
-- **Node environment** (per-package `vitest.config.ts`):
-  - Domain packages and API packages use Node environment
-  - Each package has its own config for independent execution
-- **Browser environment** (per-package `vitest.config.ts`):
-  - Each web app owns its own `vitest.config.ts` with `environment: 'happy-dom'`
-  - `packages/ui` will get its own config when component tests are added
-- This separation ensures tests run in the correct environment regardless of invocation context
-
-### 4. Reset and Isolation Rules
-
-- Do not rely on undeclared `globalThis` state for resets.
-- Expose explicit `reset*` or factory functions from the owning domain package.
-- Reset in-memory repositories in `beforeEach`.
-- Keep stable IDs deterministic in tests where possible.
-
-### 5. Coverage Thresholds
-
-- **Domain packages**: 90% lines/functions, 85% branches (business logic requires high coverage)
-- **API packages**: 80% lines/functions, 75% branches (contract validation needs strong coverage)
-- **Web packages**: 70% lines/functions, 65% branches (component tests are integration-level)
-- Thresholds are enforced via Vitest configuration and will fail the build if not met
-
-## Validation Commands
-
-See `docs/testing-commands.md` for comprehensive command documentation.
-
-```bash
-# Workspace-wide commands
-pnpm test              # Run all tests (watch mode)
-pnpm test:run          # Run all tests once
-pnpm test:coverage     # Run all tests with coverage
-pnpm test:affected     # Run affected tests via Nx
-pnpm typecheck         # Type check the workspace
-
-# Per-package commands
-pnpm --filter @suite/domain-calendar test
-pnpm --filter @suite/domain-calendar test:coverage
-
-# CI commands
-pnpm ci:test           # Run affected tests + typecheck (PR validation)
-pnpm ci:validate       # Run full test suite + typecheck (main branch)
-pnpm ci:coverage       # Run coverage with thresholds
+export default defineConfig({
+  test: {
+    environment: 'node',
+    globals: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: ['node_modules/', 'dist/'],
+    },
+  },
+});
 ```
 
-## Testing Best Practices
+## Testing Server Actions
 
-### Domain Tests
+```typescript
+// test/server-actions.test.ts
+import { describe, it, expect } from 'vitest';
+import { createEvent } from '@/app/actions/events';
 
-- Test both happy paths and error paths.
-- Assert on error **codes**, not just message strings.
-- Prefer table-driven cases for validation and conflict rules.
-- Use explicit reset functions in `beforeEach` for isolation.
+describe('createEvent', () => {
+  it('should create an event with valid data', async () => {
+    const result = await createEvent({
+      title: 'Test Event',
+      start: new Date('2026-06-01'),
+      end: new Date('2026-06-02'),
+    });
+    
+    expect(result.success).toBe(true);
+    expect(result.data?.title).toBe('Test Event');
+  });
+  
+  it('should fail with invalid date range', async () => {
+    const result = await createEvent({
+      title: 'Invalid Event',
+      start: new Date('2026-06-02'),
+      end: new Date('2026-06-01'), // End before start
+    });
+    
+    expect(result.success).toBe(false);
+  });
+});
+```
 
-### API Tests
+## Testing Zod Schemas
 
-- Use the Hono `app.request()` helper for in-process HTTP testing.
-- Keep route handlers thin; test request parsing, status mapping, and delegation.
-- Verify that domain errors are translated into the correct HTTP status and response shape.
-- Use domain reset functions for test isolation.
+```typescript
+// test/schemas.test.ts
+import { z } from 'zod';
+import { eventSchema } from '@/lib/schemas';
 
-### Web Tests
+describe('eventSchema', () => {
+  it('should validate correct data', () => {
+    const result = eventSchema.safeParse({
+      title: 'Test',
+      start: '2026-06-01',
+      end: '2026-06-02',
+    });
+    
+    expect(result.success).toBe(true);
+  });
+  
+  it('should reject missing title', () => {
+    const result = eventSchema.safeParse({
+      start: '2026-06-01',
+      end: '2026-06-02',
+    });
+    
+    expect(result.success).toBe(false);
+  });
+});
+```
 
-- Use `@testing-library/react` for component tests.
-- Verify keyboard-only interactions and dialog semantics.
-- Assert accessibility attributes (`role`, `aria-label`, `aria-describedby`, `aria-live`).
-- Prefer user-visible assertions over implementation details.
-- Test server validation error states and loading states.
+## Playwright Configuration
 
-## CI / Affected Testing
+```typescript
+// playwright.config.ts
+import { defineConfig } from '@playwright/test';
 
-- **PR checks**: Run `nx affected -t test` and `nx affected -t typecheck` (fast validation)
-- **Main branch**: Run full `pnpm test:run`, `pnpm typecheck`, and `pnpm test:coverage` (complete validation)
-- GitHub Actions workflow in `.github/workflows/ci.yml` implements this strategy
-- Nx `namedInputs` exclude test files and specs from production builds
-- Coverage thresholds are enforced on main branch only
+export default defineConfig({
+  testDir: './e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  use: {
+    baseURL: 'http://localhost:3000',
+    trace: 'on-first-retry',
+  },
+});
+```
 
-## Script Naming Convention
+## Testing Auth Flows
 
-All packages follow this script naming:
-- `test` - Run tests in watch mode (development)
-- `test:run` - Run tests once (CI-friendly)
-- `test:coverage` - Run tests with coverage (enforces thresholds)
-- `typecheck` - TypeScript type checking
-- `lint` - Linting (if configured)
+```typescript
+// e2e/auth.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('user can sign in', async ({ page }) => {
+  await page.goto('/sign-in');
+  await page.click('button[data-provider="github"]');
+  
+  // Mock OAuth redirect for testing
+  await page.goto('/dashboard');
+  await expect(page).toHaveURL('/dashboard');
+  await expect(page.locator('text=Welcome')).toBeVisible();
+});
+```
+
+## Testing Async Server Components
+
+```typescript
+// e2e/calendar.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('calendar loads events', async ({ page }) => {
+  await page.goto('/calendar');
+  
+  // Wait for async data to load
+  await page.waitForSelector('[data-testid="event-card"]');
+  
+  const events = await page.locator('[data-testid="event-card"]').count();
+  expect(events).toBeGreaterThan(0);
+});
+```
+
+## Test Coverage Requirements
+
+- **Unit tests**: Minimum 80% coverage for domain packages
+- **E2E tests**: Critical user paths must be covered
+- **Integration tests**: API endpoints must have contract tests
+
+## What to Test, What to Skip
+
+**Test:**
+- Business logic in domain packages
+- API contracts and validation
+- Critical user flows (auth, checkout)
+- Error handling paths
+
+**Skip:**
+- Third-party library internals
+- Trivial components (buttons, labels)
+- Framework boilerplate
+- Visual regression (defer to dedicated tools)
+
+## Enforcement
+
+- CI runs Vitest and Playwright on every PR
+- Coverage gates prevent merging below thresholds
+- Code reviews check for missing tests on new features
