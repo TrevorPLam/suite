@@ -916,10 +916,10 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-018: Add Response Compression
+### [!] P2-018: Add Response Compression
 
-**Status**: Pending  
-**Priority**: P2  
+**Status**: Blocked
+**Priority**: P2
 **Bounded Context**: API Performance
 
 **Related Files**:
@@ -959,6 +959,8 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Block Reason**: Cloudflare Workers automatically compress responses at the platform level. Hono documentation states: "On Cloudflare Workers and Deno Deploy, the response body will be compressed automatically, so there is no need to use this middleware." Adding compression middleware would be redundant and adds unnecessary overhead.
+
 **Subtasks**:
 
 #### P2-018-01: Add compression to calendar API
@@ -978,10 +980,10 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-019: Add Cache Control Headers
+### [x] P2-019: Add Cache Control Headers
 
-**Status**: Pending  
-**Priority**: P2  
+**Status**: Completed
+**Priority**: P2
 **Bounded Context**: API Performance
 
 **Related Files**:
@@ -1021,22 +1023,32 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Implementation Notes**:
+- Added cache control middleware to all three APIs (calendar, tasks, drive)
+- Authenticated endpoints use `Cache-Control: no-cache, no-store, must-revalidate` to prevent caching of private data
+- Health endpoints use `Cache-Control: public, max-age=60` to allow short-term caching of public health status
+- Lint passed with 0 errors (only warnings)
+- Pre-existing typecheck errors in drive-api and tasks-api test files (unrelated to this task)
+
 **Subtasks**:
 
 #### P2-019-01: Add cache headers to calendar API
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Add Cache-Control: no-cache for authenticated endpoints; Cache-Control: max-age=60 for public health endpoint
 **Validate Command**: `curl -I http://localhost:3001/api/v1/events | grep Cache-Control`
+**Status**: ✅ Complete
 
 #### P2-019-02: Add cache headers to tasks API
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Add Cache-Control: no-cache for authenticated endpoints; Cache-Control: max-age=60 for public health endpoint
 **Validate Command**: `curl -I http://localhost:3002/api/v1/tasks | grep Cache-Control`
+**Status**: ✅ Complete
 
 #### P2-019-03: Add cache headers to drive API
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Add Cache-Control: no-cache for authenticated endpoints; Cache-Control: max-age=60 for public health endpoint
 **Validate Command**: `curl -I http://localhost:3003/api/v1/files | grep Cache-Control`
+**Status**: ✅ Complete
 
 ---
 

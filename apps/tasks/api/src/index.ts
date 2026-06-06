@@ -143,6 +143,13 @@ app.use('/api/*', secureHeaders({
   },
 }));
 
+// Add cache control headers
+app.use('/api/*', async (c, next) => {
+  await next();
+  // No caching for authenticated endpoints
+  c.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+});
+
 // Mount Better Auth handler
 mountAuth(app);
 
@@ -234,6 +241,7 @@ app.get('/api/v1/health', async (c) => {
   };
 
   const statusCode = dbStatus === 'ok' ? 200 : 503;
+  c.header('Cache-Control', 'public, max-age=60');
   return c.json(health, statusCode);
 });
 
