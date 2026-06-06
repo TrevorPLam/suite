@@ -42,12 +42,13 @@ jobs:
           echo "drive=$(nx affected:print --type=apps --projects=drive-api --base=HEAD~1 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
           echo "db=$(nx affected:print --type=packages --projects=db --base=HEAD~1 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
 
-  # Migration jobs - run before API deployments
-  migration-calendar:
+  # Migration job - run before API deployments
+  # Drizzle migrations run all migration files in sequence for the shared database
+  migration:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: detect-changes
-    if: needs.detect-changes.outputs.calendar-changed != '' || needs.detect-changes.outputs.db-changed != ''
+    if: needs.detect-changes.outputs.calendar-changed != '' || needs.detect-changes.outputs.tasks-changed != '' || needs.detect-changes.outputs.drive-changed != '' || needs.detect-changes.outputs.db-changed != ''
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,64 +67,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run calendar migrations
-        run: APP_DOMAIN=calendar pnpm --filter @suite/db run db:migrate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-  migration-tasks:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: detect-changes
-    if: needs.detect-changes.outputs.tasks-changed != '' || needs.detect-changes.outputs.db-changed != ''
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run tasks migrations
-        run: APP_DOMAIN=tasks pnpm --filter @suite/db run db:migrate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-  migration-drive:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: detect-changes
-    if: needs.detect-changes.outputs.drive-changed != '' || needs.detect-changes.outputs.db-changed != ''
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run drive migrations
-        run: APP_DOMAIN=drive pnpm --filter @suite/db run db:migrate
+      - name: Run database migrations
+        run: pnpm --filter @suite/db run db:migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
@@ -131,7 +76,7 @@ jobs:
   deploy-calendar-api:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [detect-changes, migration-calendar]
+    needs: [detect-changes, migration]
     if: needs.detect-changes.outputs.calendar-changed != ''
     steps:
       - name: Checkout code
@@ -164,7 +109,7 @@ jobs:
   deploy-tasks-api:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [detect-changes, migration-tasks]
+    needs: [detect-changes, migration]
     if: needs.detect-changes.outputs.tasks-changed != ''
     steps:
       - name: Checkout code
@@ -197,7 +142,7 @@ jobs:
   deploy-drive-api:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [detect-changes, migration-drive]
+    needs: [detect-changes, migration]
     if: needs.detect-changes.outputs.drive-changed != ''
     steps:
       - name: Checkout code
