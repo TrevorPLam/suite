@@ -49,19 +49,25 @@ export async function generateBlindIndex(data: string, key: CryptoKey): Promise<
  * The key must be kept secret and never sent to the server.
  * 
  * @param masterPassword - The user's master password
- * @param salt - Optional salt for key derivation (use static salt for blind indexing)
+ * @param salt - Cryptographically random salt for key derivation (required)
  * @returns HMAC-SHA256 key for blind index generation
  * 
  * @example
  * ```ts
- * const indexKey = await deriveIndexKey('user-password', 'static_blind_index_salt');
+ * const salt = await generateSalt(); // Generate cryptographically random salt
+ * const indexKey = await deriveIndexKey('user-password', salt);
  * const blindIndex = await generateBlindIndex('search term', indexKey);
  * ```
+ * 
+ * @throws {Error} If salt is not provided or is empty
  */
 export async function deriveIndexKey(
   masterPassword: string,
-  salt: string = 'static_blind_index_salt'
+  salt: string
 ): Promise<CryptoKey> {
+  if (!salt || salt.length === 0) {
+    throw new Error('Salt is required for blind index key derivation. Use generateSalt() to create a cryptographically random salt.');
+  }
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     'raw',

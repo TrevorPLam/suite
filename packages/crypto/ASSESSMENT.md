@@ -99,22 +99,20 @@ return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 - Use constant-time comparison for all secret comparisons (HMAC outputs, tokens, authentication tags)
 - Update AGENTS.md compliance
 
-### 2. **Static Salt in Blind Index Key Derivation** ⚠️
-**Severity**: HIGH  
+### 2. **Static Salt in Blind Index Key Derivation** ✅ RESOLVED
+**Severity**: HIGH (resolved)
 **Location**: `blind-index.ts:63`
 
-```typescript
-salt: string = 'static_blind_index_salt'
-```
+**Previous Issue**: Using a static salt for blind index key derivation defeated the purpose of salting and made all installations vulnerable to rainbow table attacks.
 
-**Issue**: Using a static salt for blind index key derivation defeats the purpose of salting and makes all installations vulnerable to rainbow table attacks.
+**Resolution**:
+- Salt is now a required parameter (no default value)
+- Parameter validation ensures salt is provided and non-empty
+- Comprehensive JSDoc documentation added with salt generation requirements
+- Tests updated to use random salts generated with generateSalt()
+- Error thrown when salt is not provided or empty
 
-**Impact**: All instances using the default salt have the same blind index keys, enabling cross-instance attacks.
-
-**Required Fix**:
-- Require salt as a mandatory parameter
-- Generate random salts per installation/user
-- Document salt generation and storage requirements
+**Impact**: All instances must now provide unique salts, preventing cross-instance attacks.
 
 ### 3. **No Key Lifecycle Management** ⚠️
 **Severity**: HIGH
@@ -609,10 +607,10 @@ return (x == 0);
    - Add timing attack tests to verify side-channel resistance
    - Follow Intel SIR/SIC/SID principles
 
-2. **Fix static salt in blind index**
-   - Make salt a required parameter
-   - Generate random salts per installation/user
-   - Update documentation with salt generation requirements
+2. **Fix static salt in blind index** ✅ COMPLETED
+   - Salt is now a required parameter
+   - Random salts must be generated per installation/user
+   - Documentation updated with salt generation requirements
 
 3. **Add key zeroization**
    - Implement secure memory clearing function
@@ -682,8 +680,8 @@ return (x == 0);
 ## Implementation Roadmap
 
 ### Phase 1: Security Hardening (1-2 weeks)
-- [ ] Implement constant-time comparison (crypto.subtle.timingSafeEqual)
-- [ ] Fix static salt issue in blind index
+- [x] Implement constant-time comparison (crypto.subtle.timingSafeEqual)
+- [x] Fix static salt issue in blind index
 - [ ] Add key zeroization function
 - [ ] Add timing attack tests
 - [ ] Security audit review

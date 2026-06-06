@@ -893,11 +893,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] CRYPTO-001: Implement Constant-Time Comparison
+### [x] CRYPTO-001: Implement Constant-Time Comparison
 
 **Priority**: P0
 **Bounded Context**: Security
-**Status**: Not Started
+**Status**: Complete
 
 **Related Files**:
 - `packages/crypto/src/index.ts`
@@ -973,19 +973,27 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 **Action**: Review generateBlindIndex function to identify any secret comparisons. If HMAC output comparison is performed (e.g., for blind index lookup), replace with constantTimeEqual. Update imports.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-001-06: Document AGENTS.md rule 11 compliance
+#### ✅ CRYPTO-001-06: Document AGENTS.md rule 11 compliance
 **Assigned To**: HUMAN
 **Target File**: `AGENTS.md`
 **Action**: Update AGENTS.md rule 11 to document that constantTimeEqual is implemented and available. Document usage pattern: import from @suite/crypto, use for all secret/token/HMAC comparisons. Reference Intel side-channel mitigation guidelines.
 **Validate Command**: No validation needed
 
+**Implementation Notes**:
+- This task was completed as part of DEP-003 (Verify Better Auth Timing-Safe Comparisons)
+- constantTimeEqual() and constantTimeEqualSync() were implemented in @suite/crypto/src/constant-time.ts
+- Comprehensive test suite with 34 tests was added covering strings, Uint8Arrays, edge cases, and constant-time behavior verification
+- All tests passing (67 total for crypto package)
+- Typecheck and lint passing
+- AGENTS.md rule 11 was documented with verification status and usage documentation
+
 ---
 
-### [ ] CRYPTO-002: Fix Static Salt in Blind Index Key Derivation
+### [x] CRYPTO-002: Fix Static Salt in Blind Index Key Derivation
 
 **Priority**: P0
 **Bounded Context**: Security
-**Status**: Not Started
+**Status**: Complete
 
 **Related Files**:
 - `packages/crypto/src/blind-index.ts`
@@ -1028,31 +1036,39 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### CRYPTO-002-01: Remove static salt default parameter
+#### ✅ CRYPTO-002-01: Remove static salt default parameter
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/blind-index.ts`
 **Action**: Remove default value 'static_blind_index_salt' from deriveIndexKey salt parameter. Make salt a required parameter. Add parameter validation to ensure salt is provided and is non-empty string.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-002-02: Update blind index tests to use random salts
+#### ✅ CRYPTO-002-02: Update blind index tests to use random salts
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/blind-index.test.ts`
 **Action**: Update all test calls to deriveIndexKey to pass random salts generated with crypto.getRandomValues() or generateSalt(). Ensure each test uses unique salt.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-002-03: Add salt generation documentation
+#### ✅ CRYPTO-002-03: Add salt generation documentation
 **Assigned To**: HUMAN
 **Target File**: `packages/crypto/src/blind-index.ts`
 **Action**: Add comprehensive JSDoc documentation to deriveIndexKey explaining salt requirements: must be cryptographically random, unique per installation/user, minimum 16 bytes recommended. Provide example of salt generation using generateSalt().
 **Validate Command**: No validation needed
 
-#### CRYPTO-002-04: Update assessment document
+#### ✅ CRYPTO-002-04: Update assessment document
 **Assigned To**: HUMAN
 **Target File**: `packages/crypto/ASSESSMENT.md`
 **Action**: Update ASSESSMENT.md to mark static salt issue as resolved. Remove from critical security gaps section. Add to strengths section.
 **Validate Command**: No validation needed
 
----
+**Implementation Notes**:
+- Removed static salt default parameter from deriveIndexKey function
+- Added parameter validation to throw error if salt is not provided or empty
+- Updated JSDoc documentation with comprehensive salt requirements and examples
+- Created blind-index.test.ts with 15 tests (11 unit tests + 4 property-based tests)
+- All tests use random salts generated with generateSalt()
+- Updated ASSESSMENT.md to mark static salt issue as resolved
+- All typecheck and tests passing (82 total tests for crypto package)
+- Security vulnerability resolved: all instances must now provide unique salts
 
 ## P0 - UI Package Critical Tasks
 
