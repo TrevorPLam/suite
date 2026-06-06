@@ -1,4 +1,5 @@
 import type { QueryRepository } from '@suite/db';
+import { generateUUID } from '@suite/shared-kernel';
 
 export type DriveFile = {
   id: string;
@@ -78,7 +79,7 @@ class InMemoryDriveFileRepository implements DriveFileRepository {
 
   async create(entity: Omit<DriveFile, 'id'>): Promise<DriveFile> {
     const file: DriveFile = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       ...entity,
     };
     this.files.set(file.id, file);
@@ -142,7 +143,7 @@ class InMemoryDriveFolderRepository implements DriveFolderRepository {
 
   async create(entity: Omit<DriveFolder, 'id'>): Promise<DriveFolder> {
     const folder: DriveFolder = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       ...entity,
     };
     this.folders.set(folder.id, folder);

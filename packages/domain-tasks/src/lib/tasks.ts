@@ -1,4 +1,5 @@
 import type { QueryRepository } from '@suite/db';
+import { generateUUID } from '@suite/shared-kernel';
 
 export type TaskPriority = 'low' | 'medium' | 'high';
 
@@ -75,7 +76,7 @@ class InMemoryTaskRepository implements TaskRepository {
 
   async create(entity: Omit<TaskItem, 'id'>): Promise<TaskItem> {
     const task: TaskItem = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       ...entity,
     };
     this.tasks.set(task.id, task);
@@ -143,16 +144,6 @@ function snapshot(task: TaskItem): TaskItem {
   return {
     ...task,
   };
-}
-
-function createTaskId(): string {
-  const randomUUID = globalThis.crypto?.randomUUID;
-
-  if (typeof randomUUID === 'function') {
-    return randomUUID.call(globalThis.crypto);
-  }
-
-  return `task_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function normalizeTaskTitle(title: unknown): string {

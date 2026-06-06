@@ -6,3 +6,5 @@ export interface BaseEntity {
   createdAt: string;
   updatedAt: string;
 }
+
+export { generateUUID } from './uuid.js';

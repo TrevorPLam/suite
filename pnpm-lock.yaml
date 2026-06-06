@@ -316,18 +316,27 @@ importers:
       '@suite/db':
         specifier: workspace:*
         version: link:../db
+      '@suite/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
 
   packages/domain-drive:
     dependencies:
       '@suite/db':
         specifier: workspace:*
         version: link:../db
+      '@suite/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
 
   packages/domain-tasks:
     dependencies:
       '@suite/db':
         specifier: workspace:*
         version: link:../db
+      '@suite/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
 
   packages/env-config:
     dependencies:

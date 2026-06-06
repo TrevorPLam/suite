@@ -1,4 +1,5 @@
 import type { Repository } from '@suite/db';
+import { generateUUID } from '@suite/shared-kernel';
 
 export type CalendarEvent = {
   id: string;
@@ -51,7 +52,7 @@ class InMemoryCalendarEventRepository implements CalendarEventRepository {
 
   async create(entity: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
     const event: CalendarEvent = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       ...entity,
     };
     this.events.set(event.id, event);
@@ -253,7 +254,7 @@ export async function getCalendarEvent(id: string): Promise<CalendarEvent | null
 export async function createCalendarEvent(input: CreateCalendarEventInput): Promise<CalendarEvent> {
   const normalizedInput = normalizeCalendarEventInput(input);
   const event: CalendarEvent = {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     ...normalizedInput,
   };
 

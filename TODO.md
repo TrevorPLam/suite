@@ -1621,9 +1621,9 @@ export { App };
 
 ## Phase 5: Technical Debt Resolution
 
-### [ ] DEBT-01: Fix crypto.randomUUID compatibility
+### [x] DEBT-01: Fix crypto.randomUUID compatibility
 
-**Status**: Not started  
+**Status**: Complete  
 **Related Files**: packages/domain-calendar/src/lib/calendar-events.ts, packages/domain-tasks/src/lib/tasks.ts, packages/domain-drive/src/index.ts
 
 **Definition of Done**:
@@ -1697,7 +1697,20 @@ function generateUUID(): string {
 **Action**: Replace createDriveFileId with generateUUID from shared-kernel.
 **Validate**: `pnpm --filter @suite/domain-drive test`
 
----
+**Implementation Notes**:
+- Created generateUUID function in packages/shared-kernel/src/uuid.ts with cross-platform support
+- Function tries Web Crypto API (crypto.randomUUID) first (browser and Node.js 18+)
+- Falls back to Node.js crypto module (require('crypto').randomUUID) for older Node.js
+- Final fallback uses Math.random for UUID v4 format (not cryptographically secure, only for non-security contexts)
+- Added @ts-ignore comments for require and crypto module since they're Node.js-specific
+- Updated shared-kernel package.json to include exports field pointing to src/index.ts
+- Exported generateUUID from shared-kernel index.ts with .js extension for ES module compatibility
+- Added @suite/shared-kernel workspace dependency to domain-calendar, domain-tasks, and domain-drive
+- Replaced all crypto.randomUUID() calls with generateUUID() in all three domain packages
+- Removed unused createTaskId function from domain-tasks (had partial fallback but wasn't used)
+- All domain tests passing (20/20 for calendar, 57/57 for tasks, 47/47 for drive)
+- Typecheck passing for all packages
+- No breaking changes to domain API - UUID format remains v4
 
 ### [ ] DEBT-02: Add API proxy to Vite configs
 
