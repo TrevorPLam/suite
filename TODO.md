@@ -192,31 +192,31 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 **Action**: Add libsodium.js as optional dependency in package.json. Use optionalDependencies field to avoid forcing installation. Document that this is optional for advanced features.
 **Validate Command**: `pnpm install` (to verify package.json syntax)
 
-#### CRYPTO-008-02: Implement WASM backend detection
+#### ✅ CRYPTO-008-02: Implement WASM backend detection
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/wasm-backend.ts` (create)
 **Action**: Implement isWasmAvailable() function that checks if libsodium.js is available and WebAssembly is supported. Return boolean. Handle import errors gracefully.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-008-03: Implement Argon2id via WASM
+#### ✅ CRYPTO-008-03: Implement Argon2id via WASM
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/wasm-backend.ts`
 **Action**: Implement argon2idHash function using libsodium.js if available. Function accepts password, salt, iterations, memory, parallelism. Returns derived key. Fallback to PBKDF2 if WASM not available.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-008-04: Implement feature flag for WASM backend
+#### ✅ CRYPTO-008-04: Implement feature flag for WASM backend
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/wasm-backend.ts`
 **Action**: Implement enableWasmBackend() function that sets a flag to use WASM backend when available. Implement disableWasmBackend() to force Web Crypto API only. Add state management.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-008-05: Add WASM backend tests
+#### ✅ CRYPTO-008-05: Add WASM backend tests
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/wasm-backend.test.ts` (create)
 **Action**: Add tests for WASM backend. Test: WASM detection, Argon2id hashing, feature flag behavior, fallback to Web Crypto. Skip tests if libsodium.js not installed.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-008-06: Export WASM backend functions
+#### ✅ CRYPTO-008-06: Export WASM backend functions
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/index.ts`
 **Action**: Export argon2idHash, isWasmAvailable, enableWasmBackend, disableWasmBackend from wasm-backend module. Only export if module exists (optional dependency).

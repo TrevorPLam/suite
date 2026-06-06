@@ -58,3 +58,13 @@ export {
   isRetriable,
   wrapError,
 } from './errors.js';
+
+// WebAssembly backend (optional dependency)
+export {
+  isWasmAvailable,
+  enableWasmBackend,
+  disableWasmBackend,
+  isWasmEnabled,
+  argon2idHash,
+  getWasmStatus,
+} from './wasm-backend.js';
