@@ -146,10 +146,10 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P1-017: Remove Dead auth-routes.ts
+### [x] P1-017: Remove Dead auth-routes.ts
 
-**Status**: Pending  
-**Priority**: P1  
+**Status**: Complete
+**Priority**: P1
 **Bounded Context**: Code Quality
 
 **Related Files**:
@@ -188,15 +188,24 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 **Subtasks**:
 
-#### P1-016-01: Delete auth-routes.ts
+#### P1-017-01: Delete auth-routes.ts
 **Target File**: `apps/calendar/api/src/auth-routes.ts`
 **Action**: Delete file
 **Validate Command**: `ls apps/calendar/api/src/auth-routes.ts 2>&1 | grep "No such file"`
+**Status**: ✅ Complete
 
-#### P1-016-02: Remove auth-routes import from calendar API
+#### P1-017-02: Remove auth-routes import from calendar API
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Remove import of mountAuth from auth-routes; confirm @suite/auth mountAuth is used
 **Validate Command**: `pnpm --filter @suite/calendar-api test`
+**Status**: ✅ Complete
+
+**Implementation Notes**:
+- Deleted `apps/calendar/api/src/auth-routes.ts` - duplicate auth implementation
+- Confirmed `apps/calendar/api/src/index.ts` already uses `@suite/auth` mountAuth (line 14, line 57)
+- No import removal needed - auth-routes.ts was never imported in index.ts
+- All typecheck, lint, and tests pass after deletion
+- Single source of truth for auth now: @suite/auth package
 
 ---
 
