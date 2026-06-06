@@ -1173,10 +1173,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] AUTH-005 — Protect Drive mutation routes with requireAuth
+### [x] AUTH-005 — Protect Drive mutation routes with requireAuth
 
-**Status:** pending  
-**Depends on:** AUTH-002, DB-006  
+**Status:** done
+**Depends on:** AUTH-002, DB-006
 **Blocks:** none
 
 #### Related paths
@@ -1212,8 +1212,17 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| AUTH-005-a | `apps/drive/api/src/index.test.ts` | TDD: 401 on POST file route without session. | `pnpm --filter @suite/drive-api test:run -- src/index.test.ts` |
-| AUTH-005-b | `apps/drive/api/src/index.ts` | Apply requireAuth to mutations. | `pnpm --filter @suite/drive-api test:run -- src/index.test.ts` |
+| AUTH-005-a | `apps/drive/api/src/index.test.ts` | TDD: 401 on POST file route without session. | `pnpm --filter @suite/drive-api test:run -- src/index.test.ts` ✅ |
+| AUTH-005-b | `apps/drive/api/src/index.ts` | Apply requireAuth to mutations. | `pnpm --filter @suite/drive-api test:run -- src/index.test.ts` ✅ |
+
+#### Implementation notes
+
+- Added `requireAuth` import from `@suite/auth` to drive API index.ts
+- Applied `requireAuth` middleware to all mutation routes: POST /api/files, PUT /api/files/:id, DELETE /api/files/:id, POST /api/folders, PUT /api/folders/:id, DELETE /api/folders/:id, POST /api/files/:id/move
+- Added TDD tests for 401 responses on all mutation routes without session
+- Updated existing tests to use `allowAuth` flag for authenticated operations
+- Updated validation error tests to expect 401 instead of 400 (auth check runs before validation)
+- All 43 drive API tests pass
 
 ---
 

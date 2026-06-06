@@ -20,7 +20,7 @@ import {
 } from '@suite/domain-drive';
 import { wireRepositories } from './bootstrap.js';
 import { validateDriveEnv } from '@suite/env-config';
-import { mountAuth } from '@suite/auth';
+import { mountAuth, requireAuth } from '@suite/auth';
 
 // Validate environment variables at startup
 const env = validateDriveEnv();
@@ -205,7 +205,7 @@ app.get('/api/files', async (c) => {
   return c.json({ files });
 });
 
-app.post('/api/files', async (c) => {
+app.post('/api/files', requireAuth, async (c) => {
   let body: unknown;
 
   try {
@@ -243,7 +243,7 @@ app.post('/api/files', async (c) => {
   }
 });
 
-app.put('/api/files/:id', async (c) => {
+app.put('/api/files/:id', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -279,7 +279,7 @@ app.put('/api/files/:id', async (c) => {
   }
 });
 
-app.delete('/api/files/:id', async (c) => {
+app.delete('/api/files/:id', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -302,7 +302,7 @@ app.get('/api/folders', async (c) => {
   return c.json({ folders });
 });
 
-app.post('/api/folders', async (c) => {
+app.post('/api/folders', requireAuth, async (c) => {
   let body: unknown;
 
   try {
@@ -330,7 +330,7 @@ app.post('/api/folders', async (c) => {
   }
 });
 
-app.put('/api/folders/:id', async (c) => {
+app.put('/api/folders/:id', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -366,7 +366,7 @@ app.put('/api/folders/:id', async (c) => {
   }
 });
 
-app.delete('/api/folders/:id', async (c) => {
+app.delete('/api/folders/:id', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -383,7 +383,7 @@ app.delete('/api/folders/:id', async (c) => {
 });
 
 // Move file endpoint
-app.post('/api/files/:id/move', async (c) => {
+app.post('/api/files/:id/move', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {

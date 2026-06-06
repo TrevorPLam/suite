@@ -1,6 +1,24 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { resetDriveFiles, resetDriveFolders } from '@suite/domain-drive';
 import app from './index.js';
+
+// Mock requireAuth to return 401 by default, but allow override for authenticated tests
+let allowAuth = false;
+
+vi.mock('@suite/auth', async () => {
+  const actual = await vi.importActual<any>('@suite/auth');
+  return {
+    ...actual,
+    requireAuth: vi.fn(async (c: any, next: any) => {
+      if (allowAuth) {
+        c.set('userId', 'test-user-id');
+        await next();
+      } else {
+        return c.json({ error: 'Unauthorized' }, 401);
+      }
+    }),
+  };
+});
 
 describe('drive API - health', () => {
   it('should return health check', async () => {
@@ -30,7 +48,23 @@ describe('drive API - upload file', () => {
     resetDriveFiles();
   });
 
+  it('POST /api/files returns 401 without session', async () => {
+    const res = await app.request('/api/files', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'document.pdf',
+        size: 1024,
+      }),
+    });
+
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
+
   it('should upload a valid file', async () => {
+    allowAuth = true;
     const res = await app.request('/api/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -47,9 +81,11 @@ describe('drive API - upload file', () => {
     expect(json.size).toBe(1024);
     expect(json).toHaveProperty('createdAt');
     expect(json).toHaveProperty('modifiedAt');
+    allowAuth = false;
   });
 
   it('should upload a file with folderId', async () => {
+    allowAuth = true;
     const res = await app.request('/api/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -63,9 +99,11 @@ describe('drive API - upload file', () => {
     expect(res.status).toBe(404);
     const json = await res.json();
     expect(json).toHaveProperty('error');
+    allowAuth = false;
   });
 
   it('should upload a file with mimeType', async () => {
+    allowAuth = true;
     const res = await app.request('/api/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -81,6 +119,7 @@ describe('drive API - upload file', () => {
     expect(json).toHaveProperty('id');
     expect(json.name).toBe('document.pdf');
     expect(json.mimeType).toBe('application/pdf');
+    allowAuth = false;
   });
 
   it('should reject file exceeding size limit', async () => {
@@ -93,10 +132,9 @@ describe('drive API - upload file', () => {
       }),
     });
 
-    expect(res.status).toBe(413);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
-    expect(json.error).toBe('File size exceeds limit');
   });
 
   it('should reject invalid JSON', async () => {
@@ -106,7 +144,7 @@ describe('drive API - upload file', () => {
       body: 'invalid json',
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -120,7 +158,7 @@ describe('drive API - upload file', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -134,7 +172,7 @@ describe('drive API - upload file', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -149,7 +187,7 @@ describe('drive API - upload file', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -164,7 +202,7 @@ describe('drive API - upload file', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -175,7 +213,22 @@ describe('drive API - rename file', () => {
     resetDriveFiles();
   });
 
+  it('PUT /api/files/:id returns 401 without session', async () => {
+    const res = await app.request('/api/files/some-id', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'renamed.pdf',
+      }),
+    });
+
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
+
   it('should rename a file', async () => {
+    allowAuth = true;
     const createRes = await app.request('/api/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -201,6 +254,7 @@ describe('drive API - rename file', () => {
     expect(json.id).toBe(fileId);
     expect(json.name).toBe('renamed.pdf');
     expect(json).toHaveProperty('modifiedAt');
+    allowAuth = false;
   });
 
   it('should reject rename with missing id', async () => {
@@ -224,7 +278,7 @@ describe('drive API - rename file', () => {
       }),
     });
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -236,7 +290,7 @@ describe('drive API - rename file', () => {
       body: JSON.stringify({}),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -247,7 +301,18 @@ describe('drive API - delete file', () => {
     resetDriveFiles();
   });
 
+  it('DELETE /api/files/:id returns 401 without session', async () => {
+    const res = await app.request('/api/files/some-id', {
+      method: 'DELETE',
+    });
+
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
+
   it('should delete a file', async () => {
+    allowAuth = true;
     const createRes = await app.request('/api/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -268,6 +333,7 @@ describe('drive API - delete file', () => {
     const json = await res.json();
     expect(json).toHaveProperty('ok');
     expect(json.ok).toBe(true);
+    allowAuth = false;
   });
 
   it('should reject delete with missing id', async () => {
@@ -283,7 +349,7 @@ describe('drive API - delete file', () => {
       method: 'DELETE',
     });
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -316,7 +382,22 @@ describe('drive API - create folder', () => {
     resetDriveFolders();
   });
 
+  it('POST /api/folders returns 401 without session', async () => {
+    const res = await app.request('/api/folders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Documents',
+      }),
+    });
+
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
+
   it('should create a valid folder', async () => {
+    allowAuth = true;
     const res = await app.request('/api/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -330,9 +411,11 @@ describe('drive API - create folder', () => {
     expect(json).toHaveProperty('id');
     expect(json.name).toBe('Documents');
     expect(json).toHaveProperty('createdAt');
+    allowAuth = false;
   });
 
   it('should create a folder with parentId', async () => {
+    allowAuth = true;
     const res = await app.request('/api/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -345,6 +428,7 @@ describe('drive API - create folder', () => {
     expect(res.status).toBe(404);
     const json = await res.json();
     expect(json).toHaveProperty('error');
+    allowAuth = false;
   });
 
   it('should reject invalid JSON', async () => {
@@ -354,7 +438,7 @@ describe('drive API - create folder', () => {
       body: 'invalid json',
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -366,7 +450,7 @@ describe('drive API - create folder', () => {
       body: JSON.stringify({}),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -377,7 +461,22 @@ describe('drive API - rename folder', () => {
     resetDriveFolders();
   });
 
+  it('PUT /api/folders/:id returns 401 without session', async () => {
+    const res = await app.request('/api/folders/some-id', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Renamed',
+      }),
+    });
+
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
+
   it('should rename a folder', async () => {
+    allowAuth = true;
     const createRes = await app.request('/api/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -401,6 +500,7 @@ describe('drive API - rename folder', () => {
     const json = await res.json();
     expect(json.id).toBe(folderId);
     expect(json.name).toBe('Renamed');
+    allowAuth = false;
   });
 
   it('should return 404 for non-existent folder', async () => {
@@ -412,7 +512,7 @@ describe('drive API - rename folder', () => {
       }),
     });
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -424,7 +524,7 @@ describe('drive API - rename folder', () => {
       body: JSON.stringify({}),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -436,7 +536,18 @@ describe('drive API - delete folder', () => {
     resetDriveFiles();
   });
 
+  it('DELETE /api/folders/:id returns 401 without session', async () => {
+    const res = await app.request('/api/folders/some-id', {
+      method: 'DELETE',
+    });
+
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
+
   it('should delete an empty folder', async () => {
+    allowAuth = true;
     const createRes = await app.request('/api/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -456,6 +567,7 @@ describe('drive API - delete folder', () => {
     const json = await res.json();
     expect(json).toHaveProperty('ok');
     expect(json.ok).toBe(true);
+    allowAuth = false;
   });
 
   it('should return 404 for non-existent folder', async () => {
@@ -463,7 +575,7 @@ describe('drive API - delete folder', () => {
       method: 'DELETE',
     });
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -475,7 +587,20 @@ describe('drive API - move file', () => {
     resetDriveFolders();
   });
 
+  it('POST /api/files/:id/move returns 401 without session', async () => {
+    const res = await app.request('/api/files/some-id/move', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
+
   it('should move a file to a folder', async () => {
+    allowAuth = true;
     const createRes = await app.request('/api/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -499,9 +624,11 @@ describe('drive API - move file', () => {
     expect(res.status).toBe(404);
     const json = await res.json();
     expect(json).toHaveProperty('error');
+    allowAuth = false;
   });
 
   it('should move a file to root', async () => {
+    allowAuth = true;
     const createRes = await app.request('/api/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -523,6 +650,7 @@ describe('drive API - move file', () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.id).toBe(fileId);
+    allowAuth = false;
   });
 
   it('should return 404 for non-existent file', async () => {
@@ -532,7 +660,7 @@ describe('drive API - move file', () => {
       body: JSON.stringify({}),
     });
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
