@@ -791,13 +791,16 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] DEP-014: Improve Auth Client Test Coverage
+### [x] DEP-014: Improve Auth Client Test Coverage
 
 **Priority**: P2
 **Bounded Context**: Testing
+**Status**: Complete
 
 **Related Files**:
 - `packages/auth/src/index.test.ts`
+- `packages/auth/src/test-setup.ts` (create)
+- `packages/auth/vitest.config.ts`
 
 **Definition of Done**:
 - Comprehensive tests for auth client methods (signIn, signUp, signOut)
@@ -817,25 +820,26 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### DEP-014-01: Add signIn method test
+#### ✅ DEP-014-01: Add signIn method test
 **Target File**: `packages/auth/src/index.test.ts`
 **Action**: Add test for signIn method with success and error cases.
 **Validate Command**: `pnpm --filter @suite/auth test`
 
-#### DEP-014-02: Add signUp method test
+#### ✅ DEP-014-02: Add signUp method test
 **Target File**: `packages/auth/src/index.test.ts`
 **Action**: Add test for signUp method with success and error cases.
 **Validate Command**: `pnpm --filter @suite/auth test`
 
-#### DEP-014-03: Add signOut method test
+#### ✅ DEP-014-03: Add signOut method test
 **Target File**: `packages/auth/src/index.test.ts`
 **Action**: Add test for signOut method.
 **Validate Command**: `pnpm --filter @suite/auth test`
 
-#### DEP-014-04: Add session management test
+#### ✅ DEP-014-04: Add session management test
 **Target File**: `packages/auth/src/index.test.ts`
 **Action**: Add test for session persistence and retrieval.
 **Validate Command**: `pnpm --filter @suite/auth test`
+**Implementation Notes**: Created test-setup.ts to mock better-auth/react and prevent network calls. Added 9 tests covering signIn, signUp, signOut, useSession exports and client structure. All tests passing.
 
 ---
 
