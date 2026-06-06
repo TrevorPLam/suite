@@ -1072,11 +1072,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ## P0 - UI Package Critical Tasks
 
-### [ ] UI-001: Add Build Step and Tree-Shaking Optimization
+### [x] UI-001: Add Build Step and Tree-Shaking Optimization
 
 **Priority**: P0
 **Bounded Context**: UI Package
-**Status**: Not Started
+**Status**: Complete
 
 **Related Files**:
 - `packages/ui/package.json`
@@ -1126,41 +1126,59 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### UI-001-01: Create Vite build configuration
+#### ✅ UI-001-01: Create Vite build configuration
 **Assigned To**: AGENT
 **Target File**: `packages/ui/vite.config.ts` (create)
 **Action**: Create Vite configuration for library build. Configure build to output to dist/ directory, use library mode, generate TypeScript declarations, and bundle as ESM. Set external dependencies to not bundle React, Radix UI, or other peer dependencies.
 **Validate Command**: `pnpm --filter @suite/ui build`
 
-#### UI-001-02: Update package.json exports
+#### ✅ UI-001-02: Update package.json exports
 **Assigned To**: AGENT
 **Target File**: `packages/ui/package.json`
 **Action**: Update exports field to point to dist/ directory instead of src/. Add "./styles/globals.css": "./dist/styles/globals.css" export. Ensure all exports use built files.
 **Validate Command**: `pnpm --filter @suite/ui typecheck`
 
-#### UI-001-03: Add sideEffects field to package.json
+#### ✅ UI-001-03: Add sideEffects field to package.json
 **Assigned To**: AGENT
 **Target File**: `packages/ui/package.json`
 **Action**: Add "sideEffects": ["*.css", "*.scss"] to package.json to enable tree-shaking. Mark CSS files as having side effects while allowing pure JS modules to be tree-shaken.
 **Validate Command**: `pnpm --filter @suite/ui typecheck`
 
-#### UI-001-04: Add build script to package.json
+#### ✅ UI-001-04: Add build script to package.json
 **Assigned To**: AGENT
 **Target File**: `packages/ui/package.json`
 **Action**: Add "build": "vite build" and "typecheck": "tsc --noEmit" scripts to package.json. Ensure build script runs before typecheck in CI.
 **Validate Command**: `pnpm --filter @suite/ui build`
 
-#### UI-001-05: Update tsconfig.json for build output
+#### ✅ UI-001-05: Update tsconfig.json for build output
 **Assigned To**: AGENT
 **Target File**: `packages/ui/tsconfig.json`
 **Action**: Ensure tsconfig.json has correct outDir pointing to dist/ and rootDir pointing to src/. Verify declaration: true is set for type generation.
 **Validate Command**: `pnpm --filter @suite/ui typecheck`
 
-#### UI-001-06: Test build output
+#### ✅ UI-001-06: Test build output
 **Assigned To**: AGENT
 **Target File**: `packages/ui/`
 **Action**: Run build command and verify dist/ directory is created with index.js, index.d.ts, and styles/globals.css. Verify imports from consuming apps still work with built output.
 **Validate Command**: `pnpm --filter @suite/calendar-web typecheck`
+
+**Implementation Notes**:
+- Created vite.config.ts with library mode configuration using Vite 6.4.3
+- Configured preserveModules: true for optimal tree-shaking (modules remain separate instead of bundled)
+- Added vite-plugin-dts for TypeScript declaration generation with rollupTypes: true
+- Added custom plugin to copy CSS files to dist/styles/ directory during build
+- Updated package.json exports to point to dist/ with conditional exports for import and types
+- Added sideEffects: ["*.css", "*.scss"] to enable tree-shaking while preserving CSS side effects
+- Added build script and vite/vite-plugin-dts to devDependencies
+- Updated tsconfig.json with declaration: true and declarationMap: true
+- Build successfully outputs dist/ with:
+  - index.js (1.98 kB) and index.d.ts (7.36 kB)
+  - All component modules preserved separately for tree-shaking
+  - styles/globals.css copied to dist/styles/
+  - Source maps generated for development
+- All peer dependencies (React, Radix UI, etc.) externalized
+- Typecheck, lint, and tests all passing (12 tests)
+- Build time: ~3.1s
 
 ---
 

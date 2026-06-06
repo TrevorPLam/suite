@@ -4,10 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./styles/globals.css": "./src/styles/globals.css"
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./styles/globals.css": "./dist/styles/globals.css"
   },
+  "sideEffects": ["*.css", "*.scss"],
   "scripts": {
+    "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest --run",
     "test:run": "vitest run",
@@ -28,6 +33,8 @@
     "@types/react": "^19.0.0",
     "jsdom": "catalog:",
     "tailwindcss": "^4.0.0",
+    "vite": "^6.0.0",
+    "vite-plugin-dts": "^4.0.0",
     "vitest": "catalog:"
   }
 }
