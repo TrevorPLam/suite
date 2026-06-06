@@ -6,6 +6,16 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests configured yet\"",
-    "lint": "echo \"No lint configured yet\""
+    "lint": "echo \"No lint configured yet\"",
+    "drizzle-kit": "drizzle-kit"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.36.4",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30.1",
+    "@types/pg": "^8.11.10",
+    "@types/node": "^22.10.2"
   }
 }

@@ -25,3 +25,18 @@ export interface QueryRepository<T, ID = string> extends Repository<T, ID> {
 }
 
 export const dbPackageName = '@suite/db';
+
+// Drizzle ORM exports
+export { drizzle } from 'drizzle-orm/postgres-js';
+export { pgTable, serial, varchar, timestamp, text, integer, boolean } from 'drizzle-orm/pg-core';
+
+// Connection exports
+export { getDb, closeDb } from './connection.js';
+
+// Schema exports
+export * from './schema/calendar.js';
+export * from './schema/tasks.js';
+export * from './schema/drive.js';
+
+// Repository exports
+export * from './repositories/index.js';
