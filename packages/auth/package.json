@@ -25,6 +25,7 @@
     "@better-auth/passkey": "catalog:",
     "@better-auth/scim": "catalog:",
     "@better-auth/sso": "^1.6.11",
+    "@suite/crypto": "workspace:*",
     "@suite/db": "workspace:*",
     "better-auth": "catalog:",
     "hono": "^4.6.0",

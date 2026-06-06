@@ -80,7 +80,7 @@
 
 ## Task: T039 - Implement Webhook Signature Verification
 
-- [ ] **T039** [PENDING] Implement Webhook Signature Verification
+- [x] **T039** [DONE] Implement Webhook Signature Verification
 
 **Files:** `packages/auth/src/webhook-signature.ts` (create)
 
@@ -102,25 +102,49 @@
 
 ### Subtasks
 
-- [ ] **T039.01 [AGENT]** Create webhook signature module
+- [x] **T039.01 [AGENT]** Create webhook signature module ✅
   - **File:** `packages/auth/src/webhook-signature.ts` (create)
   - **Action:** Create verifyWebhookSignature(payload, signature, secret, timestamp) function. Use HMAC-SHA256.
   - **Validation:** `pnpm --filter @suite/auth typecheck`.
 
-- [ ] **T039.02 [AGENT]** Add timestamp validation
+- [x] **T039.02 [AGENT]** Add timestamp validation ✅
   - **File:** `packages/auth/src/webhook-signature.ts`
   - **Action:** Validate timestamp is within acceptable window (e.g., 5 minutes) to prevent replay.
   - **Validation:** `pnpm --filter @suite/auth test:run`.
 
-- [ ] **T039.03 [AGENT]** Add secret management
+- [x] **T039.03 [AGENT]** Add secret management ✅
   - **File:** `packages/auth/src/webhook-signature.ts`
   - **Action:** Support per-organization webhook secrets. Store secrets securely.
   - **Validation:** `pnpm --filter @suite/auth test:run`.
 
-- [ ] **T039.04 [AGENT]** Add webhook signature tests
+- [x] **T039.04 [AGENT]** Add webhook signature tests ✅
   - **File:** `packages/auth/src/webhook-signature.test.ts` (create)
   - **Action:** Test valid signature accepted. Test invalid signature rejected. Test replay prevented.
   - **Validation:** `pnpm --filter @suite/auth test:run`.
+
+### Implementation Notes
+- Created `packages/auth/src/webhook-signature.ts` with HMAC-SHA256 signature verification
+- Signature format follows Stripe pattern: "t=timestamp,v1=signature"
+- Timestamp validation with configurable tolerance (default 300 seconds = 5 minutes)
+- Rejects timestamps in the future (with 5-second clock skew allowance)
+- Uses `constantTimeEqual` from `@suite/crypto` for timing-safe comparison (AGENTS.md Rule 11)
+- Supports per-organization webhook secrets via `WebhookSecretStorage` interface
+- Includes `InMemoryWebhookSecretStorage` for testing/simple use cases
+- Provides `generateWebhookSignature` for testing purposes
+- Provides `generateWebhookSecret` for cryptographically secure secret generation (32-byte hex)
+- Added `@suite/crypto` as dependency to `packages/auth/package.json`
+- Created comprehensive test suite in `packages/auth/src/webhook-signature.test.ts` with 29 tests covering:
+  - Valid/invalid signature verification
+  - Timestamp validation (old, future, within tolerance, custom tolerance, skip)
+  - Malformed signature headers
+  - Wrong secret rejection
+  - Empty and large payloads
+  - Per-organization secret storage
+  - Multi-tenant scenarios
+  - Integration tests
+- All 305 auth package tests pass
+- Typecheck passes
+- Lint passes (pre-existing warnings unrelated to webhook signature implementation)
 
 ---
 

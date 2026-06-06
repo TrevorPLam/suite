@@ -79,6 +79,10 @@ export type { RateLimitConfig, RateLimitResult, PerEndpointConfig, RateLimitOpti
 export { configureOTP } from './otp.js';
 export type { OTPOptions, OTPConfig, EmailOTPProvider, SMSOTPProvider, OTPResult, ValidateOTPResult } from './otp.js';
 
+// Webhook signature verification for secure webhook integration
+export { verifyWebhookSignature, generateWebhookSignature, InMemoryWebhookSecretStorage, verifyWebhookSignatureWithSecretStorage, generateWebhookSecret } from './webhook-signature.js';
+export type { WebhookSignatureOptions, WebhookSignatureResult, WebhookSecretStorage } from './webhook-signature.js';
+
 // Organization client is already configured with organizationClient plugin
 // Applications can use authClient.organization.createOrganization, etc.
 

@@ -495,6 +495,9 @@ importers:
       '@better-auth/sso':
         specifier: ^1.6.11
         version: 1.6.14(@better-auth/core@1.6.14(@better-auth/utils@0.4.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260605.1)(better-call@1.3.5(zod@3.25.76))(jose@6.2.3)(kysely@0.29.2)(nanostores@1.3.0))(@better-auth/utils@0.4.1)(@better-fetch/fetch@1.1.21)(better-auth@1.6.14(@cloudflare/workers-types@4.20260605.1)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@cloudflare/workers-types@4.20260605.1)(@types/pg@8.20.0)(gel@2.2.0)(kysely@0.29.2)(postgres@3.4.9))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(vitest@4.1.8))(better-call@1.3.5(zod@3.25.76))
+      '@suite/crypto':
+        specifier: workspace:*
+        version: link:../crypto
       '@suite/db':
         specifier: workspace:*
         version: link:../db
