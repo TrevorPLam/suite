@@ -1,7 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default defineConfig({
-  globalSetup: require.resolve('./playwright.global-setup'),
+  globalSetup: join(__dirname, './playwright.global-setup.ts'),
   testDir: './e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
