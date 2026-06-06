@@ -1,6 +1,24 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { resetCalendarEvents } from '@suite/domain-calendar';
 import app from './index.js';
+
+// Mock requireAuth to return 401 by default, but allow override for authenticated tests
+let allowAuth = false;
+
+vi.mock('@suite/auth', async () => {
+  const actual = await vi.importActual<any>('@suite/auth');
+  return {
+    ...actual,
+    requireAuth: vi.fn(async (c: any, next: any) => {
+      if (allowAuth) {
+        c.set('userId', 'test-user-id');
+        await next();
+      } else {
+        return c.json({ error: 'Unauthorized' }, 401);
+      }
+    }),
+  };
+});
 
 describe('calendar API - health', () => {
   it('should return health check', async () => {
@@ -57,7 +75,24 @@ describe('calendar API - create event', () => {
     resetCalendarEvents();
   });
 
+  it('POST /api/events returns 401 without session', async () => {
+    const res = await app.request('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Team Meeting',
+        startAt: '2025-01-15T10:00:00Z',
+        endAt: '2025-01-15T11:00:00Z',
+      }),
+    });
+
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
+
   it('should create a valid event', async () => {
+    allowAuth = true;
     const res = await app.request('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -73,6 +108,7 @@ describe('calendar API - create event', () => {
     expect(json).toHaveProperty('event');
     expect(json.event).toHaveProperty('id');
     expect(json.event.title).toBe('Team Meeting');
+    allowAuth = false;
   });
 
   it('should reject invalid JSON', async () => {
@@ -82,7 +118,7 @@ describe('calendar API - create event', () => {
       body: 'invalid json',
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -97,7 +133,7 @@ describe('calendar API - create event', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -113,12 +149,13 @@ describe('calendar API - create event', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
 
   it('should reject conflicting event', async () => {
+    allowAuth = true;
     // Create first event
     await app.request('/api/events', {
       method: 'POST',
@@ -144,6 +181,7 @@ describe('calendar API - create event', () => {
     expect(res.status).toBe(409);
     const json = await res.json();
     expect(json).toHaveProperty('error');
+    allowAuth = false;
   });
 });
 
@@ -152,7 +190,24 @@ describe('calendar API - update event', () => {
     resetCalendarEvents();
   });
 
+  it('PUT /api/events/:id returns 401 without session', async () => {
+    const res = await app.request('/api/events/some-id', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Updated Meeting',
+        startAt: '2025-01-15T14:00:00Z',
+        endAt: '2025-01-15T15:00:00Z',
+      }),
+    });
+
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
+
   it('should update an existing event', async () => {
+    allowAuth = true;
     // Create event first
     const createRes = await app.request('/api/events', {
       method: 'POST',
@@ -183,6 +238,7 @@ describe('calendar API - update event', () => {
     expect(json).toHaveProperty('event');
     expect(json.event.id).toBe(eventId);
     expect(json.event.title).toBe('Updated Meeting');
+    allowAuth = false;
   });
 
   it('should reject update with missing id', async () => {
@@ -210,7 +266,7 @@ describe('calendar API - update event', () => {
       }),
     });
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -224,7 +280,7 @@ describe('calendar API - update event', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });

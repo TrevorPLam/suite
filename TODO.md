@@ -1056,10 +1056,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] AUTH-003 — Protect Calendar mutation routes with requireAuth
+### [x] AUTH-003 — Protect Calendar mutation routes with requireAuth
 
-**Status:** pending  
-**Depends on:** AUTH-002, DB-004  
+**Status:** done
+**Depends on:** AUTH-002, DB-004
 **Blocks:** none
 
 #### Related paths
@@ -1100,9 +1100,22 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| AUTH-003-a | `apps/calendar/api/src/index.test.ts` | TDD: test POST `/api/events` returns 401 without cookie. | `pnpm --filter @suite/calendar-api test:run -- src/index.test.ts` |
-| AUTH-003-b | `apps/calendar/api/src/index.ts` | Apply middleware to mutation routes. | `pnpm --filter @suite/calendar-api test:run -- src/index.test.ts` |
-| AUTH-003-c | `apps/calendar/specs/create-event.spec.md` | Document auth requirement in API contract. | `findstr /n "401" apps\calendar\specs\create-event.spec.md` |
+| AUTH-003-a | `apps/calendar/api/src/index.test.ts` | TDD: test POST `/api/events` returns 401 without cookie. | `pnpm --filter @suite/calendar-api test:run -- src/index.test.ts` ✅ |
+| AUTH-003-b | `apps/calendar/api/src/index.ts` | Apply middleware to mutation routes. | `pnpm --filter @suite/calendar-api test:run -- src/index.test.ts` ✅ |
+| AUTH-003-c | `apps/calendar/specs/create-event.spec.md` | Document auth requirement in API contract. | `findstr /n "401" apps\calendar\specs\create-event.spec.md` ✅ |
+
+#### Implementation notes
+
+- Added `requireAuth` import from `@suite/auth` to calendar API index.ts
+- Applied `requireAuth` middleware to POST /api/events and PUT /api/events/:id routes
+- Fixed TypeScript error for route parameter by adding null check
+- Added TDD test for POST /api/events returning 401 without session
+- Added TDD test for PUT /api/events/:id returning 401 without session
+- Mocked `requireAuth` in tests to return 401 by default, with configurable override for authenticated tests
+- Updated existing tests to use authenticated mock where needed
+- Updated validation tests to expect 401 instead of 400 (auth check runs before validation)
+- Documented 401 response in create-event.spec.md and update-event.spec.md API contracts
+- All 17 calendar API tests pass, typecheck passes for all packages
 
 ---
 

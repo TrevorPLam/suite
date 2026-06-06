@@ -26,6 +26,8 @@ As a Calendar user, I want to edit an existing event so I can keep my schedule a
   - `title: string`
   - `startAt: string`
   - `endAt: string`
+- Response 401:
+  - `error: string` - Unauthorized (missing or invalid session)
 
 ## Validation rules
 

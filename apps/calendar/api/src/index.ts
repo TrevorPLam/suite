@@ -10,7 +10,7 @@ import {
 } from '@suite/domain-calendar';
 import { wireRepositories } from './bootstrap.js';
 import { validateCalendarEnv } from '@suite/env-config';
-import { mountAuth } from '@suite/auth';
+import { mountAuth, requireAuth } from '@suite/auth';
 
 // Validate environment variables at startup
 const env = validateCalendarEnv();
@@ -161,7 +161,7 @@ app.get('/api/events', async (c) => {
   return c.json({ events });
 });
 
-app.post('/api/events', async (c) => {
+app.post('/api/events', requireAuth, async (c) => {
   const body = await readRequestBody(c);
 
   if (body === undefined) {
@@ -190,8 +190,8 @@ app.post('/api/events', async (c) => {
   }
 });
 
-app.put('/api/events/:id', async (c) => {
-  const id = c.req.param('id').trim();
+app.put('/api/events/:id', requireAuth, async (c) => {
+  const id = (c.req.param('id') || '').trim();
 
   if (!isNonEmptyString(id)) {
     return c.json(

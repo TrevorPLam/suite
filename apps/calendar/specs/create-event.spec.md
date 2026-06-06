@@ -24,6 +24,8 @@ As a Calendar user, I want to create an event so I can reserve time on my schedu
   - `title: string`
   - `startAt: string`
   - `endAt: string`
+- Response 401:
+  - `error: string` - Unauthorized (missing or invalid session)
 
 ## Validation rules
 
