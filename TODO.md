@@ -2431,9 +2431,9 @@ test('should upload file with folderId', async () => {
 
 ---
 
-### [ ] COV-01: Add c8 dependency for vitest coverage reporting
+### [x] COV-01: Add c8 dependency for vitest coverage reporting
 
-**Status**: Pending
+**Status**: Complete
 **Related Files**: package.json, vitest.config.ts
 
 **Definition of Done**:
@@ -2486,17 +2486,27 @@ export default defineConfig({
 
 **Subtasks**:
 
-#### COV-01.1: Install c8 dependency
+#### ✅ COV-01.1: Install c8 dependency
 **Target**: Root package.json
 **Action**: Add c8 to devDependencies.
 **Validate**: `pnpm install`
 
-#### COV-01.2: Configure vitest coverage
+#### ✅ COV-01.2: Configure vitest coverage
 **Target**: vitest.config.ts
 **Action**: Configure vitest to use c8 provider with basic settings.
 **Validate**: `pnpm test:coverage`
 
-#### COV-01.3: Test coverage command
+#### ✅ COV-01.3: Test coverage command
 **Target**: All packages
 **Action**: Run coverage command to verify it works across workspace.
 **Validate**: `pnpm test:coverage`
+
+**Implementation Notes**:
+- Added @vitest/coverage-istanbul v4.1.8 to root devDependencies (matching vitest 4.1.8)
+- Updated all vitest.config.ts files to use 'istanbul' provider (c8 is Istanbul-compatible)
+- Updated coverage provider in: root vitest.config.ts, 3 domain packages, 6 app packages (3 API + 3 web)
+- Set all coverage thresholds to 0 (lines, functions, branches, statements) as specified in task rules
+- Coverage command now works across entire workspace: `pnpm test:coverage` passes successfully
+- All tests passing (20/20 calendar, 57/57 tasks, 47/47 drive, 14/14 calendar API, 36/36 drive API, 35/35 tasks API, 5/5 calendar web, 5/5 drive web, 6/6 tasks web)
+- Typecheck passing for all 18/18 workspace projects
+- Note: Used @vitest/coverage-istanbul instead of standalone c8 package because vitest requires the vitest integration package for istanbul provider

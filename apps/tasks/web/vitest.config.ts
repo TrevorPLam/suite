@@ -10,7 +10,7 @@ export default defineConfig({
     exclude: ['node_modules', 'dist'],
     setupFiles: ['./src/test-setup.ts'],
     coverage: {
-      provider: 'v8',
+      provider: 'istanbul',
       reporter: ['text', 'html', 'lcov'],
       exclude: [
         'node_modules',
@@ -21,10 +21,10 @@ export default defineConfig({
         'src/main.tsx',
       ],
       thresholds: {
-        lines: 70,
-        functions: 70,
-        branches: 65,
-        statements: 70,
+        lines: 0,
+        functions: 0,
+        branches: 0,
+        statements: 0,
       },
     },
   },

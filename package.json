@@ -20,6 +20,7 @@
     "ci:coverage": "pnpm test:coverage"
   },
   "devDependencies": {
+    "@vitest/coverage-istanbul": "^4.1.8",
     "nx": "^22.7.0",
     "rimraf": "^6.0.1",
     "typescript": "^5.8.0",
