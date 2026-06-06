@@ -15,55 +15,55 @@ describe('drive - upload', () => {
     resetDriveFiles();
   });
 
-  it('should upload a file with a stable ID', () => {
+  it('should upload a file with a stable ID', async () => {
     const input: UploadDriveFileInput = {
       name: 'document.pdf',
       size: 1024,
     };
 
-    const file = uploadDriveFile(input);
+    const file = await uploadDriveFile(input);
 
     expect(file.id).toBeDefined();
     expect(file.name).toBe('document.pdf');
     expect(file.size).toBe(1024);
   });
 
-  it('should trim whitespace from file name', () => {
+  it('should trim whitespace from file name', async () => {
     const input: UploadDriveFileInput = {
       name: '  document.pdf  ',
       size: 1024,
     };
 
-    const file = uploadDriveFile(input);
+    const file = await uploadDriveFile(input);
 
     expect(file.name).toBe('document.pdf');
   });
 
-  it('should reject negative file size', () => {
+  it('should reject negative file size', async () => {
     const input: UploadDriveFileInput = {
       name: 'document.pdf',
       size: -1,
     };
 
-    expect(() => uploadDriveFile(input)).toThrow();
+    await expect(uploadDriveFile(input)).rejects.toThrow();
   });
 
-  it('should reject non-integer file size', () => {
+  it('should reject non-integer file size', async () => {
     const input: UploadDriveFileInput = {
       name: 'document.pdf',
       size: 1024.5,
     };
 
-    expect(() => uploadDriveFile(input)).toThrow();
+    await expect(uploadDriveFile(input)).rejects.toThrow();
   });
 
-  it('should allow zero file size', () => {
+  it('should allow zero file size', async () => {
     const input: UploadDriveFileInput = {
       name: 'empty.txt',
       size: 0,
     };
 
-    const file = uploadDriveFile(input);
+    const file = await uploadDriveFile(input);
 
     expect(file.size).toBe(0);
   });
@@ -74,7 +74,7 @@ describe('drive - query', () => {
     resetDriveFiles();
   });
 
-  it('should list files in reverse upload order', () => {
+  it('should list files in reverse upload order', async () => {
     const firstInput: UploadDriveFileInput = {
       name: 'first.pdf',
       size: 1024,
@@ -85,37 +85,37 @@ describe('drive - query', () => {
       size: 2048,
     };
 
-    const firstFile = uploadDriveFile(firstInput);
-    const secondFile = uploadDriveFile(secondInput);
+    const firstFile = await uploadDriveFile(firstInput);
+    const secondFile = await uploadDriveFile(secondInput);
 
-    const files = listDriveFiles();
+    const files = await listDriveFiles();
 
     expect(files).toHaveLength(2);
     expect(files[0]?.id).toBe(secondFile.id);
     expect(files[1]?.id).toBe(firstFile.id);
   });
 
-  it('should get file by id', () => {
+  it('should get file by id', async () => {
     const input: UploadDriveFileInput = {
       name: 'document.pdf',
       size: 1024,
     };
 
-    const file = uploadDriveFile(input);
-    const found = getDriveFile(file.id);
+    const file = await uploadDriveFile(input);
+    const found = await getDriveFile(file.id);
 
     expect(found).not.toBeNull();
     expect(found?.id).toBe(file.id);
     expect(found?.name).toBe('document.pdf');
   });
 
-  it('should return null for non-existent file', () => {
-    const found = getDriveFile('non-existent-id');
+  it('should return null for non-existent file', async () => {
+    const found = await getDriveFile('non-existent-id');
     expect(found).toBeNull();
   });
 
-  it('should return empty list when no files exist', () => {
-    const files = listDriveFiles();
+  it('should return empty list when no files exist', async () => {
+    const files = await listDriveFiles();
     expect(files).toHaveLength(0);
   });
 });
@@ -125,20 +125,20 @@ describe('drive - rename', () => {
     resetDriveFiles();
   });
 
-  it('should rename a file', () => {
+  it('should rename a file', async () => {
     const uploadInput: UploadDriveFileInput = {
       name: 'document.pdf',
       size: 1024,
     };
 
-    const file = uploadDriveFile(uploadInput);
+    const file = await uploadDriveFile(uploadInput);
 
     const renameInput: RenameDriveFileInput = {
       id: file.id,
       name: 'renamed.pdf',
     };
 
-    const renamed = renameDriveFile(renameInput);
+    const renamed = await renameDriveFile(renameInput);
 
     expect(renamed).not.toBeNull();
     expect(renamed?.id).toBe(file.id);
@@ -146,49 +146,49 @@ describe('drive - rename', () => {
     expect(renamed?.size).toBe(file.size);
   });
 
-  it('should trim whitespace from new name', () => {
+  it('should trim whitespace from new name', async () => {
     const uploadInput: UploadDriveFileInput = {
       name: 'document.pdf',
       size: 1024,
     };
 
-    const file = uploadDriveFile(uploadInput);
+    const file = await uploadDriveFile(uploadInput);
 
     const renameInput: RenameDriveFileInput = {
       id: file.id,
       name: '  renamed.pdf  ',
     };
 
-    const renamed = renameDriveFile(renameInput);
+    const renamed = await renameDriveFile(renameInput);
 
     expect(renamed?.name).toBe('renamed.pdf');
   });
 
-  it('should return null for non-existent file', () => {
+  it('should return null for non-existent file', async () => {
     const renameInput: RenameDriveFileInput = {
       id: 'non-existent-id',
       name: 'renamed.pdf',
     };
 
-    const result = renameDriveFile(renameInput);
+    const result = await renameDriveFile(renameInput);
 
     expect(result).toBeNull();
   });
 
-  it('should preserve original size on rename', () => {
+  it('should preserve original size on rename', async () => {
     const uploadInput: UploadDriveFileInput = {
       name: 'document.pdf',
       size: 1024,
     };
 
-    const file = uploadDriveFile(uploadInput);
+    const file = await uploadDriveFile(uploadInput);
 
     const renameInput: RenameDriveFileInput = {
       id: file.id,
       name: 'renamed.pdf',
     };
 
-    const renamed = renameDriveFile(renameInput);
+    const renamed = await renameDriveFile(renameInput);
 
     expect(renamed?.size).toBe(1024);
   });
@@ -199,38 +199,38 @@ describe('drive - delete', () => {
     resetDriveFiles();
   });
 
-  it('should delete a file', () => {
+  it('should delete a file', async () => {
     const input: UploadDriveFileInput = {
       name: 'document.pdf',
       size: 1024,
     };
 
-    const file = uploadDriveFile(input);
+    const file = await uploadDriveFile(input);
 
-    const deleted = deleteDriveFile(file.id);
+    const deleted = await deleteDriveFile(file.id);
 
     expect(deleted).toBe(true);
 
-    const found = getDriveFile(file.id);
+    const found = await getDriveFile(file.id);
     expect(found).toBeNull();
   });
 
-  it('should return false for non-existent file', () => {
-    const deleted = deleteDriveFile('non-existent-id');
+  it('should return false for non-existent file', async () => {
+    const deleted = await deleteDriveFile('non-existent-id');
     expect(deleted).toBe(false);
   });
 
-  it('should remove file from list after deletion', () => {
+  it('should remove file from list after deletion', async () => {
     const input: UploadDriveFileInput = {
       name: 'document.pdf',
       size: 1024,
     };
 
-    const file = uploadDriveFile(input);
+    const file = await uploadDriveFile(input);
 
-    deleteDriveFile(file.id);
+    await deleteDriveFile(file.id);
 
-    const files = listDriveFiles();
+    const files = await listDriveFiles();
     expect(files).toHaveLength(0);
   });
 });

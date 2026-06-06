@@ -1,3 +1,5 @@
+import type { QueryRepository } from '@suite/db';
+
 export type DriveFile = {
   id: string;
   name: string;
@@ -21,38 +23,117 @@ export class DriveError extends Error {
   }
 }
 
-const driveFiles: DriveFile[] = [];
+export interface DriveFileRepository extends QueryRepository<DriveFile> {
+  clear?(): void;
+}
 
-function createDriveFileId() {
-  const randomUUID = globalThis.crypto?.randomUUID;
+// In-memory repository for testing (default)
+class InMemoryDriveFileRepository implements DriveFileRepository {
+  private files = new Map<string, DriveFile>();
 
-  if (typeof randomUUID === 'function') {
-    return randomUUID.call(globalThis.crypto);
+  async findById(id: string): Promise<DriveFile | null> {
+    return this.files.get(id) ?? null;
   }
 
-  return `drive_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  async findAll(): Promise<DriveFile[]> {
+    return Array.from(this.files.values());
+  }
+
+  async create(entity: Omit<DriveFile, 'id'>): Promise<DriveFile> {
+    const file: DriveFile = {
+      id: crypto.randomUUID(),
+      ...entity,
+    };
+    this.files.set(file.id, file);
+    return file;
+  }
+
+  async update(id: string, entity: Partial<DriveFile>): Promise<DriveFile | null> {
+    const existing = this.files.get(id);
+    if (!existing) return null;
+    const updated = { ...existing, ...entity };
+    this.files.set(id, updated);
+    return updated;
+  }
+
+  async delete(id: string): Promise<boolean> {
+    return this.files.delete(id);
+  }
+
+  async findWhere(criteria: Partial<DriveFile>): Promise<DriveFile[]> {
+    const allFiles = Array.from(this.files.values());
+    return allFiles.filter(file => {
+      for (const [key, value] of Object.entries(criteria)) {
+        if (file[key as keyof DriveFile] !== value) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  async count(criteria?: Partial<DriveFile>): Promise<number> {
+    if (!criteria || Object.keys(criteria).length === 0) {
+      return this.files.size;
+    }
+    const results = await this.findWhere(criteria);
+    return results.length;
+  }
+
+  clear(): void {
+    this.files.clear();
+  }
 }
 
-export function listDriveFiles(): DriveFile[] {
-  return [...driveFiles]
-    .reverse()
-    .map((file) => ({ ...file }));
+// Default repository (in-memory for backward compatibility)
+let defaultRepository: DriveFileRepository = new InMemoryDriveFileRepository();
+
+// Current repository (can be injected)
+let currentRepository: DriveFileRepository = defaultRepository;
+
+export function setDriveFileRepository(repository: DriveFileRepository): void {
+  currentRepository = repository;
 }
 
-export function getDriveFile(id: string): DriveFile | null {
-  const file = driveFiles.find((f) => f.id === id);
-  return file ? { ...file } : null;
+export function getDriveFileRepository(): DriveFileRepository {
+  return currentRepository;
+}
+
+function snapshot(file: DriveFile): DriveFile {
+  return {
+    ...file,
+  };
+}
+
+export async function listDriveFiles(): Promise<DriveFile[]> {
+  const files = await currentRepository.findAll();
+  return files.reverse().map(snapshot);
+}
+
+export async function getDriveFile(id: string): Promise<DriveFile | null> {
+  const file = await currentRepository.findById(id);
+  return file ? snapshot(file) : null;
 }
 
 export function resetDriveFiles(): void {
-  driveFiles.length = 0;
+  if (currentRepository instanceof InMemoryDriveFileRepository) {
+    (currentRepository as InMemoryDriveFileRepository).clear();
+  }
 }
 
-export function getDriveOverview() {
+export async function resetDriveFilesDB(): Promise<void> {
+  // For database repositories, delete all files
+  const files = await currentRepository.findAll();
+  for (const file of files) {
+    await currentRepository.delete(file.id);
+  }
+}
+
+export async function getDriveOverview() {
   return {
     name: 'Drive',
     description: 'Starter drive domain package',
-    files: listDriveFiles(),
+    files: await listDriveFiles(),
   };
 }
 
@@ -60,7 +141,7 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-export function uploadDriveFile(input: UploadDriveFileInput): DriveFile {
+export async function uploadDriveFile(input: UploadDriveFileInput): Promise<DriveFile> {
   const name = input.name.trim();
 
   if (!isNonEmptyString(name)) {
@@ -75,43 +156,23 @@ export function uploadDriveFile(input: UploadDriveFileInput): DriveFile {
     throw new DriveError('size must be non-negative');
   }
 
-  const file: DriveFile = {
-    id: createDriveFileId(),
-    name,
-    size: input.size,
-  };
+  const created = await currentRepository.create({ name, size: input.size });
 
-  driveFiles.push(file);
-
-  return { ...file };
+  return snapshot(created);
 }
 
-export function renameDriveFile(input: RenameDriveFileInput): DriveFile | null {
-  const index = driveFiles.findIndex((f) => f.id === input.id);
+export async function renameDriveFile(input: RenameDriveFileInput): Promise<DriveFile | null> {
+  const name = input.name.trim();
 
-  if (index === -1) {
-    return null;
+  if (!isNonEmptyString(name)) {
+    throw new DriveError('name must be a non-empty string');
   }
 
-  const existingFile = driveFiles[index]!;
-  const updatedFile: DriveFile = {
-    id: existingFile.id,
-    name: input.name.trim(),
-    size: existingFile.size,
-  };
+  const updated = await currentRepository.update(input.id, { name });
 
-  driveFiles[index] = updatedFile;
-
-  return { ...updatedFile };
+  return updated ? snapshot(updated) : null;
 }
 
-export function deleteDriveFile(id: string): boolean {
-  const index = driveFiles.findIndex((f) => f.id === id);
-
-  if (index === -1) {
-    return false;
-  }
-
-  driveFiles.splice(index, 1);
-  return true;
+export async function deleteDriveFile(id: string): Promise<boolean> {
+  return await currentRepository.delete(id);
 }

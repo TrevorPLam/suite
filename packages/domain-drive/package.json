@@ -12,5 +12,8 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "echo \"No lint configured yet\""
+  },
+  "dependencies": {
+    "@suite/db": "workspace:*"
   }
 }

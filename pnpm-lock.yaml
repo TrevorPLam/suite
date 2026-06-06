@@ -317,7 +317,11 @@ importers:
         specifier: workspace:*
         version: link:../db
 
-  packages/domain-drive: {}
+  packages/domain-drive:
+    dependencies:
+      '@suite/db':
+        specifier: workspace:*
+        version: link:../db
 
   packages/domain-tasks:
     dependencies:
