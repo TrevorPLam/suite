@@ -370,10 +370,10 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-011: Add Error Code Taxonomy
+### [x] P2-011: Add Error Code Taxonomy
 
-**Status**: Pending  
-**Priority**: P2  
+**Status**: Completed
+**Priority**: P2
 **Bounded Context**: Error Handling
 
 **Related Files**:
@@ -414,32 +414,47 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Implementation Notes**:
+- Created `packages/shared-kernel/src/errors.ts` with error code constants and error classes following the taxonomy from planning docs
+- Error codes follow pattern: `<domain>_<error_name>` or `global_<error_name>` for cross-domain errors
+- All error classes extend base `AppError` class with code, message, details, and timestamp
+- Updated all three APIs (calendar, tasks, drive) to use standardized error format with code field
+- Error responses now include: `{ error: { code, message, details?, timestamp } }`
+- Typecheck passes for shared-kernel, calendar-api, and tasks-api
+- Lint passes with 0 errors (only warnings)
+- Pre-existing typecheck errors in drive-api test file (unrelated to this task)
+
 **Subtasks**:
 
 #### P2-011-01: Create error code constants
 **Target File**: `packages/shared-kernel/src/errors.ts`
 **Action**: Create error code constants following taxonomy: VALIDATION_ERROR, NOT_FOUND, UNAUTHORIZED, FORBIDDEN, CONFLICT, INTERNAL_ERROR
 **Validate Command**: `pnpm --filter @suite/shared-kernel typecheck`
+**Status**: ✅ Complete
 
 #### P2-011-02: Create error classes
 **Target File**: `packages/shared-kernel/src/errors.ts`
 **Action**: Create error classes (ValidationError, NotFoundError, etc.) that include code and message
 **Validate Command**: `pnpm --filter @suite/shared-kernel typecheck`
+**Status**: ✅ Complete
 
 #### P2-011-03: Update calendar API to use error classes
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Replace generic errors with typed error classes from shared-kernel
 **Validate Command**: `pnpm --filter @suite/calendar-api test`
+**Status**: ✅ Complete
 
 #### P2-011-04: Update tasks API to use error classes
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Replace generic errors with typed error classes from shared-kernel
 **Validate Command**: `pnpm --filter @suite/tasks-api test`
+**Status**: ✅ Complete
 
 #### P2-011-05: Update drive API to use error classes
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Replace generic errors with typed error classes from shared-kernel
 **Validate Command**: `pnpm --filter @suite/drive-api test`
+**Status**: ✅ Complete
 
 ---
 

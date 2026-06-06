@@ -25,7 +25,7 @@ import {
   archiveTaskBodySchema,
   batchOperationBodySchema,
 } from './schemas.js';
-import { UsageMonitor, rateLimit, structuredLogger } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit, structuredLogger, ERROR_CODES } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 
 // Validate environment variables at startup
@@ -130,8 +130,12 @@ function readTaskError(error: unknown): { status: 400 | 404 | 500; body: Record<
       return {
         status: 404,
         body: {
-          error: error.message,
-          details: error.details,
+          error: {
+            code: ERROR_CODES.TASKS_TASK_NOT_FOUND,
+            message: error.message,
+            details: error.details,
+            timestamp: new Date().toISOString(),
+          },
         },
       };
     }
@@ -139,8 +143,12 @@ function readTaskError(error: unknown): { status: 400 | 404 | 500; body: Record<
     return {
       status: 400,
       body: {
-        error: error.message,
-        details: error.details,
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: error.message,
+          details: error.details,
+          timestamp: new Date().toISOString(),
+        },
       },
     };
   }
@@ -148,7 +156,11 @@ function readTaskError(error: unknown): { status: 400 | 404 | 500; body: Record<
   return {
     status: 500,
     body: {
-      error: 'Unable to process task',
+      error: {
+        code: ERROR_CODES.GLOBAL_INTERNAL_ERROR,
+        message: 'Unable to process task',
+        timestamp: new Date().toISOString(),
+      },
     },
   };
 }
@@ -280,7 +292,16 @@ app.get('/api/v1/tasks/:id', async (c) => {
   const task = await getTask(c.req.param('id').trim());
 
   if (!task) {
-    return c.json({ error: 'Task not found' }, 404);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.TASKS_TASK_NOT_FOUND,
+          message: 'Task not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      404,
+    );
   }
 
   return c.json({ task });
@@ -290,7 +311,17 @@ app.put('/api/v1/tasks/:id/completion', requireAuth, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!id) {
-    return c.json({ error: 'Invalid task id', expected: ['id'] }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid task id',
+          details: { expected: ['id'] },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   let body: unknown;
@@ -298,13 +329,32 @@ app.put('/api/v1/tasks/:id/completion', requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid JSON body',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const result = taskCompletionBodySchema.safeParse(body);
 
   if (!result.success) {
-    return c.json({ error: 'Invalid task completion payload', expected: ['completed'] }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid task completion payload',
+          details: { expected: ['completed'] },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   try {
@@ -320,7 +370,17 @@ app.put('/api/v1/tasks/:id', requireAuth, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!id) {
-    return c.json({ error: 'Invalid task id', expected: ['id'] }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid task id',
+          details: { expected: ['id'] },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   let body: unknown;
@@ -328,13 +388,32 @@ app.put('/api/v1/tasks/:id', requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid JSON body',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const result = updateTaskBodySchema.safeParse(body);
 
   if (!result.success) {
-    return c.json({ error: 'Invalid task update payload', expected: ['title'] }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid task update payload',
+          details: { expected: ['title'] },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   try {
@@ -350,7 +429,17 @@ app.put('/api/v1/tasks/:id/archive', requireAuth, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!id) {
-    return c.json({ error: 'Invalid task id', expected: ['id'] }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid task id',
+          details: { expected: ['id'] },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   let body: unknown;
@@ -358,13 +447,32 @@ app.put('/api/v1/tasks/:id/archive', requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid JSON body',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const result = archiveTaskBodySchema.safeParse(body);
 
   if (!result.success) {
-    return c.json({ error: 'Invalid task archive payload', expected: ['archived'] }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid task archive payload',
+          details: { expected: ['archived'] },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   try {
@@ -380,7 +488,17 @@ app.delete('/api/v1/tasks/:id', requireAuth, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!id) {
-    return c.json({ error: 'Invalid task id', expected: ['id'] }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid task id',
+          details: { expected: ['id'] },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   try {
@@ -399,16 +517,32 @@ app.post('/api/v1/tasks/batch/complete', requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid JSON body',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const result = batchOperationBodySchema.safeParse(body);
 
   if (!result.success) {
-    return c.json({
-      error: 'Invalid batch operation payload',
-      expected: ['taskIds: string[]'],
-    }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid batch operation payload',
+          details: { expected: ['taskIds: string[]'] },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   try {
@@ -427,16 +561,32 @@ app.post('/api/v1/tasks/batch/archive', requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid JSON body',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const result = batchOperationBodySchema.safeParse(body);
 
   if (!result.success) {
-    return c.json({
-      error: 'Invalid batch operation payload',
-      expected: ['taskIds: string[]'],
-    }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid batch operation payload',
+          details: { expected: ['taskIds: string[]'] },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   try {

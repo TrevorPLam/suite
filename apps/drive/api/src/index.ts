@@ -19,7 +19,7 @@ import {
 import { wireRepositories, getR2Adapter } from './bootstrap.js';
 import { validateDriveEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
-import { UsageMonitor, rateLimit, structuredLogger } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit, structuredLogger, ERROR_CODES } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import {
   uploadFileBodySchema,
@@ -139,8 +139,12 @@ function readDriveError(error: unknown): { status: 400 | 404 | 500; body: Record
       return {
         status: 404,
         body: {
-          error: error.message,
-          details: error.details,
+          error: {
+            code: ERROR_CODES.DRIVE_FILE_NOT_FOUND,
+            message: error.message,
+            details: error.details,
+            timestamp: new Date().toISOString(),
+          },
         },
       };
     }
@@ -148,8 +152,12 @@ function readDriveError(error: unknown): { status: 400 | 404 | 500; body: Record
     return {
       status: 400,
       body: {
-        error: error.message,
-        details: error.details,
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: error.message,
+          details: error.details,
+          timestamp: new Date().toISOString(),
+        },
       },
     };
   }
@@ -157,7 +165,11 @@ function readDriveError(error: unknown): { status: 400 | 404 | 500; body: Record
   return {
     status: 500,
     body: {
-      error: 'Unable to process drive operation',
+      error: {
+        code: ERROR_CODES.GLOBAL_INTERNAL_ERROR,
+        message: 'Unable to process drive operation',
+        timestamp: new Date().toISOString(),
+      },
     },
   };
 }
@@ -256,21 +268,45 @@ app.post('/api/v1/files', requireAuth, async (c) => {
       const mimeType = formData.get('mimeType') as string | null;
 
       if (!file) {
-        return c.json({ error: 'File is required' }, 400);
+        return c.json(
+          {
+            error: {
+              code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+              message: 'File is required',
+              timestamp: new Date().toISOString(),
+            },
+          },
+          400,
+        );
       }
 
       if (!name) {
-        return c.json({ error: 'Name is required' }, 400);
+        return c.json(
+          {
+            error: {
+              code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+              message: 'Name is required',
+              timestamp: new Date().toISOString(),
+            },
+          },
+          400,
+        );
       }
 
       // File size limit: 100MB
       const MAX_FILE_SIZE = 100 * 1024 * 1024;
       if (file.size > MAX_FILE_SIZE) {
-        return c.json({
-          error: 'File size exceeds limit',
-          maxSize: MAX_FILE_SIZE,
-          actualSize: file.size,
-        }, 413);
+        return c.json(
+          {
+            error: {
+              code: ERROR_CODES.DRIVE_QUOTA_EXCEEDED,
+              message: 'File size exceeds limit',
+              details: { maxSize: MAX_FILE_SIZE, actualSize: file.size },
+              timestamp: new Date().toISOString(),
+            },
+          },
+          413,
+        );
       }
 
       const payload: UploadDriveFileInput = {
@@ -295,7 +331,16 @@ app.post('/api/v1/files', requireAuth, async (c) => {
         return c.json(response.body, response.status);
       }
     } catch (_error) {
-      return c.json({ error: 'Failed to parse form data' }, 400);
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Failed to parse form data',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        400,
+      );
     }
   }
 
@@ -305,26 +350,48 @@ app.post('/api/v1/files', requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid JSON body',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const result = uploadFileBodySchema.safeParse(body);
 
   if (!result.success) {
-    return c.json({
-      error: 'Invalid file payload',
-      details: result.error.errors,
-    }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid file payload',
+          details: result.error.errors,
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   // File size limit: 100MB
   const MAX_FILE_SIZE = 100 * 1024 * 1024;
   if (result.data.size > MAX_FILE_SIZE) {
-    return c.json({
-      error: 'File size exceeds limit',
-      maxSize: MAX_FILE_SIZE,
-      actualSize: result.data.size,
-    }, 413);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.DRIVE_QUOTA_EXCEEDED,
+          message: 'File size exceeds limit',
+          details: { maxSize: MAX_FILE_SIZE, actualSize: result.data.size },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      413,
+    );
   }
 
   try {
@@ -340,7 +407,16 @@ app.put('/api/v1/files/:id', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
-    return c.json({ error: 'File ID is required' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'File ID is required',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   let body: unknown;
@@ -348,23 +424,48 @@ app.put('/api/v1/files/:id', requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid JSON body',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const result = renameFileBodySchema.safeParse(body);
 
   if (!result.success) {
-    return c.json({
-      error: 'Invalid rename payload',
-      details: result.error.errors,
-    }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid rename payload',
+          details: result.error.errors,
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   try {
     const payload = { id, name: result.data.name };
     const renamed = await renameDriveFile(payload);
     if (!renamed) {
-      return c.json({ error: 'File not found' }, 404);
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.DRIVE_FILE_NOT_FOUND,
+            message: 'File not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        404,
+      );
     }
     return c.json({ file: renamed });
   } catch (error) {
@@ -377,13 +478,31 @@ app.delete('/api/v1/files/:id', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
-    return c.json({ error: 'File ID is required' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'File ID is required',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const deleted = await deleteDriveFile(id);
 
   if (!deleted) {
-    return c.json({ error: 'File not found' }, 404);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.DRIVE_FILE_NOT_FOUND,
+          message: 'File not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      404,
+    );
   }
 
   return c.json({ success: true });
@@ -393,25 +512,61 @@ app.get('/api/v1/files/:id/download', async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
-    return c.json({ error: 'File ID is required' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'File ID is required',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const file = await getDriveFile(id);
 
   if (!file) {
-    return c.json({ error: 'File not found' }, 404);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.DRIVE_FILE_NOT_FOUND,
+          message: 'File not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      404,
+    );
   }
 
   const r2Adapter = getR2Adapter();
   if (!r2Adapter) {
-    return c.json({ error: 'Storage not available' }, 503);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_SERVICE_UNAVAILABLE,
+          message: 'Storage not available',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      503,
+    );
   }
 
   const storageKey = `files/${id}`;
   const stream = await r2Adapter.get(storageKey);
 
   if (!stream) {
-    return c.json({ error: 'File bytes not found in storage' }, 404);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.DRIVE_FILE_NOT_FOUND,
+          message: 'File bytes not found in storage',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      404,
+    );
   }
 
   return new Response(stream, {
@@ -435,16 +590,32 @@ app.post('/api/v1/folders', requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid JSON body',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const result = createFolderBodySchema.safeParse(body);
 
   if (!result.success) {
-    return c.json({
-      error: 'Invalid folder payload',
-      details: result.error.errors,
-    }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid folder payload',
+          details: result.error.errors,
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   try {
@@ -460,7 +631,16 @@ app.put('/api/v1/folders/:id', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
-    return c.json({ error: 'Folder ID is required' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Folder ID is required',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   let body: unknown;
@@ -468,23 +648,48 @@ app.put('/api/v1/folders/:id', requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid JSON body',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const result = renameFolderBodySchema.safeParse(body);
 
   if (!result.success) {
-    return c.json({
-      error: 'Invalid rename payload',
-      details: result.error.errors,
-    }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid rename payload',
+          details: result.error.errors,
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   try {
     const payload = { id, name: result.data.name };
     const renamed = await renameFolder(payload);
     if (!renamed) {
-      return c.json({ error: 'Folder not found' }, 404);
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.DRIVE_FILE_NOT_FOUND,
+            message: 'Folder not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        404,
+      );
     }
     return c.json({ folder: renamed });
   } catch (error) {
@@ -497,13 +702,31 @@ app.delete('/api/v1/folders/:id', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
-    return c.json({ error: 'Folder ID is required' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Folder ID is required',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const deleted = await deleteFolder(id);
 
   if (!deleted) {
-    return c.json({ error: 'Folder not found or not empty' }, 404);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.DRIVE_FOLDER_NOT_EMPTY,
+          message: 'Folder not found or not empty',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      404,
+    );
   }
 
   return c.json({ success: true });
@@ -514,7 +737,16 @@ app.post('/api/v1/files/:id/move', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
-    return c.json({ error: 'File ID is required' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'File ID is required',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   let body: unknown;
@@ -522,16 +754,32 @@ app.post('/api/v1/files/:id/move', requireAuth, async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid JSON body',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const result = moveFileBodySchema.safeParse(body);
 
   if (!result.success) {
-    return c.json({
-      error: 'Invalid move payload',
-      details: result.error.errors,
-    }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid move payload',
+          details: result.error.errors,
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   try {
@@ -541,7 +789,16 @@ app.post('/api/v1/files/:id/move', requireAuth, async (c) => {
     }
     const moved = await moveFile(payload);
     if (!moved) {
-      return c.json({ error: 'File not found' }, 404);
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.DRIVE_FILE_NOT_FOUND,
+            message: 'File not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        404,
+      );
     }
     return c.json({ file: moved });
   } catch (error) {
@@ -556,10 +813,17 @@ app.get('/api/v1/files/search', async (c) => {
   const result = searchFilesQuerySchema.safeParse(query);
 
   if (!result.success) {
-    return c.json({
-      error: 'Invalid search query',
-      details: result.error.errors,
-    }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid search query',
+          details: result.error.errors,
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const results = await searchFiles(result.data);

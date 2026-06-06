@@ -12,7 +12,7 @@ import {
 import { wireRepositories } from './bootstrap.js';
 import { validateCalendarEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
-import { UsageMonitor, rateLimit, structuredLogger } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit, structuredLogger, ERROR_CODES } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import { createEventBodySchema, updateEventBodySchema } from './schemas.js';
 
@@ -142,8 +142,12 @@ function readCalendarError(error: unknown): { status: CalendarResponseStatus; bo
       return {
         status: 409,
         body: {
-          error: error.message,
-          details: error.details,
+          error: {
+            code: ERROR_CODES.CALENDAR_EVENT_CONFLICT,
+            message: error.message,
+            details: error.details,
+            timestamp: new Date().toISOString(),
+          },
         },
       };
     }
@@ -152,8 +156,12 @@ function readCalendarError(error: unknown): { status: CalendarResponseStatus; bo
       return {
         status: 404,
         body: {
-          error: error.message,
-          details: error.details,
+          error: {
+            code: ERROR_CODES.CALENDAR_EVENT_NOT_FOUND,
+            message: error.message,
+            details: error.details,
+            timestamp: new Date().toISOString(),
+          },
         },
       };
     }
@@ -161,8 +169,12 @@ function readCalendarError(error: unknown): { status: CalendarResponseStatus; bo
     return {
       status: 400,
       body: {
-        error: error.message,
-        details: error.details,
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: error.message,
+          details: error.details,
+          timestamp: new Date().toISOString(),
+        },
       },
     };
   }
@@ -170,7 +182,11 @@ function readCalendarError(error: unknown): { status: CalendarResponseStatus; bo
   return {
     status: 500,
     body: {
-      error: 'Unable to process calendar event',
+      error: {
+        code: ERROR_CODES.GLOBAL_INTERNAL_ERROR,
+        message: 'Unable to process calendar event',
+        timestamp: new Date().toISOString(),
+      },
     },
   };
 }
@@ -277,8 +293,12 @@ app.get('/api/v1/events', async (c) => {
     if (hasStartAt || hasEndAt) {
       return c.json(
         {
-          error: 'Invalid event range',
-          expected: ['startAt', 'endAt'],
+          error: {
+            code: ERROR_CODES.CALENDAR_INVALID_DATE_RANGE,
+            message: 'Invalid event range',
+            details: { expected: ['startAt', 'endAt'] },
+            timestamp: new Date().toISOString(),
+          },
         },
         400,
       );
@@ -296,7 +316,16 @@ app.post('/api/v1/events', requireAuth, async (c) => {
   const body = await readRequestBody(c);
 
   if (body === undefined) {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid JSON body',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const result = createEventBodySchema.safeParse(body);
@@ -304,8 +333,12 @@ app.post('/api/v1/events', requireAuth, async (c) => {
   if (!result.success) {
     return c.json(
       {
-        error: 'Invalid event payload',
-        details: result.error.errors,
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid event payload',
+          details: result.error.errors,
+          timestamp: new Date().toISOString(),
+        },
       },
       400,
     );
@@ -327,8 +360,12 @@ app.put('/api/v1/events/:id', requireAuth, async (c) => {
   if (!isNonEmptyString(id)) {
     return c.json(
       {
-        error: 'Invalid event id',
-        expected: ['id'],
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid event id',
+          details: { expected: ['id'] },
+          timestamp: new Date().toISOString(),
+        },
       },
       400,
     );
@@ -337,7 +374,16 @@ app.put('/api/v1/events/:id', requireAuth, async (c) => {
   const body = await readRequestBody(c);
 
   if (body === undefined) {
-    return c.json({ error: 'Invalid JSON body' }, 400);
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid JSON body',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
   }
 
   const result = updateEventBodySchema.safeParse(body);
@@ -345,8 +391,12 @@ app.put('/api/v1/events/:id', requireAuth, async (c) => {
   if (!result.success) {
     return c.json(
       {
-        error: 'Invalid event payload',
-        details: result.error.errors,
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid event payload',
+          details: result.error.errors,
+          timestamp: new Date().toISOString(),
+        },
       },
       400,
     );
