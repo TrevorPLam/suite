@@ -1712,9 +1712,9 @@ function generateUUID(): string {
 - Typecheck passing for all packages
 - No breaking changes to domain API - UUID format remains v4
 
-### [ ] DEBT-02: Add API proxy to Vite configs
+### [x] DEBT-02: Add API proxy to Vite configs
 
-**Status**: Not started  
+**Status**: Complete  
 **Related Files**: apps/calendar/web/vite.config.ts, apps/tasks/web/vite.config.ts, apps/drive/web/vite.config.ts
 
 **Definition of Done**:
@@ -1763,25 +1763,36 @@ export default defineConfig({
 
 **Subtasks**:
 
-#### DEBT-02.1: Add proxy to calendar Vite config
+#### ✅ DEBT-02.1: Add proxy to calendar Vite config
 **Target**: apps/calendar/web/vite.config.ts
 **Action**: Add proxy configuration for /api/* to calendar API server.
 **Validate**: `pnpm --filter @suite/calendar-web dev` (manual test)
 
-#### DEBT-02.2: Add proxy to tasks Vite config
+#### ✅ DEBT-02.2: Add proxy to tasks Vite config
 **Target**: apps/tasks/web/vite.config.ts
 **Action**: Add proxy configuration for /api/* to tasks API server.
 **Validate**: `pnpm --filter @suite/tasks-web dev` (manual test)
 
-#### DEBT-02.3: Add proxy to drive Vite config
+#### ✅ DEBT-02.3: Add proxy to drive Vite config
 **Target**: apps/drive/web/vite.config.ts
 **Action**: Add proxy configuration for /api/* to drive API server.
 **Validate**: `pnpm --filter @suite/drive-web dev` (manual test)
 
-#### DEBT-02.4: Document proxy setup in README
+#### ✅ DEBT-02.4: Document proxy setup in README
 **Target**: README.md
 **Action**: Add section documenting API proxy configuration and environment variables.
 **Validate**: Manual review
+
+**Implementation Notes**:
+- Added proxy configuration to all three web app Vite configs (calendar, tasks, drive)
+- Each config proxies /api/* to its respective API server with unique default ports (3001, 3002, 3003)
+- Used VITE_API_URL environment variable for override capability with sensible defaults
+- Added changeOrigin: true to handle CORS issues automatically
+- Documented proxy setup in README with clear instructions and examples
+- Typecheck passing for all packages
+- Lint passing for all packages
+- Proxy configuration is simple and follows Vite best practices
+- Production builds are unaffected (proxy only active in dev mode)
 
 ---
 
