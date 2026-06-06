@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Button, Input } from '@suite/ui';
 import { type DriveFile, type DriveFolder } from '@suite/domain-drive';
 import { DriveFileList } from './features/DriveFileList';
+import { VirtualizedFileList } from './components/VirtualizedFileList';
 import { FolderTree } from './features/FolderTree';
 import { UploadDialog } from './features/UploadDialog';
 import { RenameDialog } from './features/RenameDialog';
@@ -847,18 +848,29 @@ export function App() {
               </div>
             )}
 
-            <DriveFileList
-              files={displayFiles}
-              loading={loadingFiles || searching}
-              error={searchQuery.trim() ? searchError : filesError}
-              errorDetails={filesErrorDetails}
-              onRefresh={loadFiles}
-              onRename={handleRename}
-              onDelete={handleDelete}
-              onMoveFile={handleMoveFile}
-              folders={folders}
-              currentFolderId={currentFolderId}
-            />
+            {displayFiles.length > 100 ? (
+              <VirtualizedFileList
+                files={displayFiles}
+                onRename={handleRename}
+                onDelete={handleDelete}
+                onMoveFile={handleMoveFile}
+                folders={folders}
+                currentFolderId={currentFolderId}
+              />
+            ) : (
+              <DriveFileList
+                files={displayFiles}
+                loading={loadingFiles || searching}
+                error={searchQuery.trim() ? searchError : filesError}
+                errorDetails={filesErrorDetails}
+                onRefresh={loadFiles}
+                onRename={handleRename}
+                onDelete={handleDelete}
+                onMoveFile={handleMoveFile}
+                folders={folders}
+                currentFolderId={currentFolderId}
+              />
+            )}
           </article>
         </section>
 

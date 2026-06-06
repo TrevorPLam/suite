@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Button, Input, Skeleton } from '@suite/ui';
 import { TaskRow } from './components/TaskRow';
 import { EmptyState } from './components/EmptyState';
+import { VirtualizedTaskList } from './components/VirtualizedTaskList';
 import { useAuth } from './auth-provider';
 
 type TaskItem = {
@@ -914,56 +915,84 @@ export function App() {
 
             {!loading && getFilteredTasks().length === 0 ? <EmptyState message="No tasks in this view." /> : null}
 
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12 }}>
-              {getFilteredTasks().map((task) => (
-                <li
-                  key={task.id}
-                  style={{
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: 16,
-                    padding: 16,
-                    display: 'grid',
-                    gap: 12,
-                    background: task.completed ? 'rgba(34, 197, 94, 0.12)' : 'rgba(255, 255, 255, 0.03)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedTaskIds.has(task.id)}
-                      onChange={() => toggleTaskSelection(task.id)}
-                      disabled={submitting}
-                      style={{ marginTop: 4 }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <TaskRow
-                        task={task}
-                        editingTaskId={editingTaskId}
-                        editTitle={editTitle}
-                        editDueDate={editDueDate}
-                        editPriority={editPriority}
-                        editTags={editTags}
-                        editTagInput={editTagInput}
-                        onEditTitleChange={setEditTitle}
-                        onEditDueDateChange={setEditDueDate}
-                        onEditPriorityChange={setEditPriority}
-                        onEditTagsChange={setEditTags}
-                        onEditTagInputChange={setEditTagInput}
-                        onAddEditTag={addEditTag}
-                        onRemoveEditTag={removeEditTag}
-                        onStartEditing={startEditing}
-                        onCancelEditing={cancelEditing}
-                        onSaveEdit={editTask}
-                        onToggleCompletion={toggleTaskCompletion}
-                        onArchive={archiveTask}
-                        onDelete={deleteTask}
-                        submitting={submitting}
+            {getFilteredTasks().length > 100 ? (
+              <VirtualizedTaskList
+                tasks={getFilteredTasks()}
+                editingTaskId={editingTaskId}
+                editTitle={editTitle}
+                editDueDate={editDueDate}
+                editPriority={editPriority}
+                editTags={editTags}
+                editTagInput={editTagInput}
+                selectedTaskIds={selectedTaskIds}
+                submitting={submitting}
+                onToggleTaskSelection={toggleTaskSelection}
+                onEditTitleChange={setEditTitle}
+                onEditDueDateChange={setEditDueDate}
+                onEditPriorityChange={setEditPriority}
+                onEditTagsChange={setEditTags}
+                onEditTagInputChange={setEditTagInput}
+                onAddEditTag={addEditTag}
+                onRemoveEditTag={removeEditTag}
+                onStartEditing={startEditing}
+                onCancelEditing={cancelEditing}
+                onSaveEdit={editTask}
+                onToggleCompletion={toggleTaskCompletion}
+                onArchive={archiveTask}
+                onDelete={deleteTask}
+              />
+            ) : (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12 }}>
+                {getFilteredTasks().map((task) => (
+                  <li
+                    key={task.id}
+                    style={{
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: 16,
+                      padding: 16,
+                      display: 'grid',
+                      gap: 12,
+                      background: task.completed ? 'rgba(34, 197, 94, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedTaskIds.has(task.id)}
+                        onChange={() => toggleTaskSelection(task.id)}
+                        disabled={submitting}
+                        style={{ marginTop: 4 }}
                       />
+                      <div style={{ flex: 1 }}>
+                        <TaskRow
+                          task={task}
+                          editingTaskId={editingTaskId}
+                          editTitle={editTitle}
+                          editDueDate={editDueDate}
+                          editPriority={editPriority}
+                          editTags={editTags}
+                          editTagInput={editTagInput}
+                          onEditTitleChange={setEditTitle}
+                          onEditDueDateChange={setEditDueDate}
+                          onEditPriorityChange={setEditPriority}
+                          onEditTagsChange={setEditTags}
+                          onEditTagInputChange={setEditTagInput}
+                          onAddEditTag={addEditTag}
+                          onRemoveEditTag={removeEditTag}
+                          onStartEditing={startEditing}
+                          onCancelEditing={cancelEditing}
+                          onSaveEdit={editTask}
+                          onToggleCompletion={toggleTaskCompletion}
+                          onArchive={archiveTask}
+                          onDelete={deleteTask}
+                          submitting={submitting}
+                        />
+                      </div>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </article>
       </section>
