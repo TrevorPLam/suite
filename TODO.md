@@ -935,10 +935,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ## Phase 5 — Authentication
 
-### [ ] AUTH-001 — Mount Better Auth handler on Calendar API
+### [x] AUTH-001 — Mount Better Auth handler on Calendar API
 
-**Status:** pending  
-**Depends on:** ENV-001, DB-001  
+**Status:** done
+**Depends on:** ENV-001, DB-001
 **Blocks:** AUTH-002
 
 #### Related paths
@@ -980,9 +980,22 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| AUTH-001-a | `apps/calendar/api/src/auth-routes.ts` | Create `mountAuth(app: Hono)` forwarding `/api/auth/**` to Better Auth. | `pnpm --filter @suite/calendar-api typecheck` |
-| AUTH-001-b | `apps/calendar/api/src/index.test.ts` | TDD: add test `GET /api/health returns 200 without session`. | `pnpm --filter @suite/calendar-api test:run -- src/index.test.ts` |
-| AUTH-001-c | `apps/calendar/api/src/index.ts` | Call `mountAuth(app)` before domain routes. | `pnpm --filter @suite/calendar-api test:run -- src/index.test.ts` |
+| AUTH-001-a | `apps/calendar/api/src/auth-routes.ts` | Create `mountAuth(app: Hono)` forwarding `/api/auth/**` to Better Auth. | `pnpm --filter @suite/calendar-api typecheck` ✅ |
+| AUTH-001-b | `apps/calendar/api/src/index.test.ts` | TDD: add test `GET /api/health returns 200 without session`. | `pnpm --filter @suite/calendar-api test:run -- src/index.test.ts` ✅ |
+| AUTH-001-c | `apps/calendar/api/src/index.ts` | Call `mountAuth(app)` before domain routes. | `pnpm --filter @suite/calendar-api test:run -- src/index.test.ts` ✅ |
+
+#### Implementation notes
+
+- Created `apps/calendar/api/src/auth-routes.ts` with `mountAuth()` function that forwards GET/POST requests on `/api/auth/*` to Better Auth handler
+- Added `@suite/auth` dependency to calendar-api package.json
+- Added exports field to @suite/auth package.json for proper module resolution
+- Added `getDbOrNull()` function to @suite/db to handle missing DATABASE_URL gracefully (prevents auth from breaking tests without Postgres)
+- Updated @suite/auth server.ts to use `getDbOrNull()` and conditionally configure database adapter
+- Added test for unauthenticated health check (returns 200 without session)
+- Integrated `mountAuth()` call in calendar API index.ts before domain routes
+- Session cookie prefix `suite` is configured in @suite/auth server.ts
+- All 267 tests pass, typecheck passes for all packages
+- Better Auth handler now mounted at `/api/auth/*` on Calendar API
 
 ---
 

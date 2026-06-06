@@ -31,7 +31,7 @@ export { drizzle } from 'drizzle-orm/postgres-js';
 export { pgTable, serial, varchar, timestamp, text, integer, boolean } from 'drizzle-orm/pg-core';
 
 // Connection exports
-export { getDb, closeDb } from './connection.js';
+export { getDb, getDbOrNull, closeDb } from './connection.js';
 
 // Schema exports
 export * from './schema/calendar.js';

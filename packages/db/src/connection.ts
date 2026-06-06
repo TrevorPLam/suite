@@ -17,6 +17,19 @@ export function getDb(): ReturnType<typeof drizzle> {
   return db!;
 }
 
+export function getDbOrNull(): ReturnType<typeof drizzle> | null {
+  if (!process.env.DATABASE_URL) {
+    return null;
+  }
+
+  if (!client) {
+    client = postgres(process.env.DATABASE_URL);
+    db = drizzle(client);
+  }
+
+  return db!;
+}
+
 export async function closeDb() {
   if (client) {
     await client.end();

@@ -67,6 +67,9 @@ importers:
 
   apps/calendar/api:
     dependencies:
+      '@suite/auth':
+        specifier: workspace:*
+        version: link:../../../packages/auth
       '@suite/db':
         specifier: workspace:*
         version: link:../../../packages/db

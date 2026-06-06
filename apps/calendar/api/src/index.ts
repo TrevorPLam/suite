@@ -10,6 +10,7 @@ import {
 } from '@suite/domain-calendar';
 import { wireRepositories } from './bootstrap.js';
 import { validateCalendarEnv } from '@suite/env-config';
+import { mountAuth } from './auth-routes.js';
 
 // Validate environment variables at startup
 const env = validateCalendarEnv();
@@ -18,6 +19,9 @@ const env = validateCalendarEnv();
 wireRepositories();
 
 const app = new Hono();
+
+// Mount Better Auth handler
+mountAuth(app);
 
 type CalendarResponseStatus = 400 | 404 | 409 | 500;
 

@@ -9,6 +9,11 @@ describe('calendar API - health', () => {
     const json = await res.json();
     expect(json).toEqual({ ok: true, app: 'calendar' });
   });
+
+  it('GET /api/health returns 200 without session', async () => {
+    const res = await app.request('/api/health');
+    expect(res.status).toBe(200);
+  });
 });
 
 describe('calendar API - list events', () => {
