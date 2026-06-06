@@ -1,6 +1,48 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { resetDriveFiles, resetDriveFolders } from '@suite/domain-drive';
 
+// Type definitions for API responses
+interface FileResponse {
+  id: string;
+  name: string;
+  size: number;
+  mimeType?: string;
+  folderId?: string;
+  createdAt: string;
+  modifiedAt: string;
+}
+
+interface FolderResponse {
+  id: string;
+  name: string;
+  parentId?: string;
+  createdAt: string;
+}
+
+interface FilesListResponse {
+  files: FileResponse[];
+}
+
+interface FoldersListResponse {
+  folders: FolderResponse[];
+}
+
+interface FileCreateResponse {
+  file: FileResponse;
+}
+
+interface FolderCreateResponse {
+  folder: FolderResponse;
+}
+
+interface ErrorResponse {
+  error: string;
+}
+
+interface SuccessResponse {
+  success: boolean;
+}
+
 // Mock env validation to bypass DATABASE_URL requirement in tests
 vi.mock('@suite/env-config', async () => {
   const actual = await vi.importActual<any>('@suite/env-config');
@@ -52,7 +94,7 @@ describe('drive API - list files', () => {
   it('should list all files', async () => {
     const res = await app.request('/api/v1/files');
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await res.json() as FilesListResponse;
     expect(json).toHaveProperty('files');
     expect(Array.isArray(json.files)).toBe(true);
   });
@@ -74,7 +116,7 @@ describe('drive API - upload file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -90,7 +132,7 @@ describe('drive API - upload file', () => {
     });
 
     expect(res.status).toBe(201);
-    const json = await res.json();
+    const json = await res.json() as FileCreateResponse;
     expect(json).toHaveProperty('file');
     expect(json.file).toHaveProperty('id');
     expect(json.file.name).toBe('document.pdf');
@@ -131,7 +173,7 @@ describe('drive API - upload file', () => {
     });
 
     expect(res.status).toBe(201);
-    const json = await res.json();
+    const json = await res.json() as FileCreateResponse;
     expect(json).toHaveProperty('file');
     expect(json.file).toHaveProperty('id');
     expect(json.file.name).toBe('document.pdf');
@@ -150,7 +192,7 @@ describe('drive API - upload file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -162,7 +204,7 @@ describe('drive API - upload file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -176,7 +218,7 @@ describe('drive API - upload file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -190,7 +232,7 @@ describe('drive API - upload file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -205,7 +247,7 @@ describe('drive API - upload file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -220,7 +262,7 @@ describe('drive API - upload file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 });
@@ -240,7 +282,7 @@ describe('drive API - rename file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -255,7 +297,7 @@ describe('drive API - rename file', () => {
       }),
     });
 
-    const createJson = await createRes.json();
+    const createJson = await createRes.json() as FileCreateResponse;
     const fileId = createJson.file.id;
 
     const res = await app.request(`/api/v1/files/${fileId}`, {
@@ -267,7 +309,7 @@ describe('drive API - rename file', () => {
     });
 
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await res.json() as FileCreateResponse;
     expect(json).toHaveProperty('file');
     expect(json.file.id).toBe(fileId);
     expect(json.file.name).toBe('renamed.pdf');
@@ -297,7 +339,7 @@ describe('drive API - rename file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -309,7 +351,7 @@ describe('drive API - rename file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 });
@@ -325,7 +367,7 @@ describe('drive API - delete file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -340,7 +382,7 @@ describe('drive API - delete file', () => {
       }),
     });
 
-    const createJson = await createRes.json();
+    const createJson = await createRes.json() as FileCreateResponse;
     const fileId = createJson.file.id;
 
     const res = await app.request(`/api/v1/files/${fileId}`, {
@@ -348,7 +390,7 @@ describe('drive API - delete file', () => {
     });
 
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await res.json() as SuccessResponse;
     expect(json).toHaveProperty('success');
     expect(json.success).toBe(true);
     allowAuth = false;
@@ -368,7 +410,7 @@ describe('drive API - delete file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 });
@@ -381,7 +423,7 @@ describe('drive API - list folders', () => {
   it('should list all folders', async () => {
     const res = await app.request('/api/v1/folders');
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await res.json() as FoldersListResponse;
     expect(json).toHaveProperty('folders');
     expect(Array.isArray(json.folders)).toBe(true);
   });
@@ -389,7 +431,7 @@ describe('drive API - list folders', () => {
   it('should list folders by parentId', async () => {
     const res = await app.request('/api/v1/folders?parentId=parent-123');
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await res.json() as FoldersListResponse;
     expect(json).toHaveProperty('folders');
     expect(Array.isArray(json.folders)).toBe(true);
   });
@@ -410,7 +452,7 @@ describe('drive API - create folder', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -425,7 +467,7 @@ describe('drive API - create folder', () => {
     });
 
     expect(res.status).toBe(201);
-    const json = await res.json();
+    const json = await res.json() as FolderCreateResponse;
     expect(json).toHaveProperty('folder');
     expect(json.folder).toHaveProperty('id');
     expect(json.folder.name).toBe('Documents');
@@ -458,7 +500,7 @@ describe('drive API - create folder', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -470,7 +512,7 @@ describe('drive API - create folder', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 });
@@ -490,7 +532,7 @@ describe('drive API - rename folder', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -504,7 +546,7 @@ describe('drive API - rename folder', () => {
       }),
     });
 
-    const createJson = await createRes.json();
+    const createJson = await createRes.json() as FolderCreateResponse;
     const folderId = createJson.folder.id;
 
     const res = await app.request(`/api/v1/folders/${folderId}`, {
@@ -516,7 +558,7 @@ describe('drive API - rename folder', () => {
     });
 
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await res.json() as FolderCreateResponse;
     expect(json).toHaveProperty('folder');
     expect(json.folder.id).toBe(folderId);
     expect(json.folder.name).toBe('Renamed');
@@ -533,7 +575,7 @@ describe('drive API - rename folder', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -545,7 +587,7 @@ describe('drive API - rename folder', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 });
@@ -562,7 +604,7 @@ describe('drive API - delete folder', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -576,7 +618,7 @@ describe('drive API - delete folder', () => {
       }),
     });
 
-    const createJson = await createRes.json();
+    const createJson = await createRes.json() as FolderCreateResponse;
     const folderId = createJson.folder.id;
 
     const res = await app.request(`/api/v1/folders/${folderId}`, {
@@ -584,7 +626,7 @@ describe('drive API - delete folder', () => {
     });
 
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await res.json() as SuccessResponse;
     expect(json).toHaveProperty('success');
     expect(json.success).toBe(true);
     allowAuth = false;
@@ -596,7 +638,7 @@ describe('drive API - delete folder', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 });
@@ -615,7 +657,7 @@ describe('drive API - move file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 
@@ -630,7 +672,7 @@ describe('drive API - move file', () => {
       }),
     });
 
-    const createJson = await createRes.json();
+    const createJson = await createRes.json() as FileCreateResponse;
     const fileId = createJson.file.id;
 
     const res = await app.request(`/api/v1/files/${fileId}/move`, {
@@ -658,7 +700,7 @@ describe('drive API - move file', () => {
       }),
     });
 
-    const createJson = await createRes.json();
+    const createJson = await createRes.json() as FileCreateResponse;
     const fileId = createJson.file.id;
 
     const res = await app.request(`/api/v1/files/${fileId}/move`, {
@@ -668,7 +710,7 @@ describe('drive API - move file', () => {
     });
 
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await res.json() as FileCreateResponse;
     expect(json).toHaveProperty('file');
     expect(json.file.id).toBe(fileId);
     allowAuth = false;
@@ -682,7 +724,7 @@ describe('drive API - move file', () => {
     });
 
     expect(res.status).toBe(401);
-    const json = await res.json();
+    const json = await res.json() as ErrorResponse;
     expect(json).toHaveProperty('error');
   });
 });
@@ -695,7 +737,7 @@ describe('drive API - search files', () => {
   it('should search files by query', async () => {
     const res = await app.request('/api/v1/files/search?q=doc');
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await res.json() as FilesListResponse;
     expect(json).toHaveProperty('files');
     expect(Array.isArray(json.files)).toBe(true);
   });
@@ -703,7 +745,7 @@ describe('drive API - search files', () => {
   it('should search files by query and folderId', async () => {
     const res = await app.request('/api/v1/files/search?q=doc&folderId=folder-123');
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json = await res.json() as FilesListResponse;
     expect(json).toHaveProperty('files');
     expect(Array.isArray(json.files)).toBe(true);
   });
