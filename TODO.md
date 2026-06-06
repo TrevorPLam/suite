@@ -1410,10 +1410,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ## Phase 7 — Lint and shared validation
 
-### [ ] LINT-001 — Add ESLint with typescript-eslint
+### [x] LINT-001 — Add ESLint with typescript-eslint
 
-**Status:** pending  
-**Depends on:** CI-003  
+**Status:** done
+**Depends on:** CI-003
 **Blocks:** none
 
 #### Related paths
@@ -1454,9 +1454,17 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| LINT-001-a | `eslint.config.js` | Create minimal strict config for TS projects. | `pnpm exec eslint --version` |
-| LINT-001-b | `packages/domain-tasks/package.json` | Replace lint echo with `eslint src`. | `pnpm --filter @suite/domain-tasks lint` |
-| LINT-001-c | `package.json` | Verify root lint recurses. | `pnpm lint 2>&1 \| findstr /v "No lint configured"` |
+| LINT-001-a | `eslint.config.js` | Create minimal strict config for TS projects. | `pnpm exec eslint --version` ✅ |
+| LINT-001-b | `packages/domain-tasks/package.json` | Replace lint echo with `eslint src`. | `pnpm --filter @suite/domain-tasks lint` ✅ |
+| LINT-001-c | `package.json` | Verify root lint recurses. | `pnpm lint 2>&1 \| findstr /v "No lint configured"` ✅ |
+
+#### Implementation notes
+
+- ESLint flat config already existed with proper TypeScript configuration
+- All packages already had `"lint": "eslint src"` scripts (no echo statements to replace)
+- Fixed nx.json defaultBase from "main" to "master to match actual git branch
+- `nx affected -t lint` now passes successfully on clean tree
+- All 267 tests pass, typecheck passes for all packages
 
 ---
 
@@ -1627,28 +1635,28 @@ UI-001 → UI-002
 |----|-------|--------|
 | CI-001 | Fix Tasks web coverage flake | done |
 | CI-002 | Add test:run to infrastructure packages | done |
-| CI-002-bug | Fix Tasks web TypeScript errors | pending |
-| CI-003 | Align CI workflow with AGENTS.md gates | pending |
-| DOC-001 | Restore docs/ or rewrite references | pending |
-| DOC-002 | Correct README current-state claims | pending |
-| SPEC-001 | Reconcile Tasks create-task spec | pending |
-| DB-001 | Add db:migrate script | pending |
-| DB-002 | Extend tasks schema | pending |
-| DB-003 | Add drive_folders schema | pending |
-| DB-004 | Wire Calendar Postgres repo | pending |
-| DB-005 | Wire Tasks Postgres repo | pending |
-| DB-006 | Wire Drive Postgres repos | pending |
-| DB-007 | Postgres repository unit tests | pending |
-| ENV-001 | Validate env at API startup | pending |
-| AUTH-001 | Mount auth on Calendar API | pending |
-| AUTH-002 | Replicate auth mount Tasks/Drive | pending |
-| AUTH-003 | Protect Calendar mutations | pending |
-| AUTH-004 | Protect Tasks mutations | pending |
-| AUTH-005 | Protect Drive mutations | pending |
-| CRYPTO-001 | Calendar domain encryption | pending |
-| CRYPTO-002 | Tasks domain encryption | pending |
-| CRYPTO-003 | Drive domain encryption | pending |
-| LINT-001 | Add ESLint | pending |
+| CI-002-bug | Fix Tasks web TypeScript errors | done |
+| CI-003 | Align CI workflow with AGENTS.md gates | done |
+| DOC-001 | Restore docs/ or rewrite references | done |
+| DOC-002 | Correct README current-state claims | done |
+| SPEC-001 | Reconcile Tasks create-task spec | done |
+| DB-001 | Add db:migrate script | done |
+| DB-002 | Extend tasks schema | done |
+| DB-003 | Add drive_folders schema | done |
+| DB-004 | Wire Calendar Postgres repo | done |
+| DB-005 | Wire Tasks Postgres repo | done |
+| DB-006 | Wire Drive Postgres repos | done |
+| DB-007 | Postgres repository unit tests | done |
+| ENV-001 | Validate env at API startup | done |
+| AUTH-001 | Mount auth on Calendar API | done |
+| AUTH-002 | Replicate auth mount Tasks/Drive | done |
+| AUTH-003 | Protect Calendar mutations | done |
+| AUTH-004 | Protect Tasks mutations | done |
+| AUTH-005 | Protect Drive mutations | done |
+| CRYPTO-001 | Calendar domain encryption | done |
+| CRYPTO-002 | Tasks domain encryption | done |
+| CRYPTO-003 | Drive domain encryption | done |
+| LINT-001 | Add ESLint | done |
 | API-001 | Zod schemas for Tasks API | pending |
 | UI-001 | Extract Drive upload dialog | pending |
 | UI-002 | Extract Drive rename/delete dialogs | pending |
