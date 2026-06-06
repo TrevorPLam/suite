@@ -2362,9 +2362,9 @@ test('should detect conflict', async () => {
 
 ---
 
-### [ ] TEST-02: Fix drive API folder operation tests
+### [x] TEST-02: Fix drive API folder operation tests
 
-**Status**: Pending
+**Status**: Complete
 **Related Files**: apps/drive/api/src/index.test.ts
 
 **Definition of Done**:
@@ -2408,15 +2408,26 @@ test('should upload file with folderId', async () => {
 
 **Subtasks**:
 
-#### TEST-02.1: Investigate status code mismatch
+#### ✅ TEST-02.1: Investigate status code mismatch
 **Target**: apps/drive/api/src/index.test.ts
 **Action**: Review why folder operations return 404 instead of 400.
 **Validate**: Manual review
 
-#### TEST-02.2: Update test expectations
+#### ✅ TEST-02.2: Update test expectations
 **Target**: apps/drive/api/src/index.test.ts
 **Action**: Update test expectations to match actual 404 status for not_found errors.
 **Validate**: `pnpm --filter @suite/drive-api test`
+
+**Implementation Notes**:
+- Root cause: Tests expected 400 status code for folder not found errors, but API correctly returns 404
+- The error mapping in readDriveError is correct: not_found_error → 404, validation_error → 400
+- Updated 3 test expectations from 400 to 404:
+  - Upload file with non-existent folderId (line 63)
+  - Create folder with non-existent parentId (line 345)
+  - Move file to non-existent folder (line 499)
+- All 36 drive API tests passing
+- Typecheck passing for all packages
+- No changes to domain logic or API contracts - only test expectations corrected to match correct HTTP semantics (404 for not found resources)
 
 ---
 

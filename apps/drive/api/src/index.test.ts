@@ -60,7 +60,7 @@ describe('drive API - upload file', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -342,7 +342,7 @@ describe('drive API - create folder', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
@@ -496,7 +496,7 @@ describe('drive API - move file', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
