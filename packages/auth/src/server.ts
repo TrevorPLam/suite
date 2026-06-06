@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { organization, twoFactor } from 'better-auth/plugins';
+import { sso } from '@better-auth/sso';
 import { dash } from '@better-auth/infra';
 import { users, sessions, accounts } from '@suite/db';
 import { validateAuthEnv } from './env.js';
@@ -168,6 +169,7 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
     plugins: [
       organization(),
       twoFactor(),
+      sso(),
       ...(betterAuthApiKey ? [dash({ apiKey: betterAuthApiKey })] : []),
     ],
     advanced: {
