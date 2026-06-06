@@ -54,6 +54,7 @@ This repository is a greenfield monorepo for a productivity suite. The initial f
 - Incident response: `docs/07-business/33-incident-response.md` → `.planning/07-business-33-incident-response.md`
 - Developer setup: `docs/08-execution/36-developer-onboarding.md` → `.planning/08-execution-36-developer-onboarding.md`
 - App guides: `docs/10-apps/` → `.planning/10-apps-*.md`
+- Secrets management: `SECRETS.md`
 
 ## Notes
 - Keep the structure simple until the first packages are stable.

@@ -1,5 +1,10 @@
 name: Deploy
 
+# Required GitHub Actions Secrets:
+# - CLOUDFLARE_API_TOKEN: Cloudflare API token for deployment
+# - CLOUDFLARE_ACCOUNT_ID: Cloudflare account ID
+# - DATABASE_URL: PostgreSQL connection string for migrations
+
 on:
   push:
     branches: [main]

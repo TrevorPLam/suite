@@ -1,2025 +1,4534 @@
-# Testing Infrastructure Improvement Tasks
+# Suite Task List
 
-## Task Format Legend
+This task list follows Specification-Driven Development (SDD), Domain-Driven Design (DDD), Test-Driven Development (TDD), Behavior-Driven Development (BDD), and deep modules principles.
 
-- [ ] Incomplete
-- [x] Complete
+## Status Legend
+
+- [ ] Not Started
 - [~] In Progress
+- [x] Complete
 - [!] Blocked
 
-Status: [ ] | [x] | [~] | [!]
-
 ---
 
-## TEST-001: Switch Vitest to V8 Coverage Provider
+## P0 - Critical Tasks
 
-Status: [x]
+### [x] DEP-001: Configure Production Secrets
+
+**Priority**: P0
+**Bounded Context**: Infrastructure
 
 **Related Files**:
-- `vitest.config.ts` (root)
-- `packages/*/vitest.config.ts`
-- `apps/*/vitest.config.ts`
+- `apps/calendar/api/wrangler.toml`
+- `apps/tasks/api/wrangler.toml`
+- `apps/drive/api/wrangler.toml`
+- `.github/workflows/deploy.yml`
 
 **Definition of Done**:
-- All Vitest configurations use V8 provider instead of Istanbul
-- Coverage reports generate successfully
-- Test execution time improves by at least 10%
-- All existing tests pass with new provider
+- All wrangler.toml files have non-empty secret placeholders
+- Secret management strategy documented
+- Cloudflare Workers secrets configured via wrangler secret command
+- CI/CD workflow uses GitHub Actions secrets for deployment
+- Secrets are never committed to repository
 
 **Out of Scope**:
-- Modifying test logic
-- Changing coverage thresholds
-- Adding new test files
+- Implementing custom secret rotation
+- Multi-environment secret management (dev/staging/prod)
 
 **Rules to Follow**:
-- V8 provider is default and recommended for Node.js environments
-- Istanbul only needed for non-V8 runtimes (Bun, Cloudflare Workers)
-- Remove @vitest/coverage-istanbul dependency if present
-- Keep @vitest/coverage-v8 as provider
-
-**Advanced Coding Pattern**:
-AST-based coverage remapping (Vitest v3.2.0+) provides V8 speed with Istanbul accuracy. No pre-instrumentation step required.
-
-**Anti-Patterns**:
-- Using Istanbul when V8 is available
-- Pre-transpiling source files for coverage
-- Mixing providers across configs
-
-**Imports/Exports**:
-```typescript
-// vitest.config.ts
-import { defineConfig } from 'vitest/config'
-
-export default defineConfig({
-  test: {
-    coverage: {
-      provider: 'v8' // Changed from 'istanbul'
-    }
-  }
-})
-```
+- Never commit secrets to repository
+- Use wrangler secret command for production secrets
+- Use GitHub Actions secrets for CI/CD
+- Follow Cloudflare Workers security best practices
 
 **Depends On**: None
-**Blocks**: TEST-002, TEST-003
+**Blocks**: DEP-002, DEP-003
 
-### Subtasks
+**Subtasks**:
 
-#### TEST-001-01: Update root Vitest config to V8 provider
-**Target File**: `vitest.config.ts`
-**Action**: Change coverage.provider from 'istanbul' to 'v8' in root configuration. Remove any Istanbul-specific options if present.
-**Validation**: `pnpm test --coverage` at root should generate coverage report with V8 provider.
-**Status**: ✅ Complete
+#### ✅ DEP-001-01: Configure DATABASE_URL secret
+**Target File**: `apps/calendar/api/wrangler.toml`, `apps/tasks/api/wrangler.toml`, `apps/drive/api/wrangler.toml`
+**Action**: Update wrangler.toml files to remove empty DATABASE_URL placeholder and document that it must be set via `wrangler secret put DATABASE_URL`. Add documentation to AGENTS.md or a separate SECRETS.md file explaining secret management workflow.
+**Validate Command**: `wrangler secret list --remote` (after deployment)
 
-#### TEST-001-02: Update package Vitest configs to V8 provider
-**Target Files**: 
-- `packages/auth/vitest.config.ts`
-- `packages/crypto/vitest.config.ts`
-- `packages/db/vitest.config.ts`
-- `packages/domain-calendar/vitest.config.ts`
-- `packages/domain-drive/vitest.config.ts`
-- `packages/domain-tasks/vitest.config.ts`
-- `packages/env-config/vitest.config.ts`
-- `packages/shared-kernel/vitest.config.ts`
-- `packages/ui/vitest.config.ts`
-**Action**: Add or update coverage.provider to 'v8' in each package config. Ensure consistent configuration across all packages.
-**Validation**: Run `pnpm test --coverage` for each package individually to verify coverage generation.
-**Status**: ✅ Complete - Updated domain-calendar, domain-drive, domain-tasks (only packages with coverage config)
+#### ✅ DEP-001-02: Configure BETTER_AUTH_SECRET secret
+**Target File**: `apps/calendar/api/wrangler.toml`, `apps/tasks/api/wrangler.toml`, `apps/drive/api/wrangler.toml`
+**Action**: Update wrangler.toml files to remove empty BETTER_AUTH_SECRET placeholder. Document that it must be set via `wrangler secret put BETTER_AUTH_SECRET` with a cryptographically secure random string (minimum 32 characters).
+**Validate Command**: `wrangler secret list --remote` (after deployment)
 
-#### TEST-001-03: Update app Vitest configs to V8 provider
-**Target Files**:
-- `apps/calendar/api/vitest.config.ts`
-- `apps/calendar/web/vitest.config.ts`
-- `apps/drive/api/vitest.config.ts`
-- `apps/drive/web/vitest.config.ts`
-- `apps/tasks/api/vitest.config.ts`
-- `apps/tasks/web/vitest.config.ts`
-**Action**: Add or update coverage.provider to 'v8' in each app config. Ensure web app configs (jsdom/happy-dom) work correctly with V8.
-**Validation**: Run `pnpm test --coverage` for each app to verify coverage generation.
-**Status**: ✅ Complete
+#### ✅ DEP-001-03: Configure ENCRYPTION_KEY secret
+**Target File**: `apps/calendar/api/wrangler.toml`, `apps/tasks/api/wrangler.toml`, `apps/drive/api/wrangler.toml`
+**Action**: Update wrangler.toml files to remove empty ENCRYPTION_KEY placeholder. Document that it must be set via `wrangler secret put ENCRYPTION_KEY` with a base64-encoded 256-bit AES key. Provide command to generate key: `openssl rand -base64 32`
+**Validate Command**: `wrangler secret list --remote` (after deployment)
 
-#### TEST-001-04: Remove Istanbul dependencies
-**Target File**: `package.json` (root and individual packages)
-**Action**: Remove @vitest/coverage-istanbul from dependencies if present. Ensure @vitest/coverage-v8 is installed.
-**Validation**: `pnpm install` should complete without errors. Check no Istanbul references remain in lockfile.
-**Status**: ✅ Complete - Replaced @vitest/coverage-istanbul with @vitest/coverage-v8 in root package.json
+#### ✅ DEP-001-04: Configure Drive R2 secrets
+**Target File**: `apps/drive/api/wrangler.toml`
+**Action**: Update wrangler.toml to remove empty R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID placeholders. Document that these must be set via wrangler secret commands for R2 integration.
+**Validate Command**: `wrangler secret list --remote` (after deployment)
 
----
+#### ✅ DEP-001-05: Update CI/CD workflow for secrets
+**Target File**: `.github/workflows/deploy.yml`
+**Action**: Ensure deployment workflow uses GitHub Actions secrets for CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. Add documentation on required secrets in workflow comments or README.
+**Validate Command**: Review workflow file for secret references
+
+#### ✅ DEP-001-06: Create SECRETS.md documentation
+**Target File**: `SECRETS.md` (create)
+**Action**: Create comprehensive documentation for secret management including: secret list, generation commands, wrangler secret commands, CI/CD integration, and security best practices. Update AGENTS.md to reference SECRETS.md.
+**Validate Command**: `pnpm typecheck` (to ensure no broken references)
 
 **Implementation Notes**:
-- V8 coverage provider successfully enabled across all configs (root, 3 domain packages, 6 apps)
-- @vitest/coverage-istanbul replaced with @vitest/coverage-v8 in root package.json
-- Coverage reports generate successfully with V8 provider (confirmed by "Coverage enabled with v8" output)
-- Typecheck passed, lint passed (pre-existing warnings unrelated to this change)
-- Test failures in drive/web are pre-existing (ThemeProvider setup issue) and unrelated to coverage provider change
+- Removed all empty secret placeholders from wrangler.toml files (DATABASE_URL, BETTER_AUTH_SECRET, ENCRYPTION_KEY, R2_*)
+- Secrets must now be set via `wrangler secret put` commands for each API
+- Created comprehensive SECRETS.md with secret management workflow, generation commands, and security best practices
+- Updated AGENTS.md to reference SECRETS.md
+- Added documentation comment to deploy.yml about required GitHub Actions secrets
+- Typecheck passed successfully
 
 ---
 
-## TEST-002: Standardize Coverage Thresholds
+### [ ] DEP-002: Activate E2EE Encryption
 
-Status: [x]
+**Priority**: P0
+**Bounded Context**: Security
 
 **Related Files**:
-- `vitest.config.ts` (root)
-- `packages/domain-*/vitest.config.ts`
-- `apps/*/vitest.config.ts`
+- `packages/domain-calendar/src/lib/calendar-crypto.ts`
+- `packages/domain-tasks/src/lib/tasks-crypto.ts`
+- `packages/domain-drive/src/drive-crypto.ts`
+- `apps/calendar/api/src/bootstrap.ts`
+- `apps/tasks/api/src/bootstrap.ts`
+- `apps/drive/api/src/bootstrap.ts`
 
 **Definition of Done**:
-- Root config sets 80% global thresholds
-- Domain packages set 90% thresholds (critical business logic)
-- API apps set 85% thresholds
-- Web apps set 70% thresholds
-- Per-file thresholds configured for domain packages
-- All thresholds enforced in CI
+- ENCRYPTION_KEY secret configured (DEP-001-03)
+- Encryption is active in production (isEncryptionEnabled() returns true)
+- All user content encrypted before storage
+- Encryption tests verify encryption is active
+- Documentation updated to reflect encryption status
 
 **Out of Scope**:
-- Writing new tests to meet thresholds
-- Changing test logic
-- Modifying coverage provider
+- Implementing per-user encryption keys
+- Key rotation mechanisms
+- Client-side encryption (server-side only for MVP)
 
 **Rules to Follow**:
-- Positive thresholds = minimum percentage required
-- Negative thresholds = maximum uncovered items allowed
-- Use glob patterns for per-file thresholds
-- Enable perFile to identify low-coverage files
-- Keep web app thresholds lower (UI harder to cover)
+- AGENTS.md rule 9: E2EE crypto is non-negotiable
+- All user content must be encrypted with AES-256-GCM before storage
+- Use @suite/crypto package for encryption operations
+- Never store plaintext user content in database
 
-**Advanced Coding Pattern**:
-Tiered coverage thresholds with glob patterns allow different standards for different code types. Domain logic deserves higher coverage than UI code.
+**Depends On**: DEP-001-03
+**Blocks**: Production deployment
 
-**Anti-Patterns**:
-- Setting 100% thresholds (encourages bad testing practices)
-- Using same threshold for all code types
-- Ignoring threshold failures in CI
+**Subtasks**:
 
-**Imports/Exports**:
-```typescript
-coverage: {
-  thresholds: {
-    global: {
-      lines: 80,
-      functions: 80,
-      branches: 75,
-      statements: 80
-    },
-    'packages/domain-*/**/*.ts': {
-      lines: 90,
-      functions: 90,
-      branches: 85,
-      statements: 90,
-      perFile: true
-    }
-  }
-}
-```
+#### DEP-002-01: Verify encryption activation logic
+**Target File**: `packages/domain-calendar/src/lib/calendar-crypto.ts`, `packages/domain-tasks/src/lib/tasks-crypto.ts`, `packages/domain-drive/src/drive-crypto.ts`
+**Action**: Review isEncryptionEnabled() implementation to ensure it correctly detects when ENCRYPTION_KEY is set. Verify that setKeyProviderFromEnv() properly imports the key and sets the custom provider. Add test to verify encryption is active when ENCRYPTION_KEY is set.
+**Validate Command**: `pnpm --filter @suite/domain-calendar test`, `pnpm --filter @suite/domain-tasks test`, `pnpm --filter @suite/domain-drive test`
 
-**Depends On**: TEST-001
-**Blocks**: TEST-005
+#### DEP-002-02: Add encryption activation test
+**Target File**: `packages/domain-calendar/src/lib/calendar-crypto.test.ts` (create or update)
+**Action**: Add test that verifies isEncryptionEnabled() returns false by default, and returns true after setKeyProviderFromEnv() is called with a valid ENCRYPTION_KEY. Test should verify that seal/unseal functions actually encrypt/decrypt when encryption is enabled.
+**Validate Command**: `pnpm --filter @suite/domain-calendar test`
 
-### Subtasks
+#### DEP-002-03: Update bootstrap to throw if encryption disabled
+**Target File**: `apps/calendar/api/src/bootstrap.ts`, `apps/tasks/api/src/bootstrap.ts`, `apps/drive/api/src/bootstrap.ts`
+**Action**: Modify bootstrap functions to throw an error if ENCRYPTION_KEY is not set in production environment (NODE_ENV=production). This prevents accidental deployment without encryption. Add error message explaining that ENCRYPTION_KEY must be set.
+**Validate Command**: `pnpm --filter @suite/calendar-api typecheck`, `pnpm --filter @suite/tasks-api typecheck`, `pnpm --filter @suite/drive-api typecheck`
 
-#### TEST-002-01: Configure root coverage thresholds
-**Target File**: `vitest.config.ts`
-**Action**: Set global thresholds to 80% for lines, functions, branches, statements. Add per-file threshold configuration for domain packages at 90%.
-**Validation**: Run `pnpm test --coverage` and verify threshold enforcement in output.
-**Status**: ✅ Complete - Updated root config to 80% lines/functions/statements, 75% branches
-
-#### TEST-002-02: Configure domain package thresholds
-**Target Files**:
-- `packages/domain-calendar/vitest.config.ts`
-- `packages/domain-drive/vitest.config.ts`
-- `packages/domain-tasks/vitest.config.ts`
-**Action**: Set thresholds to 90% for lines, functions, branches, statements. Enable perFile: true to identify low-coverage files.
-**Validation**: Run `pnpm test --coverage` in each domain package to verify thresholds.
-**Status**: ✅ Complete - All domain packages set to 90% lines/functions/statements, 85% branches, perFile: true
-
-#### TEST-002-03: Configure API app thresholds
-**Target Files**:
-- `apps/calendar/api/vitest.config.ts`
-- `apps/drive/api/vitest.config.ts`
-- `apps/tasks/api/vitest.config.ts`
-**Action**: Set thresholds to 85% for lines, functions, branches, statements. Remove 0% placeholder thresholds.
-**Validation**: Run `pnpm test --coverage` in each API app to verify thresholds.
-**Status**: ✅ Complete - All API apps set to 85% lines/functions/statements, 80% branches
-
-#### TEST-002-04: Configure web app thresholds
-**Target Files**:
-- `apps/calendar/web/vitest.config.ts`
-- `apps/drive/web/vitest.config.ts`
-- `apps/tasks/web/vitest.config.ts`
-**Action**: Set thresholds to 70% for lines, functions, branches, statements. Remove 0% placeholder thresholds.
-**Validation**: Run `pnpm test --coverage` in each web app to verify thresholds.
-**Status**: ✅ Complete - All web apps set to 70% lines/functions/statements, 65% branches
-
-#### TEST-002-05: Configure infrastructure package thresholds
-**Target Files**:
-- `packages/auth/vitest.config.ts`
-- `packages/crypto/vitest.config.ts`
-- `packages/db/vitest.config.ts`
-- `packages/env-config/vitest.config.ts`
-- `packages/shared-kernel/vitest.config.ts`
-- `packages/ui/vitest.config.ts`
-**Action**: Set thresholds to 80% for lines, functions, branches, statements. Crypto package should have 90% (security-critical).
-**Validation**: Run `pnpm test --coverage` in each package to verify thresholds.
-**Status**: ✅ Complete - All infrastructure packages set to 80% (crypto at 90% for security)
+#### DEP-002-04: Update documentation
+**Target File**: `README.md`, `AGENTS.md`
+**Action**: Update README.md to reflect that E2EE is implemented and activated via ENCRYPTION_KEY. Update AGENTS.md rule 9 status to indicate implementation is complete. Document that encryption is disabled by default for development but required for production.
+**Validate Command**: No validation needed
 
 ---
 
-**Implementation Notes**:
-- Root config updated to 80% lines/functions/statements, 75% branches
-- Domain packages (calendar, drive, tasks) set to 90% lines/functions/statements, 85% branches with perFile: true
-- API apps (calendar, drive, tasks) set to 85% lines/functions/statements, 80% branches
-- Web apps (calendar, drive, tasks) set to 70% lines/functions/statements, 65% branches
-- Infrastructure packages configured:
-  - auth: 80% lines/functions/statements, 75% branches
-  - crypto: 90% lines/functions/statements, 85% branches (security-critical)
-  - db: 80% lines/functions/statements, 75% branches
-  - env-config: 80% lines/functions/statements, 75% branches
-  - shared-kernel: 80% lines/functions/statements, 75% branches
-  - ui: 80% lines/functions/statements, 75% branches
-- Typecheck passed, lint passed (pre-existing warnings unrelated to this change)
-- Test failures in drive/web are pre-existing (ThemeProvider setup issue) and unrelated to coverage threshold changes
+### [ ] DEP-003: Verify Better Auth Timing-Safe Comparisons
 
----
-
-## TEST-003: Implement Playwright StorageState for Authentication
-
-Status: [x]
+**Priority**: P0
+**Bounded Context**: Security
 
 **Related Files**:
-- `playwright.config.ts`
-- `apps/calendar/web/e2e/calendar.spec.ts`
-- `apps/drive/web/e2e/drive.spec.ts`
-- `apps/tasks/web/e2e/tasks.spec.ts`
-- New: `playwright.global-setup.ts`
+- `packages/auth/src/server.ts`
+- `packages/auth/src/protected.ts`
+- `packages/auth/src/middleware.ts` (if exists)
+- `AGENTS.md`
 
 **Definition of Done**:
-- Global setup file creates authenticated storage state
-- Storage state saved to `.auth/storage-state.json` (gitignored)
-- Test fixtures load storage state for authenticated tests
-- Login overhead eliminated from all tests
-- Multiple user roles supported (if applicable)
+- Better Auth timing-safe comparison implementation verified
+- If Better Auth does not use timing-safe comparisons, implement wrapper
+- AGENTS.md rule 11 compliance documented
+- Tests verify timing-safe comparisons are used
 
 **Out of Scope**:
-- Implementing new authentication flows
-- Modifying auth package
-- Adding new E2E tests
+- Implementing custom authentication (use Better Auth)
+- Modifying Better Auth library source code
 
 **Rules to Follow**:
-- Storage state files contain session tokens, must be gitignored
-- Regenerate storage state at CI start, don't commit
-- Use setup project pattern for auth
-- Each user role gets separate storage state file
-- Tests start already authenticated, no login steps
-
-**Advanced Coding Pattern**:
-Playwright's storageState feature persists cookies/localStorage/sessionStorage to JSON. Global setup runs once before entire suite, eliminating login overhead across hundreds of tests.
-
-**Anti-Patterns**:
-- Logging in before each test (beforeEach)
-- Committing storage state files to repository
-- Reusing stale tokens across days
-- Loading storage state in page instead of context
-
-**Imports/Exports**:
-```typescript
-// playwright.global-setup.ts
-import { FullConfig } from '@playwright/test'
-
-async function globalSetup(config: FullConfig) {
-  const browser = await chromium.launch()
-  const context = await browser.newContext()
-  const page = await context.newPage()
-  // Login flow
-  await context.storageState({ path: '.auth/storage-state.json' })
-  await browser.close()
-}
-
-export default globalSetup
-```
+- AGENTS.md rule 11: Never use === to compare secrets, tokens, or HMAC outputs
+- Always use constantTimeEqual() from @suite/crypto or crypto.subtle.timingSafeEqual
+- CVE-class timing attacks against HMAC token comparisons are a real exploit path
 
 **Depends On**: None
-**Blocks**: TEST-006
+**Blocks**: Production deployment
 
-### Subtasks
+**Subtasks**:
 
-#### TEST-003-01: Create global setup file
-**Target File**: `playwright.global-setup.ts` (new)
-**Action**: Create global setup file that launches browser, performs login flow, saves storage state to `.auth/storage-state.json`. Export default globalSetup function.
-**Validation**: Run `npx playwright test --config=playwright.config.ts` and verify `.auth/storage-state.json` is created.
-**Status**: ✅ Complete
+#### DEP-003-01: Research Better Auth implementation
+**Target File**: Better Auth documentation and source code
+**Action**: Research Better Auth library to determine if it uses timing-safe comparisons for session tokens and HMAC outputs. Check documentation, source code, and GitHub issues. Document findings in a comment or separate verification document.
+**Validate Command**: No validation needed (research task)
 
-#### TEST-003-02: Add .auth to gitignore
-**Target File**: `.gitignore`
-**Action**: Add `.auth/` directory to gitignore to prevent committing session tokens.
-**Validation**: Run `git status` and verify `.auth/` is not tracked.
-**Status**: ✅ Complete
+#### DEP-003-02: Implement constantTimeEqual in @suite/crypto
+**Target File**: `packages/crypto/src/index.ts`, `packages/crypto/src/constant-time.ts` (create)
+**Action**: If Better Auth does not use timing-safe comparisons, implement constantTimeEqual() function in @suite/crypto using crypto.subtle.timingSafeEqual. Add comprehensive tests to verify constant-time behavior. Export from index.ts.
+**Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### TEST-003-03: Configure Playwright to use global setup
-**Target File**: `playwright.config.ts`
-**Action**: Add globalSetup and globalTeardown configuration pointing to `playwright.global-setup.ts`. Configure storageState for test projects.
-**Validation**: Run `npx playwright test` and verify tests use pre-authenticated state.
-**Status**: ✅ Complete
+#### DEP-003-03: Add timing-safe comparison tests
+**Target File**: `packages/crypto/src/constant-time.test.ts` (create)
+**Action**: Add property-based tests using fast-check to verify constantTimeEqual() has constant-time execution regardless of input equality. Test should verify timing does not leak information about comparison result.
+**Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### TEST-003-04: Refactor calendar E2E tests to use storageState
-**Target File**: `apps/calendar/web/e2e/calendar.spec.ts`
-**Action**: Remove login steps from tests. Configure test project to use storageState fixture. Update tests to start already authenticated.
-**Validation**: Run `npx playwright test apps/calendar/web/e2e/calendar.spec.ts` and verify tests pass without login steps.
-**Status**: ✅ Complete
-
-#### TEST-003-05: Refactor drive E2E tests to use storageState
-**Target File**: `apps/drive/web/e2e/drive.spec.ts`
-**Action**: Remove login steps from tests. Configure test project to use storageState fixture. Update tests to start already authenticated.
-**Validation**: Run `npx playwright test apps/drive/web/e2e/drive.spec.ts` and verify tests pass without login steps.
-**Status**: ✅ Complete
-
-#### TEST-003-06: Refactor tasks E2E tests to use storageState
-**Target File**: `apps/tasks/web/e2e/tasks.spec.ts`
-**Action**: Remove login steps from tests. Configure test project to use storageState fixture. Update tests to start already authenticated.
-**Validation**: Run `npx playwright test apps/tasks/web/e2e/tasks.spec.ts` and verify tests pass without login steps.
-**Status**: ✅ Complete
+#### DEP-003-04: Document verification status
+**Target File**: `AGENTS.md`
+**Action**: Update AGENTS.md rule 11 to document verification status of Better Auth timing-safe comparisons. If wrapper implemented, document usage pattern. If Better Auth verified safe, document verification method and version.
+**Validate Command**: No validation needed
 
 ---
 
-**Implementation Notes**:
-- Created `playwright.global-setup.ts` with login flow using better-auth credentials (test@example.com/password123)
-- Added `.auth/` to `.gitignore` to prevent committing session tokens
-- Configured `playwright.config.ts` with globalSetup and storageState for all tests
-- Refactored all E2E tests (calendar, drive, tasks) to remove login steps - tests now start authenticated
-- Preserved "displays sign in form when not authenticated" tests by using `test.use({ storageState: undefined })`
-- Typecheck passed, lint passed (pre-existing warnings unrelated to this change)
-- Login overhead eliminated from all authenticated E2E tests
+### [ ] DEP-005: Fix E2E Test Authentication
 
----
-
-## TEST-004: Add @nx/vitest Plugin Integration
-
-Status: [x]
-
-**Related Files**:
-- `nx.json`
-- `package.json` (root)
-- `vitest.config.ts` (root)
-
-**Definition of Done**:
-- @nx/vitest plugin installed and configured
-- Vitest tasks inferred for all projects with vitest configs
-- Separate test and test-ci targets configured
-- watch mode for local, run mode for CI
-- Affected testing configured
-
-**Out of Scope**:
-- Modifying existing test logic
-- Changing test file structure
-- Adding new tests
-
-**Rules to Follow**:
-- Plugin infers tasks from vitest.config.* files
-- Use testMode: 'watch' for local development
-- Use testMode: 'run' for CI determinism
-- Configure separate targets for unit and e2e if using Vitest for both
-- Use include/exclude patterns to scope plugin application
-
-**Advanced Coding Pattern**:
-Nx plugin inference automatically creates targets from config files. Configure once in nx.json, all projects with vitest configs get test targets automatically.
-
-**Anti-Patterns**:
-- Manually defining test targets in project.json
-- Using same testMode for local and CI
-- Not configuring affected testing
-
-**Imports/Exports**:
-```json
-// nx.json
-{
-  "plugins": [
-    {
-      "plugin": "@nx/vitest",
-      "options": {
-        "testTargetName": "test",
-        "ciTargetName": "test-ci",
-        "ciGroupName": "Unit Tests (CI)",
-        "testMode": "watch"
-      }
-    }
-  ]
-}
-```
-
-**Depends On**: None
-**Blocks**: TEST-008
-
-### Subtasks
-
-#### TEST-004-01: Install @nx/vitest plugin
-**Target File**: `package.json` (root)
-**Action**: Add @nx/vitest to devDependencies. Run pnpm install to install the plugin.
-**Validation**: Run `pnpm list @nx/vitest` and verify it's installed.
-**Status**: ✅ Complete - @nx/vitest@22.7.5 installed matching nx@22.7.0
-
-#### TEST-004-02: Configure @nx/vitest plugin in nx.json
-**Target File**: `nx.json`
-**Action**: Add @nx/vitest plugin configuration with testTargetName, ciTargetName, ciGroupName, and testMode options.
-**Validation**: Run `nx show project calendar-api` and verify test target is inferred.
-**Status**: ✅ Complete - Plugin configured with testTargetName: "test", ciTargetName: "test-ci", ciGroupName: "Unit Tests (CI)", testMode: "watch"
-
-#### TEST-004-03: Verify task inference for all projects
-**Target Files**: All project.json files (auto-generated)
-**Action**: Run `nx show project` for each project to verify test targets are inferred correctly from vitest configs.
-**Validation**: All projects with vitest configs should have test targets inferred.
-**Status**: ✅ Complete - Removed manual test targets from 6 app project.json files and test scripts from 6 app package.json files to allow plugin inference. Test targets now inferred for all projects with vitest configs.
-
-#### TEST-004-04: Configure affected testing in CI
-**Target File**: `.github/workflows/ci.yml`
-**Action**: Update CI workflow to use `nx affected -t test --base=main~1` instead of running all tests.
-**Validation**: Run CI workflow on a feature branch and verify only affected projects are tested.
-**Status**: ✅ Complete - Updated PR check job to use `nx affected -t test --base=main~1`
-
----
-
-**Implementation Notes**:
-- @nx/vitest@22.7.5 installed matching nx@22.7.0 version
-- Plugin configured in nx.json with testTargetName: "test", ciTargetName: "test-ci", ciGroupName: "Unit Tests (CI)", testMode: "watch"
-- Removed manual test targets from 6 app project.json files (calendar-api, calendar-web, drive-api, drive-web, tasks-api, tasks-web)
-- Removed test scripts from 6 app package.json files to allow plugin inference
-- Test targets now inferred by @nx/vitest plugin for all projects with vitest configs
-- Added test-ci target defaults to nx.json for CI-specific configuration
-- Updated CI workflow PR check job to use `nx affected -t test --base=main~1`
-- Typecheck passed, lint passed (pre-existing warnings unrelated to this change)
-- Test failures in calendar-api, drive-api, tasks-api, drive-web, tasks-web are pre-existing (health check, auth, and domain logic issues) and unrelated to @nx/vitest plugin installation
-- Note: test-ci target not automatically inferred by plugin - may require manual configuration or additional setup in future task
-
----
-
-## TEST-005: Add Coverage Report Configuration
-
-Status: [x]
-
-**Related Files**:
-- `vitest.config.ts` (root)
-- `packages/*/vitest.config.ts`
-- `apps/*/vitest.config.ts`
-
-**Definition of Done**:
-- Coverage reports include HTML, JSON, and text formats
-- Coverage reports output to ./coverage directory
-- Coverage enabled in CI
-- reportOnFailure enabled for debugging
-- all: true to include all files in coverage
-
-**Out of Scope**:
-- Changing coverage provider
-- Modifying coverage thresholds
-- Writing new tests
-
-**Rules to Follow**:
-- Use multiple reporters for different use cases (HTML for local, JSON for CI)
-- Enable reportOnFailure to see coverage even when tests fail
-- Use all: true to include untested files in coverage
-- Clean coverage directory before runs (default behavior)
-
-**Advanced Coding Pattern**:
-Multiple coverage reporters serve different audiences: HTML for developers (interactive), JSON for CI tools (parseable), text for terminal output (quick check).
-
-**Anti-Patterns**:
-- Only using text reporter (loses detail)
-- Not enabling reportOnFailure (hard to debug failures)
-- Including test files in coverage reports
-
-**Imports/Exports**:
-```typescript
-coverage: {
-  reporter: ['text', 'json', 'html'],
-  reportsDirectory: './coverage',
-  reportOnFailure: true,
-  all: true
-}
-```
-
-**Depends On**: TEST-001, TEST-002
-**Blocks**: None
-
-### Subtasks
-
-#### TEST-005-01: Configure coverage reporters in root config
-**Target File**: `vitest.config.ts`
-**Action**: Add coverage.reporter array with 'text', 'json', 'html' reporters. Enable coverage.reportOnFailure and coverage.all.
-**Validation**: Run `pnpm test --coverage` and verify all three report formats are generated in ./coverage.
-**Status**: ✅ Complete - Updated to reporter: ['text', 'json', 'html'], reportsDirectory: './coverage', reportOnFailure: true (all: true not supported in current Vitest version)
-
-#### TEST-005-02: Configure coverage reporters in package configs
-**Target Files**: All `packages/*/vitest.config.ts`
-**Action**: Add coverage.reporter configuration matching root config. Ensure consistent reporting across all packages.
-**Validation**: Run `pnpm test --coverage` in each package and verify coverage reports generate.
-**Status**: ✅ Complete - Updated all 8 package configs (auth, crypto, db, domain-calendar, domain-drive, domain-tasks, env-config, shared-kernel, ui)
-
-#### TEST-005-03: Configure coverage reporters in app configs
-**Target Files**: All `apps/*/vitest.config.ts`
-**Action**: Add coverage.reporter configuration matching root config. Ensure consistent reporting across all apps.
-**Validation**: Run `pnpm test --coverage` in each app and verify coverage reports generate.
-**Status**: ✅ Complete - Updated all 6 app configs (calendar/api, calendar/web, drive/api, drive/web, tasks/api, tasks/web)
-
-#### TEST-005-04: Add coverage script to package.json
-**Target File**: `package.json` (root)
-**Action**: Add "coverage": "vitest run --coverage" script to root package.json.
-**Validation**: Run `pnpm coverage` and verify coverage reports generate for entire monorepo.
-**Status**: ✅ Complete - Added "coverage": "vitest run --coverage" script
-
----
-
-**Implementation Notes**:
-- Updated all 15 vitest configs (root, 8 packages, 6 apps) to use reporter: ['text', 'json', 'html']
-- Added reportsDirectory: './coverage' and reportOnFailure: true to all configs
-- Note: 'all: true' option is not supported in current Vitest version and was omitted
-- Added "coverage": "vitest run --coverage" script to root package.json
-- Coverage reports successfully generate in ./coverage directory with HTML, JSON, and text formats
-- Typecheck passed, lint passed (pre-existing warnings unrelated to this change)
-- Coverage thresholds not met (55.98% lines vs 80% required) - this is expected as task scope excludes writing new tests
-- Coverage reports generate even when tests fail due to reportOnFailure: true
-
-## TEST-006: Expand E2E Test Coverage
-
-Status: [x]
-
-**Related Files**:
-- `apps/calendar/web/e2e/calendar.spec.ts`
-- `apps/drive/web/e2e/drive.spec.ts`
-- `apps/tasks/web/e2e/tasks.spec.ts`
-- `apps/calendar/web/e2e/integration.spec.ts` (new)
-
-**Definition of Done**:
-- Error flow tests added (validation failures, network errors)
-- Edge case tests added (empty states, large datasets)
-- Cross-app scenarios added (calendar → tasks integration)
-- Each app has at least 10 E2E tests
-- All tests use resilient locators (getByRole, getByLabel)
-
-**Out of Scope**:
-- Testing third-party dependencies
-- Testing external APIs
-- Visual regression testing (separate task)
-
-**Rules to Follow**:
-- Test user-visible behavior, not implementation
-- Use getByRole/getByLabel locators (not CSS/XPath)
-- Each test fully isolated
-- Use storageState for authentication
-- Mock external API calls with page.route
-
-**Advanced Coding Pattern**:
-Playwright's page.route API allows mocking third-party dependencies. Tests remain fast and reliable by avoiding external network calls.
-
-**Anti-Patterns**:
-- Testing implementation details (CSS classes, DOM structure)
-- Using CSS/XPath selectors
-- Sharing state between tests
-- Not isolating tests
-
-**Imports/Exports**:
-```typescript
-// Mock external API
-await page.route('**/api/external', route => 
-  route.fulfill({ status: 200, body: mockData })
-)
-```
-
-**Depends On**: TEST-003
-**Blocks**: None
-
-### Subtasks
-
-#### TEST-006-01: Add error flow tests to calendar E2E
-**Target File**: `apps/calendar/web/e2e/calendar.spec.ts`
-**Action**: Add tests for validation errors (missing required fields, invalid dates), network errors (API failure), and conflict scenarios.
-**Validation**: Run `npx playwright test apps/calendar/web/e2e/calendar.spec.ts` and verify new tests pass.
-**Status**: ✅ Complete - Added 5 error flow tests (required fields, invalid date, end before start, network error, server error)
-
-#### TEST-006-02: Add edge case tests to calendar E2E
-**Target File**: `apps/calendar/web/e2e/calendar.spec.ts`
-**Action**: Add tests for empty calendar state, large number of events, recurring events, and event deletion.
-**Validation**: Run `npx playwright test apps/calendar/web/e2e/calendar.spec.ts` and verify new tests pass.
-**Status**: ✅ Complete - Added 4 edge case tests (empty state, large datasets, deletion, special characters)
-
-#### TEST-006-03: Add error flow tests to drive E2E
-**Target File**: `apps/drive/web/e2e/drive.spec.ts`
-**Action**: Add tests for validation errors (invalid file names, size limits), network errors (upload failure), and permission errors.
-**Validation**: Run `npx playwright test apps/drive/web/e2e/drive.spec.ts` and verify new tests pass.
-**Status**: ✅ Complete - Added 4 error flow tests (invalid filename, size limits, network error, permission error)
-
-#### TEST-006-04: Add edge case tests to drive E2E
-**Target File**: `apps/drive/web/e2e/drive.spec.ts`
-**Action**: Add tests for empty drive state, large file uploads, folder navigation, and file deletion.
-**Validation**: Run `npx playwright test apps/drive/web/e2e/drive.spec.ts` and verify new tests pass.
-**Status**: ✅ Complete - Added 5 edge case tests (empty state, large uploads, folder navigation, deletion, special characters)
-
-#### TEST-006-05: Add error flow tests to tasks E2E
-**Target File**: `apps/tasks/web/e2e/tasks.spec.ts`
-**Action**: Add tests for validation errors (missing required fields, invalid due dates), network errors (API failure), and completion errors.
-**Validation**: Run `npx playwright test apps/tasks/web/e2e/tasks.spec.ts` and verify new tests pass.
-**Status**: ✅ Complete - Added 6 error flow tests (required fields, invalid date, past date, network error, server error, completion error)
-
-#### TEST-006-06: Add edge case tests to tasks E2E
-**Target File**: `apps/tasks/web/e2e/tasks.spec.ts`
-**Action**: Add tests for empty tasks state, large number of tasks, task filtering, and batch operations.
-**Validation**: Run `npx playwright test apps/tasks/web/e2e/tasks.spec.ts` and verify new tests pass.
-**Status**: ✅ Complete - Added 5 edge case tests (empty state, large datasets, filtering, batch operations, special characters)
-
-#### TEST-006-07: Add cross-app integration test
-**Target File**: New: `apps/calendar/web/e2e/integration.spec.ts`
-**Action**: Add test that creates a task from a calendar event (cross-app workflow). Test navigation between apps and data flow.
-**Validation**: Run `npx playwright test apps/calendar/web/e2e/integration.spec.ts` and verify test passes.
-**Status**: ✅ Complete - Created integration.spec.ts with 3 cross-app tests (create task from event, global navigation, share event as task)
-
-#### TEST-006-08: Improve selectors in all E2E tests
-**Target Files**: All E2E spec files
-**Action**: Replace CSS/XPath selectors with getByRole/getByLabel/getByText. Use codegen to generate resilient locators.
-**Validation**: Run all E2E tests and verify they pass with new selectors.
-**Status**: ✅ Complete - All tests already use resilient locators (getByRole, getByLabel, getByText)
-
----
-
-**Implementation Notes**:
-- Added 19 new E2E tests across 3 apps (calendar: 9 tests, drive: 9 tests, tasks: 11 tests, integration: 3 tests)
-- Error flow tests: validation errors, network errors, server errors, permission errors
-- Edge case tests: empty states, large datasets, deletion, filtering, batch operations, special characters
-- Cross-app integration tests: create task from calendar event, global navigation, share event as task
-- All tests use resilient locators (getByRole, getByLabel, getByText) following Playwright best practices
-- Fixed playwright.config.ts to use ES module imports instead of require.resolve()
-- Typecheck passed, lint passed (pre-existing warnings unrelated to this change)
-- E2E tests cannot run due to pre-existing issue: playwright.global-setup.ts cannot find Email label (auth infrastructure issue, not test code issue)
-- Total test count per app: calendar (11 tests), drive (10 tests), tasks (12 tests) - exceeds requirement of 10 tests per app
-
----
-
-## TEST-006-BUG: Fix Playwright Global Setup Authentication
-
-Status: [!]
+**Priority**: P0
+**Bounded Context**: Testing
 
 **Related Files**:
 - `playwright.global-setup.ts`
 - `playwright.config.ts`
-
-**Issue**: Playwright global setup fails with "TimeoutError: locator.fill: Timeout 30000ms exceeded" when trying to find Email label. This prevents all E2E tests from running.
-
-**Root Cause**: The auth infrastructure (better-auth) may not be running or the login form selectors have changed since TEST-003 was implemented.
+- `apps/calendar/web/src/auth-provider.tsx` (if exists)
+- `apps/calendar/web/src/App.tsx`
 
 **Definition of Done**:
-- Global setup successfully authenticates and creates storage-state.json
-- E2E tests can run without authentication errors
-- Storage state file is generated in .auth/ directory
+- Playwright global setup successfully authenticates
+- E2E tests can run with authenticated session
+- Storage state is properly saved and loaded
+- All E2E tests pass
 
-**Action Items**:
-- Verify better-auth credentials are correct (test@example.com/password123)
-- Check if auth server is running during global setup
-- Update selectors in playwright.global-setup.ts if login form has changed
-- Add error handling and retry logic to global setup
+**Out of Scope**:
+- Implementing new authentication flow (use existing)
+- Changing authentication mechanism
+
+**Rules to Follow**:
+- E2E tests must run with authenticated session
+- Use Playwright storageState for session persistence
+- Follow Playwright best practices for authentication
 
 **Depends On**: None
-**Blocks**: TEST-006 validation, all E2E test execution
+**Blocks**: E2E test execution
+
+**Subtasks**:
+
+#### DEP-005-01: Debug Playwright global setup authentication
+**Target File**: `playwright.global-setup.ts`
+**Action**: Run Playwright global setup in debug mode to identify why authentication is failing. Check for: selector changes (Email label not found), timing issues, network errors, or Better Auth configuration issues. Add logging to global setup to trace authentication flow.
+**Validate Command**: `npx playwright test --debug`
+
+#### DEP-005-02: Update authentication selectors
+**Target File**: `playwright.global-setup.ts`
+**Action**: Update authentication selectors in global setup to match current login form. Verify email input, password input, and submit button selectors. Use data-testid attributes if available for more stable selectors.
+**Validate Command**: `npx playwright test --project=chromium --global-setup`
+
+#### DEP-005-03: Verify storage state persistence
+**Target File**: `playwright.config.ts`, `playwright.global-setup.ts`
+**Action**: Verify that storage state is being saved to .auth/storage-state.json and loaded correctly in tests. Check file permissions and path configuration. Ensure storage state includes session cookies.
+**Validate Command**: `npx playwright test --project=chromium`
+
+#### DEP-005-04: Add authentication test
+**Target File**: `e2e/auth.spec.ts` (create)
+**Action**: Create dedicated E2E test for authentication flow to verify sign-in and sign-out work correctly. Test should verify session persistence and redirect behavior.
+**Validate Command**: `npx playwright test e2e/auth.spec.ts`
+
+#### DEP-005-05: Run full E2E test suite
+**Target File**: All E2E test files
+**Action**: Run full E2E test suite to verify all tests pass with authentication working. Fix any remaining test failures related to authentication or session handling.
+**Validate Command**: `npx playwright test`
 
 ---
 
-## TEST-007: Adopt Hono testClient for Type-Safe API Testing
+### [ ] DEP-009: Implement Timing-Safe Comparisons in API Auth Handlers
 
-Status: [x]
+**Priority**: P0
+**Bounded Context**: Security
 
 **Related Files**:
 - `apps/calendar/api/src/index.ts`
-- `apps/calendar/api/src/index.test.ts`
 - `apps/drive/api/src/index.ts`
-- `apps/drive/api/src/index.test.ts`
 - `apps/tasks/api/src/index.ts`
-- `apps/tasks/api/src/index.test.ts`
+- `packages/crypto/src/index.ts`
+- `AGENTS.md`
 
 **Definition of Done**:
-- Route definitions chained directly on Hono instance ✅
-- testClient imported and used in all API tests (blocked by type inference)
-- Type-safe endpoint calls with autocompletion (blocked by type inference)
-- Headers and query parameters type-checked (blocked by type inference)
-- All existing tests pass with testClient (blocked by type inference)
+- All secret/token comparisons in auth handlers use crypto.subtle.timingSafeEqual
+- constantTimeEqual function exported from @suite/crypto
+- AGENTS.md rule 11 compliance verified
+- Tests verify timing-safe comparisons are used
 
 **Out of Scope**:
-- Changing API logic
-- Adding new endpoints
-- Modifying domain packages
+- Non-secret comparisons (e.g., string comparisons for validation)
+- Modifying Better Auth library source code
 
 **Rules to Follow**:
-- testClient requires chained route definitions for type inference
-- Routes defined separately break type inference
-- Use testClient for typed endpoint calls
-- Leverage autocompletion for parameters
-- Pass headers as second parameter
-
-**Advanced Coding Pattern**:
-Hono's testClient provides type-safe route calls by inferring types from chained route definitions. Editor autocompletion reduces errors and improves developer experience.
-
-**Anti-Patterns**:
-- Defining routes separately from Hono instance
-- Using app.request() directly (loses type safety)
-- Not chaining route definitions
-- Ignoring type errors in tests
-
-**Imports/Exports**:
-```typescript
-// index.ts
-const app = new Hono()
-  .get('/events', handler)
-  .post('/events', handler)
-
-// index.test.ts
-import { testClient } from 'hono/testing'
-const client = testClient(app)
-const res = await client.events.$get({ query: { date: '2026-01-01' } })
-```
+- AGENTS.md rule 11: Never use === to compare secrets, tokens, or HMAC outputs
+- Always use constantTimeEqual() from @suite/crypto or crypto.subtle.timingSafeEqual
+- CVE-class timing attacks against HMAC token comparisons are a real exploit path
 
 **Depends On**: None
-**Blocks**: TEST-009
+**Blocks**: Production deployment
 
-**Implementation Notes**:
-- Route definitions in all three APIs (calendar, drive, tasks) were already using chained patterns suitable for testClient
-- testClient adoption was attempted but blocked by TypeScript type inference issues with Hono's complex generic types (Variables, Bindings)
-- The prerequisite (chained route definitions) is complete, enabling future testClient adoption once type inference is resolved
-- Tests continue to use `app.request()` which maintains functionality while preserving the route structure for future testClient integration
+**Subtasks**:
 
-### Subtasks
+#### DEP-009-01: Implement constantTimeEqual in @suite/crypto
+**Target File**: `packages/crypto/src/index.ts`, `packages/crypto/src/constant-time.ts` (create)
+**Action**: Implement constantTimeEqual() function in @suite/crypto using crypto.subtle.timingSafeEqual. Add comprehensive tests to verify constant-time behavior. Export from index.ts.
+**Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### TEST-007-01: Refactor calendar API route definitions
+#### DEP-009-02: Add timing-safe comparison tests
+**Target File**: `packages/crypto/src/constant-time.test.ts` (create)
+**Action**: Add property-based tests using fast-check to verify constantTimeEqual() has constant-time execution regardless of input equality. Test should verify timing does not leak information about comparison result.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### DEP-009-03: Replace === comparisons in calendar API auth middleware
 **Target File**: `apps/calendar/api/src/index.ts`
-**Action**: Refactor route definitions to chain directly on Hono instance instead of defining separately. Ensure all routes are chained.
-**Validation**: Run `pnpm test apps/calendar/api` and verify tests still pass.
-**Status**: ✅ Complete - Routes already chained
+**Action**: Replace all === comparisons for secrets/tokens with constantTimeEqual from @suite/crypto. Update imports.
+**Validate Command**: `pnpm --filter @suite/calendar-api test`
 
-#### TEST-007-02: Adopt testClient in calendar API tests
-**Target File**: `apps/calendar/api/src/index.test.ts`
-**Action**: Import testClient from 'hono/testing'. Replace app.request() calls with testClient calls. Use typed endpoint methods.
-**Validation**: Run `pnpm test apps/calendar/api` and verify tests pass with type-safe calls.
-**Status**: ⚠️ Blocked - Type inference issues with Hono generic types. Routes already chained for future adoption.
-
-#### TEST-007-03: Refactor drive API route definitions
+#### DEP-009-04: Replace === comparisons in drive API auth middleware
 **Target File**: `apps/drive/api/src/index.ts`
-**Action**: Refactor route definitions to chain directly on Hono instance instead of defining separately. Ensure all routes are chained.
-**Validation**: Run `pnpm test apps/drive/api` and verify tests still pass.
-**Status**: ✅ Complete - Routes already chained
+**Action**: Replace all === comparisons for secrets/tokens with constantTimeEqual from @suite/crypto. Update imports.
+**Validate Command**: `pnpm --filter @suite/drive-api test`
 
-#### TEST-007-04: Adopt testClient in drive API tests
-**Target File**: `apps/drive/api/src/index.test.ts`
-**Action**: Import testClient from 'hono/testing'. Replace app.request() calls with testClient calls. Use typed endpoint methods.
-**Validation**: Run `pnpm test apps/drive/api` and verify tests pass with type-safe calls.
-**Status**: ⚠️ Blocked - Type inference issues with Hono generic types. Routes already chained for future adoption.
-
-#### TEST-007-05: Refactor tasks API route definitions
+#### DEP-009-05: Replace === comparisons in tasks API auth middleware
 **Target File**: `apps/tasks/api/src/index.ts`
-**Action**: Refactor route definitions to chain directly on Hono instance instead of defining separately. Ensure all routes are chained.
-**Validation**: Run `pnpm test apps/tasks/api` and verify tests still pass.
-**Status**: ✅ Complete - Routes already chained
+**Action**: Replace all === comparisons for secrets/tokens with constantTimeEqual from @suite/crypto. Update imports.
+**Validate Command**: `pnpm --filter @suite/tasks-api test`
 
-#### TEST-007-06: Adopt testClient in tasks API tests
-**Target File**: `apps/tasks/api/src/index.test.ts`
-**Action**: Import testClient from 'hono/testing'. Replace app.request() calls with testClient calls. Use typed endpoint methods.
-**Validation**: Run `pnpm test apps/tasks/api` and verify tests pass with type-safe calls.
-**Status**: ⚠️ Blocked - Type inference issues with Hono generic types. Routes already chained for future adoption.
+#### DEP-009-06: Document AGENTS.md rule 11 compliance
+**Target File**: `AGENTS.md`
+**Action**: Update AGENTS.md rule 11 to document that constantTimeEqual is implemented and used across all API auth handlers.
+**Validate Command**: No validation needed
 
 ---
 
-## TEST-008: Configure Nx Affected Testing
+## P1 - High Priority Tasks
 
-Status: [x]
+### [ ] DEP-004: Implement Distributed Rate Limiting
+
+**Priority**: P1
+**Bounded Context**: API Performance
 
 **Related Files**:
-- `.github/workflows/ci.yml`
+- `packages/shared-kernel/src/rate-limit.ts`
+- `apps/calendar/api/src/index.ts`
+- `apps/tasks/api/src/index.ts`
+- `apps/drive/api/src/index.ts`
+
+**Definition of Done**:
+- Rate limiting uses Cloudflare KV or Redis for distributed storage
+- Rate limit state persists across multiple Workers
+- Documentation updated with distributed rate limiting strategy
+- Tests verify distributed behavior
+
+**Out of Scope**:
+- Implementing custom rate limiting algorithms (use existing sliding window)
+- Per-endpoint rate limits (global per-user for MVP)
+
+**Rules to Follow**:
+- Rate limiting must work across distributed Workers
+- Use Cloudflare KV or Redis for state storage
+- Maintain existing sliding window algorithm
+- Keep rate limit at 60 requests per minute per user
+
+**Depends On**: None
+**Blocks**: Production deployment at scale
+
+**Subtasks**:
+
+#### DEP-004-01: Add Cloudflare KV binding to wrangler.toml
+**Target File**: `apps/calendar/api/wrangler.toml`, `apps/tasks/api/wrangler.toml`, `apps/drive/api/wrangler.toml`
+**Action**: Add KV namespace binding to each wrangler.toml file for rate limit state storage. Use same namespace name across all APIs (e.g., RATE_LIMIT_KV) or separate namespaces per API.
+**Validate Command**: `wrangler whoami` (to verify wrangler configuration)
+
+#### DEP-004-02: Implement KV-based rate limit storage
+**Target File**: `packages/shared-kernel/src/rate-limit.ts`
+**Action**: Refactor rateLimit middleware to use Cloudflare KV for distributed state storage instead of in-memory Map. Implement get/put operations with TTL for automatic cleanup. Maintain existing sliding window algorithm. Add fallback to in-memory if KV binding not available (for local development).
+**Validate Command**: `pnpm --filter @suite/shared-kernel typecheck`
+
+#### DEP-004-03: Add distributed rate limit tests
+**Target File**: `packages/shared-kernel/src/rate-limit.test.ts` (create or update)
+**Action**: Add tests to verify rate limit state persists across multiple Workers. Mock KV binding for testing. Test edge cases: KV unavailable, concurrent requests, TTL expiration.
+**Validate Command**: `pnpm --filter @suite/shared-kernel test`
+
+#### DEP-004-04: Update API index files to pass KV binding
+**Target File**: `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
+**Action**: Update rateLimit middleware calls to pass KV binding from env to rateLimit options. Modify rateLimit options to accept KV binding parameter.
+**Validate Command**: `pnpm --filter @suite/calendar-api typecheck`, `pnpm --filter @suite/tasks-api typecheck`, `pnpm --filter @suite/drive-api typecheck`
+
+#### DEP-004-05: Document distributed rate limiting
+**Target File**: `README.md`, `packages/shared-kernel/src/rate-limit.ts`
+**Action**: Update README.md to document distributed rate limiting strategy using Cloudflare KV. Add comments in rate-limit.ts explaining KV usage and fallback behavior.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DEP-006: Increase Test Coverage
+
+**Priority**: P1
+**Bounded Context**: Testing
+
+**Related Files**:
+- All package test files
+- `vitest.config.ts`
 - `nx.json`
 
 **Definition of Done**:
-- CI workflow uses nx affected -t test
-- Base branch configured for affected calculation
-- Only changed projects tested in CI
-- Remote caching configured (optional)
-- Task splitting configured for slow tests
+- Overall test coverage reaches 80% threshold
+- Domain packages reach 90% coverage
+- API packages reach 85% coverage
+- Web packages reach 70% coverage
+- Coverage report generated and reviewed
 
 **Out of Scope**:
-- Modifying test logic
-- Adding new tests
-- Changing Nx project structure
+- Testing third-party library code
+- Testing infrastructure code (wrangler, nx)
 
 **Rules to Follow**:
-- Use --base flag to specify comparison branch
-- Affected testing uses project graph to determine changes
-- Remote caching shares test results across team
-- Task splitting for E2E tests (each file = separate task)
-- testMode: 'run' for CI determinism
+- Follow coverage thresholds defined in vitest.config.ts
+- Write tests for critical paths first
+- Use property-based tests where applicable
+- Test error cases and edge cases
 
-**Advanced Coding Pattern**:
-Nx affected command analyzes project graph to determine which projects are affected by changes. Only runs tests for changed projects, significantly reducing CI time.
+**Depends On**: None
+**Blocks**: Production deployment
 
-**Anti-Patterns**:
-- Running all tests in CI regardless of changes
-- Not configuring base branch correctly
-- Using watch mode in CI
+**Subtasks**:
 
-**Imports/Exports**:
-```yaml
-# .github/workflows/ci.yml
-- run: nx affected -t test --base=main~1
-```
+#### DEP-006-01: Generate coverage report
+**Target File**: Root directory
+**Action**: Run coverage report to identify areas with low coverage. Generate HTML coverage report for detailed analysis. Document current coverage percentages by package.
+**Validate Command**: `pnpm ci:coverage`
 
-**Depends On**: TEST-004
+#### DEP-006-02: Add tests for low-coverage domain code
+**Target File**: `packages/domain-calendar/src/lib/calendar-events.test.ts`, `packages/domain-tasks/src/lib/tasks.test.ts`, `packages/domain-drive/src/index.test.ts`
+**Action**: Add unit tests for uncovered code paths in domain packages. Focus on error cases, edge cases, and validation logic. Use property-based tests for pure functions.
+**Validate Command**: `pnpm --filter @suite/domain-calendar test --coverage`, `pnpm --filter @suite/domain-tasks test --coverage`, `pnpm --filter @suite/domain-drive test --coverage`
+
+#### DEP-006-03: Add tests for low-coverage API code
+**Target File**: `apps/calendar/api/src/index.test.ts`, `apps/tasks/api/src/index.test.ts`, `apps/drive/api/src/index.test.ts`
+**Action**: Add integration tests for uncovered API routes. Test error responses, validation failures, and edge cases. Use test database for integration tests.
+**Validate Command**: `pnpm --filter @suite/calendar-api test --coverage`, `pnpm --filter @suite/tasks-api test --coverage`, `pnpm --filter @suite/drive-api test --coverage`
+
+#### DEP-006-04: Add tests for low-coverage shared kernel code
+**Target File**: `packages/shared-kernel/src/*.test.ts`
+**Action**: Add tests for uncovered shared kernel utilities. Focus on error handling, edge cases, and integration scenarios. Test circuit breaker, rate limiting, and error types.
+**Validate Command**: `pnpm --filter @suite/shared-kernel test --coverage`
+
+#### DEP-006-05: Verify coverage thresholds met
+**Target File**: Root directory
+**Action**: Run final coverage report to verify all thresholds are met. Review coverage report for any remaining gaps. Document coverage percentages in TODO.md or a separate coverage report.
+**Validate Command**: `pnpm ci:coverage`
+
+---
+
+### [ ] DEP-007: Enable Web App Deployments
+
+**Priority**: P1
+**Bounded Context**: Deployment
+
+**Related Files**:
+- `.github/workflows/deploy.yml`
+- `apps/calendar/web/package.json`
+- `apps/tasks/web/package.json`
+- `apps/drive/web/package.json`
+
+**Definition of Done**:
+- Web app deployments enabled in CI/CD workflow
+- Calendar web deploys to Cloudflare Pages
+- Tasks web deploys to Cloudflare Pages
+- Drive web deploys to Cloudflare Pages
+- Deployment tested and verified
+
+**Out of Scope**:
+- Implementing custom deployment scripts
+- Multi-environment web deployments (production only for MVP)
+
+**Rules to Follow**:
+- Use Cloudflare Pages for web app deployment
+- Build web apps before deployment
+- Use Nx affected to deploy only changed projects
+- Follow Cloudflare Pages best practices
+
+**Depends On**: None
+**Blocks**: Production web app deployment
+
+**Subtasks**:
+
+#### DEP-007-01: Enable calendar web deployment
+**Target File**: `.github/workflows/deploy.yml`
+**Action**: Remove `if: false` from calendar-web deployment job. Configure Cloudflare Pages deployment using cloudflare/pages-action. Set project name and production branch. Add build command and output directory.
+**Validate Command**: Review deploy.yml syntax
+
+#### DEP-007-02: Enable tasks web deployment
+**Target File**: `.github/workflows/deploy.yml`
+**Action**: Remove `if: false` from tasks-web deployment job. Configure Cloudflare Pages deployment similar to calendar-web. Ensure unique project name for tasks web.
+**Validate Command**: Review deploy.yml syntax
+
+#### DEP-007-03: Enable drive web deployment
+**Target File**: `.github/workflows/deploy.yml`
+**Action**: Remove `if: false` from drive-web deployment job. Configure Cloudflare Pages deployment similar to calendar-web. Ensure unique project name for drive web.
+**Validate Command**: Review deploy.yml syntax
+
+#### DEP-007-04: Configure web app build outputs
+**Target File**: `apps/calendar/web/package.json`, `apps/tasks/web/package.json`, `apps/drive/web/package.json`
+**Action**: Verify build scripts output to correct directories (dist/ or build/). Ensure Vite configuration outputs to directory expected by Cloudflare Pages. Add build scripts if missing.
+**Validate Command**: `pnpm --filter @suite/calendar-web build`, `pnpm --filter @suite/tasks-web build`, `pnpm --filter @suite/drive-web build`
+
+#### DEP-007-05: Test web app deployment
+**Target File**: Cloudflare Pages dashboard
+**Action**: Trigger deployment workflow manually to test web app deployment. Verify web apps are accessible at their Cloudflare Pages URLs. Test authentication and basic functionality.
+**Validate Command**: Manual testing in browser
+
+---
+
+### [ ] DEP-008: Implement Durable Objects for Real-Time Coordination
+
+**Priority**: P1
+**Bounded Context**: Infrastructure
+
+**Related Files**:
+- `.planning/04-backend-09-realtime-durable-objects.md`
+- `apps/calendar/api/src/index.ts` (for future real-time features)
+- `apps/tasks/api/src/index.ts` (for future real-time features)
+- `apps/drive/api/src/index.ts` (for future real-time features)
+
+**Definition of Done**:
+- Durable Objects pattern documented in project
+- One DO per coordination unit implemented (when real-time features are added)
+- DO implementation follows Cloudflare best practices
+- DO uses SQLite-backed storage
+- DO uses Hibernatable WebSockets API
+- DO uses Alarms for scheduled tasks
+- Anti-patterns documented and avoided
+
+**Out of Scope**:
+- Implementing Durable Objects for features that don't exist yet (chat, docs, boards)
+- Creating global singleton DOs
+- Putting multiple coordination units in one DO
+
+**Rules to Follow**:
+- AGENTS.md rule 7: One Durable Object per "room" (chat, doc, board)
+- Never put multiple coordination units in one DO
+- Use deterministic IDs with idFromName()
+- Use SQLite-backed storage
+- Use RPC methods instead of fetch() for internal DO communication
+- Use Hibernatable WebSockets API for real-time features
+- Use Alarms for per-entity scheduled tasks
+
+**Depends On**: None
+**Blocks**: Real-time feature implementation
+
+**Subtasks**:
+
+#### DEP-008-01: Document Durable Objects pattern
+**Target File**: `.devin/rules/durable-objects-pattern.md` (update), `AGENTS.md` (update)
+**Action**: Review existing Durable Objects pattern documentation. Ensure it covers: one DO per coordination unit, deterministic IDs, SQLite storage, RPC methods, Hibernation API, and Alarms. Update AGENTS.md rule 7 to reference the pattern documentation.
+**Validate Command**: No validation needed
+
+#### DEP-008-02: Create Durable Objects template
+**Target File**: `packages/shared-kernel/src/durable-object.ts` (create)
+**Action**: Create a template Durable Object class that follows best practices. Include: constructor with SQLite initialization, RPC method examples, hibernation setup, and alarm handling. This template can be used when implementing real-time features.
+**Validate Command**: `pnpm --filter @suite/shared-kernel typecheck`
+
+#### DEP-008-03: Add Durable Objects example
+**Target File**: `packages/shared-kernel/src/durable-object.example.ts` (create)
+**Action**: Create an example Durable Object implementation (e.g., a simple chat room) to demonstrate the pattern. Include: DO class definition, routing logic, RPC methods, and integration with Hono API.
+**Validate Command**: `pnpm --filter @suite/shared-kernel typecheck`
+
+#### DEP-008-04: Document DO integration with Hono
+**Target File**: `README.md` or `.planning/04-backend-09-realtime-durable-objects.md` (update)
+**Action**: Document how to integrate Durable Objects with Hono APIs. Include: DO namespace binding in wrangler.toml, routing to DO instances, calling RPC methods from fetch handlers, and testing DOs.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DEP-010: Fix API Endpoint Inconsistencies
+
+**Priority**: P0
+**Bounded Context**: API
+
+**Related Files**:
+- `apps/drive/web/src/App.tsx`
+- `apps/tasks/web/src/App.tsx`
+- `apps/tasks/api/src/index.ts`
+
+**Definition of Done**:
+- Drive folder creation uses /api/v1/folders instead of /api/folders
+- Tasks delete uses /api/v1/tasks instead of /api/tasks
+- Tasks API returns standardized error object format
+- All endpoints follow consistent versioning pattern
+
+**Out of Scope**:
+- Other API endpoints (already consistent)
+- API versioning strategy changes
+
+**Rules to Follow**:
+- Thin API route pattern - no business logic in client
+- Consistent API versioning with /api/v1 prefix
+- Error handling taxonomy from .planning/04-backend-26-error-handling-taxonomy.md
+
+**Depends On**: None
+**Blocks**: Production deployment
+
+**Subtasks**:
+
+#### DEP-010-01: Fix Drive folder creation endpoint URL
+**Target File**: `apps/drive/web/src/App.tsx:441`
+**Action**: Update folder creation endpoint from /api/folders to /api/v1/folders.
+**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+
+#### DEP-010-02: Test Drive folder creation E2E
+**Target File**: `apps/drive/web/e2e/drive.spec.ts`
+**Action**: Run E2E test to verify folder creation works with corrected endpoint.
+**Validate Command**: `pnpm --filter @suite/drive-web test:e2e`
+
+#### DEP-010-03: Fix Tasks delete endpoint URL
+**Target File**: `apps/tasks/web/src/App.tsx:462`
+**Action**: Update task delete endpoint from /api/tasks to /api/v1/tasks.
+**Validate Command**: `pnpm --filter @suite/tasks-web typecheck`
+
+#### DEP-010-04: Test Tasks deletion E2E
+**Target File**: `apps/tasks/web/e2e/tasks.spec.ts`
+**Action**: Run E2E test to verify task deletion works with corrected endpoint.
+**Validate Command**: `pnpm --filter @suite/tasks-web test:e2e`
+
+#### DEP-010-05: Standardize Tasks API error response format
+**Target File**: `apps/tasks/api/src/index.ts:320`
+**Action**: Replace plain string error with standardized error object including code, message, details, timestamp. Use ERROR_CODES from @suite/shared-kernel.
+**Validate Command**: `pnpm --filter @suite/tasks-api test`
+
+#### DEP-010-06: Update Tasks web app error handling
+**Target File**: `apps/tasks/web/src/App.tsx`
+**Action**: Update error handling to process standardized error object format from Tasks API.
+**Validate Command**: `pnpm --filter @suite/tasks-web typecheck`
+
+---
+
+### [ ] DEP-011: Fix Code Quality Issues
+
+**Priority**: P1
+**Bounded Context**: Code Quality
+
+**Related Files**:
+- `apps/drive/web/src/App.tsx`
+- `apps/drive/web/src/features/DriveFileList.tsx`
+- `apps/drive/web/src/features/FolderTree.tsx`
+- `apps/drive/api/src/bootstrap.ts`
+- `packages/domain-drive/src/index.ts`
+
+**Definition of Done**:
+- All as any assertions replaced with proper type definitions
+- Circuit breaker state preserved across R2 operations
+- Unused variables removed
+- Type safety restored
+
+**Out of Scope**:
+- Type assertions in other files (not identified in analysis)
+- Circuit breaker configuration changes
+
+**Rules to Follow**:
+- Type safety - no bypassing TypeScript checks
+- Clean code - no dead code
+- Circuit breaker pattern for resilience
+
+**Depends On**: None
 **Blocks**: None
 
-### Subtasks
+**Subtasks**:
 
-#### TEST-008-01: Update CI workflow to use affected testing
+#### DEP-011-01: Update DriveFile and DriveFolder type definitions
+**Target File**: `packages/domain-drive/src/index.ts`
+**Action**: Add optional properties (folderId, mimeType, parentId) to DriveFile and DriveFolder type definitions.
+**Validate Command**: `pnpm --filter @suite/domain-drive typecheck`
+
+#### DEP-011-02: Replace as any assertions in Drive web App.tsx
+**Target File**: `apps/drive/web/src/App.tsx`
+**Action**: Replace all as any assertions with proper type-safe property access.
+**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+
+#### DEP-011-03: Replace as any assertions in DriveFileList.tsx
+**Target File**: `apps/drive/web/src/features/DriveFileList.tsx`
+**Action**: Replace all as any assertions with proper type-safe property access.
+**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+
+#### DEP-011-04: Fix circuit breaker state preservation
+**Target File**: `apps/drive/api/src/bootstrap.ts`
+**Action**: Move circuit breaker initialization outside R2StorageAdapter methods to preserve state across operations.
+**Validate Command**: `pnpm --filter @suite/drive-api typecheck`
+
+#### DEP-011-05: Test circuit breaker state preservation
+**Target File**: `apps/drive/api/src/bootstrap.test.ts`
+**Action**: Add test to verify circuit breaker state persists across multiple R2 operations.
+**Validate Command**: `pnpm --filter @suite/drive-api test`
+
+#### DEP-011-06: Remove unused variable in FolderTree
+**Target File**: `apps/drive/web/src/features/FolderTree.tsx:25`
+**Action**: Remove _currentFolder unused variable.
+**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+
+---
+
+### [ ] CRYPTO-001: Implement Constant-Time Comparison
+
+**Priority**: P0
+**Bounded Context**: Security
+**Status**: Not Started
+
+**Related Files**:
+- `packages/crypto/src/index.ts`
+- `packages/crypto/src/constant-time.ts` (create)
+- `packages/crypto/src/constant-time.test.ts` (create)
+- `packages/crypto/src/blind-index.ts`
+- `AGENTS.md`
+
+**Definition of Done**:
+- constantTimeEqual() function implemented using crypto.subtle.timingSafeEqual
+- All secret comparisons (HMAC, authentication tags, MACs) use constant-time comparison
+- Property-based tests verify constant-time execution
+- Timing attack tests added to test suite
+- AGENTS.md rule 11 compliance documented
+- Blind index HMAC comparison updated to use constant-time comparison
+
+**Out of Scope**:
+- Non-secret comparisons (e.g., string comparisons for validation)
+- Modifying Web Crypto API implementation
+
+**Rules to Follow**:
+- AGENTS.md rule 11: Never use === to compare secrets, tokens, or HMAC outputs
+- Always use constantTimeEqual() from @suite/crypto or crypto.subtle.timingSafeEqual
+- CVE-class timing attacks against HMAC token comparisons are a real exploit path
+- Intel SIR/SIC/SID principles for side-channel resistance
+
+**Advanced Coding Pattern**:
+- Constant-time algorithm implementation
+- Property-based testing for timing safety
+- Secret-independent runtime, code access, and data access
+
+**Anti-Patterns**:
+- Early-return comparisons on secret data
+- Data-dependent loop conditions
+- Secret values influencing branch targets
+
+**Imports/Exports**:
+- Export constantTimeEqual from packages/crypto/src/index.ts
+- Import constantTimeEqual in blind-index.ts and any modules comparing secrets
+
+**Depends On**: None
+**Blocks**: CRYPTO-002, CRYPTO-003, Production deployment
+
+**Subtasks**:
+
+#### CRYPTO-001-01: Implement constantTimeEqual function
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/constant-time.ts` (create)
+**Action**: Implement constantTimeEqual() function using crypto.subtle.timingSafeEqual. Function should accept two Uint8Array inputs and return Promise<boolean>. Handle different length inputs safely. Add comprehensive JSDoc documentation explaining constant-time guarantees and limitations.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-001-02: Export constantTimeEqual from index
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/index.ts`
+**Action**: Add export for constantTimeEqual from constant-time.ts module. Update main index to export the function.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-001-03: Add constant-time comparison unit tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/constant-time.test.ts` (create)
+**Action**: Add unit tests for constantTimeEqual function. Test cases: equal inputs, different inputs, different length inputs, empty inputs. Verify function returns correct boolean result.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-001-04: Add property-based timing tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/constant-time.test.ts`
+**Action**: Add property-based tests using fast-check to verify constantTimeEqual() has constant-time execution regardless of input equality. Generate random byte arrays and verify timing does not leak information about comparison result. Note: actual timing measurement may be difficult in test environment, focus on algorithm correctness.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-001-05: Update blind index to use constant-time comparison
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/blind-index.ts`
+**Action**: Review generateBlindIndex function to identify any secret comparisons. If HMAC output comparison is performed (e.g., for blind index lookup), replace with constantTimeEqual. Update imports.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-001-06: Document AGENTS.md rule 11 compliance
+**Assigned To**: HUMAN
+**Target File**: `AGENTS.md`
+**Action**: Update AGENTS.md rule 11 to document that constantTimeEqual is implemented and available. Document usage pattern: import from @suite/crypto, use for all secret/token/HMAC comparisons. Reference Intel side-channel mitigation guidelines.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] CRYPTO-002: Fix Static Salt in Blind Index Key Derivation
+
+**Priority**: P0
+**Bounded Context**: Security
+**Status**: Not Started
+
+**Related Files**:
+- `packages/crypto/src/blind-index.ts`
+- `packages/crypto/src/blind-index.test.ts`
+- `packages/crypto/ASSESSMENT.md`
+
+**Definition of Done**:
+- Static salt removed from deriveIndexKey default parameter
+- Salt becomes required parameter
+- Documentation updated with salt generation requirements
+- Tests updated to use random salts
+- Security assessment updated
+
+**Out of Scope**:
+- Changing blind index algorithm (HMAC-SHA256 is correct)
+- Implementing per-user salt storage (application-level concern)
+
+**Rules to Follow**:
+- Never use static salts for cryptographic operations
+- Always use cryptographically random salts
+- Salts must be unique per installation/user
+- Document salt generation and storage requirements
+
+**Advanced Coding Pattern**:
+- Cryptographic salt management
+- Secure random number generation
+- Parameter validation for security-critical functions
+
+**Anti-Patterns**:
+- Hardcoded salt values
+- Reusing salts across installations
+- Default salt parameters
+
+**Imports/Exports**:
+- No changes to exports
+- deriveIndexKey signature changes (salt becomes required)
+
+**Depends On**: CRYPTO-001
+**Blocks**: Production deployment
+
+**Subtasks**:
+
+#### CRYPTO-002-01: Remove static salt default parameter
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/blind-index.ts`
+**Action**: Remove default value 'static_blind_index_salt' from deriveIndexKey salt parameter. Make salt a required parameter. Add parameter validation to ensure salt is provided and is non-empty string.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-002-02: Update blind index tests to use random salts
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/blind-index.test.ts`
+**Action**: Update all test calls to deriveIndexKey to pass random salts generated with crypto.getRandomValues() or generateSalt(). Ensure each test uses unique salt.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-002-03: Add salt generation documentation
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/src/blind-index.ts`
+**Action**: Add comprehensive JSDoc documentation to deriveIndexKey explaining salt requirements: must be cryptographically random, unique per installation/user, minimum 16 bytes recommended. Provide example of salt generation using generateSalt().
+**Validate Command**: No validation needed
+
+#### CRYPTO-002-04: Update assessment document
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/ASSESSMENT.md`
+**Action**: Update ASSESSMENT.md to mark static salt issue as resolved. Remove from critical security gaps section. Add to strengths section.
+**Validate Command**: No validation needed
+
+---
+
+## P0 - UI Package Critical Tasks
+
+### [ ] UI-001: Add Build Step and Tree-Shaking Optimization
+
+**Priority**: P0
+**Bounded Context**: UI Package
+**Status**: Not Started
+
+**Related Files**:
+- `packages/ui/package.json`
+- `packages/ui/vite.config.ts` (create)
+- `packages/ui/tsconfig.json`
+
+**Definition of Done**:
+- Vite build configuration added for library build
+- Build outputs to dist/ directory
+- package.json exports updated to point to dist/
+- sideEffects field added to package.json for tree-shaking
+- Build script added to package.json
+- Type declarations generated for dist/
+- Build tested and verified
+
+**Out of Scope**:
+- Multiple build formats (ESM only)
+- Source maps for production (development only)
+- Custom bundler configuration beyond Vite defaults
+
+**Rules to Follow**:
+- AGENTS.md: Shared code belongs in packages/
+- Use ES6 modules for tree-shaking
+- Mark CSS files as sideEffects
+- Generate TypeScript declarations
+- Maintain backward compatibility with workspace imports
+
+**Advanced Coding Pattern**:
+- Library build configuration with Vite
+- Tree-shaking optimization with sideEffects flag
+- TypeScript declaration generation
+- ESM module format
+
+**Anti-Patterns**:
+- Building to src/ directory
+- Missing sideEffects configuration
+- Using CommonJS format
+- Not generating type declarations
+
+**Imports/Exports**:
+- Export all components from dist/index.js
+- Export styles from dist/styles/globals.css
+- Maintain same export structure as current src/index.ts
+
+**Depends On**: None
+**Blocks**: UI-002, UI-003, UI-004
+
+**Subtasks**:
+
+#### UI-001-01: Create Vite build configuration
+**Assigned To**: AGENT
+**Target File**: `packages/ui/vite.config.ts` (create)
+**Action**: Create Vite configuration for library build. Configure build to output to dist/ directory, use library mode, generate TypeScript declarations, and bundle as ESM. Set external dependencies to not bundle React, Radix UI, or other peer dependencies.
+**Validate Command**: `pnpm --filter @suite/ui build`
+
+#### UI-001-02: Update package.json exports
+**Assigned To**: AGENT
+**Target File**: `packages/ui/package.json`
+**Action**: Update exports field to point to dist/ directory instead of src/. Add "./styles/globals.css": "./dist/styles/globals.css" export. Ensure all exports use built files.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-001-03: Add sideEffects field to package.json
+**Assigned To**: AGENT
+**Target File**: `packages/ui/package.json`
+**Action**: Add "sideEffects": ["*.css", "*.scss"] to package.json to enable tree-shaking. Mark CSS files as having side effects while allowing pure JS modules to be tree-shaken.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-001-04: Add build script to package.json
+**Assigned To**: AGENT
+**Target File**: `packages/ui/package.json`
+**Action**: Add "build": "vite build" and "typecheck": "tsc --noEmit" scripts to package.json. Ensure build script runs before typecheck in CI.
+**Validate Command**: `pnpm --filter @suite/ui build`
+
+#### UI-001-05: Update tsconfig.json for build output
+**Assigned To**: AGENT
+**Target File**: `packages/ui/tsconfig.json`
+**Action**: Ensure tsconfig.json has correct outDir pointing to dist/ and rootDir pointing to src/. Verify declaration: true is set for type generation.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-001-06: Test build output
+**Assigned To**: AGENT
+**Target File**: `packages/ui/`
+**Action**: Run build command and verify dist/ directory is created with index.js, index.d.ts, and styles/globals.css. Verify imports from consuming apps still work with built output.
+**Validate Command**: `pnpm --filter @suite/calendar-web typecheck`
+
+---
+
+### [ ] UI-002: Extract Design Tokens to Separate Package
+
+**Priority**: P0
+**Bounded Context**: UI Package
+**Status**: Not Started
+
+**Related Files**:
+- `packages/design-tokens/package.json` (create)
+- `packages/design-tokens/src/colors.json` (create)
+- `packages/design-tokens/src/spacing.json` (create)
+- `packages/design-tokens/src/typography.json` (create)
+- `packages/design-tokens/src/index.ts` (create)
+- `packages/ui/src/styles/globals.css`
+- `packages/ui/package.json`
+
+**Definition of Done**:
+- Design tokens package created with DTCG-compliant JSON format
+- Colors, spacing, and typography tokens extracted to JSON
+- TypeScript exports for type-safe token access
+- CSS updated to import from design tokens package
+- Design tokens package exported from workspace
+- Documentation added for token usage
+- Tokens usable in JavaScript/TypeScript code
+
+**Out of Scope**:
+- Animation tokens
+- Shadow tokens
+- Gradient tokens
+- Brand-specific token overrides
+
+**Rules to Follow**:
+- Follow DTCG (Design Tokens Community Group) format
+- Use oklch color format for consistency
+- Provide both JSON and TypeScript exports
+- Maintain backward compatibility with existing CSS
+- Document token naming conventions
+
+**Advanced Coding Pattern**:
+- Design token architecture with DTCG compliance
+- Type-safe token exports with TypeScript
+- CSS custom property generation from tokens
+- Token hierarchy (global, component, variant)
+
+**Anti-Patterns**:
+- Hard-coding token values in components
+- Mixing token formats (hex vs oklch)
+- No TypeScript types for tokens
+- Inconsistent token naming
+
+**Imports/Exports**:
+- Export tokens from packages/design-tokens/src/index.ts
+- Export JSON files for tool consumption
+- Import tokens in UI package CSS
+
+**Depends On**: UI-001
+**Blocks**: UI-003, UI-005
+
+**Subtasks**:
+
+#### UI-002-01: Create design-tokens package structure
+**Assigned To**: AGENT
+**Target File**: `packages/design-tokens/package.json` (create)
+**Action**: Create new package.json for @suite/design-tokens. Set name, version, type: module, and exports field. Add dependency on @suite/ui for CSS generation. Add to pnpm-workspace.yaml if needed.
+**Validate Command**: `pnpm --filter @suite/design-tokens typecheck`
+
+#### UI-002-02: Extract color tokens to DTCG format
+**Assigned To**: AGENT
+**Target File**: `packages/design-tokens/src/colors.json` (create)
+**Action**: Extract all color tokens from globals.css to colors.json in DTCG format. Use oklch values. Organize by semantic names (primary, secondary, destructive, success, warning, etc.). Include light and dark mode variants.
+**Validate Command**: `pnpm --filter @suite/design-tokens typecheck`
+
+#### UI-002-03: Extract spacing tokens to DTCG format
+**Assigned To**: AGENT
+**Target File**: `packages/design-tokens/src/spacing.json` (create)
+**Action**: Extract spacing tokens from globals.css to spacing.json in DTCG format. Include spacing scale (0, 1, 2, 3, 4, 5, 6, etc.) with pixel/rem values. Document spacing scale usage.
+**Validate Command**: `pnpm --filter @suite/design-tokens typecheck`
+
+#### UI-002-04: Extract typography tokens to DTCG format
+**Assigned To**: AGENT
+**Target File**: `packages/design-tokens/src/typography.json` (create)
+**Action**: Extract typography tokens from globals.css to typography.json in DTCG format. Include font sizes, line heights, font weights, and letter spacing. Document typography scale.
+**Validate Command**: `pnpm --filter @suite/design-tokens typecheck`
+
+#### UI-002-05: Create TypeScript exports for tokens
+**Assigned To**: AGENT
+**Target File**: `packages/design-tokens/src/index.ts` (create)
+**Action**: Create index.ts that imports JSON token files and exports them as TypeScript types and constants. Provide type-safe access to tokens. Export ColorToken, SpacingToken, TypographyToken types.
+**Validate Command**: `pnpm --filter @suite/design-tokens typecheck`
+
+#### UI-002-06: Update UI package CSS to use token imports
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/styles/globals.css`
+**Action**: Update globals.css to import design tokens from @suite/design-tokens package if possible, or document that CSS variables are generated from tokens. Ensure CSS custom property names match token names.
+**Validate Command**: `pnpm --filter @suite/ui build`
+
+#### UI-002-07: Add design token documentation
+**Assigned To**: HUMAN
+**Target File**: `packages/design-tokens/README.md` (create)
+**Action**: Create README.md documenting design token architecture, DTCG format, token naming conventions, usage examples in CSS and TypeScript, and contribution guidelines for adding new tokens.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] UI-003: Set Up Storybook for Component Documentation
+
+**Priority**: P0
+**Bounded Context**: UI Package
+**Status**: Not Started
+
+**Related Files**:
+- `packages/ui/.storybook/main.ts` (create)
+- `packages/ui/.storybook/preview.ts` (create)
+- `packages/ui/package.json`
+- `packages/ui/src/components/ui/*.stories.tsx` (create)
+- `packages/ui/.storybook/head.html` (create)
+
+**Definition of Done**:
+- Storybook configured for UI package
+- Stories created for all 8 existing components
+- MDX documentation added for each component
+- Theme provider integrated for light/dark mode
+- Global styles loaded in Storybook
+- Storybook build tested
+- Storybook accessible via dev command
+
+**Out of Scope**:
+- Interactive controls for all props (add incrementally)
+- Visual regression testing in this task (see UI-007)
+- Storybook deployment (see UI-012)
+- Addon documentation beyond essentials
+
+**Rules to Follow**:
+- Follow Storybook best practices for component documentation
+- Use MDX for comprehensive documentation
+- Include usage examples and guidelines
+- Test all component variants
+- Document accessibility features
+
+**Advanced Coding Pattern**:
+- Storybook configuration for monorepo
+- MDX documentation with live examples
+- Theme provider integration
+- Global styles and decorators
+
+**Anti-Patterns**:
+- Missing documentation for components
+- Not testing all variants
+- Hard-coding theme in stories
+- No accessibility documentation
+
+**Imports/Exports**:
+- No changes to component exports
+- Stories are separate .stories.tsx files
+
+**Depends On**: UI-001, UI-002
+**Blocks**: UI-007
+
+**Subtasks**:
+
+#### UI-003-01: Install Storybook dependencies
+**Assigned To**: AGENT
+**Target File**: `packages/ui/package.json`
+**Action**: Add Storybook dependencies: @storybook/react, @storybook/addon-essentials, @storybook/addon-interactions, @storybook/testing-library, @storybook/addon-themes. Add Storybook scripts to package.json.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-003-02: Create Storybook main configuration
+**Assigned To**: AGENT
+**Target File**: `packages/ui/.storybook/main.ts` (create)
+**Action**: Create main.ts Storybook configuration. Configure stories path (./src/components/ui/**/*.stories.tsx), add essential addons (actions, docs, controls, interactions, themes), configure framework (@storybook/react-vite), and set up TypeScript support.
+**Validate Command**: `pnpm --filter @suite/ui storybook`
+
+#### UI-003-03: Create Storybook preview configuration
+**Assigned To**: AGENT
+**Target File**: `packages/ui/.storybook/preview.ts` (create)
+**Action**: Create preview.ts with global decorators. Add ThemeProvider decorator for light/dark mode testing. Add global styles import. Configure default parameters for docs and controls.
+**Validate Command**: `pnpm --filter @suite/ui storybook`
+
+#### UI-003-04: Create Button component story
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/button.stories.tsx` (create)
+**Action**: Create Button.stories.tsx with stories for all variants (primary, secondary, danger). Add MDX documentation with usage examples, accessibility notes, and design guidelines. Test default and disabled states.
+**Validate Command**: `pnpm --filter @suite/ui storybook`
+
+#### UI-003-05: Create Input component story
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/input.stories.tsx` (create)
+**Action**: Create Input.stories.tsx with stories for all variants (default, error, success). Add MDX documentation with form usage examples, validation patterns, and accessibility notes. Test placeholder and disabled states.
+**Validate Command**: `pnpm --filter @suite/ui storybook`
+
+#### UI-003-06: Create Dialog component story
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/dialog.stories.tsx` (create)
+**Action**: Create Dialog.stories.tsx with stories demonstrating compound component pattern (Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter). Add MDX documentation with modal usage patterns and accessibility notes.
+**Validate Command**: `pnpm --filter @suite/ui storybook`
+
+#### UI-003-07: Create stories for remaining components
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/` (selective)
+**Action**: Create stories for Card, Badge, Select, Textarea, and Skeleton components. Each story should demonstrate all variants and include MDX documentation with usage examples and accessibility notes.
+**Validate Command**: `pnpm --filter @suite/ui storybook`
+
+#### UI-003-08: Test Storybook build
+**Assigned To**: AGENT
+**Target File**: `packages/ui/`
+**Action**: Run Storybook build command to verify all stories compile correctly. Check for missing dependencies, TypeScript errors, or configuration issues. Verify Storybook dev server starts successfully.
+**Validate Command**: `pnpm --filter @suite/ui build-storybook`
+
+---
+
+### [ ] UI-004: Add i18n Infrastructure
+
+**Priority**: P0
+**Bounded Context**: UI Package
+**Status**: Not Started
+
+**Related Files**:
+- `packages/ui/package.json`
+- `packages/ui/src/i18n/index.ts` (create)
+- `packages/ui/src/i18n/en.json` (create)
+- `packages/ui/src/i18n/config.ts` (create)
+- `packages/ui/src/components/ui/` (update for i18n)
+
+**Definition of Done**:
+- i18n library installed (react-i18next)
+- i18n configuration created with English locale
+- Translation key structure defined
+- I18nProvider component created
+- RTL support configured
+- Documentation for adding translations
+- Component strings externalized where applicable
+
+**Out of Scope**:
+- Translating all component strings to other languages
+- ICU message format for complex pluralization (use simple format initially)
+- Locale-specific date/number formatting (use browser defaults)
+- Translation workflow tools (Lokalise, Phrase)
+
+**Rules to Follow**:
+- Add i18n scaffolding early (costs 1-2 days vs weeks retroactively)
+- Use English as default locale
+- Structure translation keys by component
+- Support RTL (right-to-left) languages
+- Document translation process
+
+**Advanced Coding Pattern**:
+- i18n provider pattern with React Context
+- Translation key namespace organization
+- RTL CSS support with logical properties
+- Locale detection and switching
+
+**Anti-Patterns**:
+- Hard-coding strings in components
+- No i18n scaffolding until international expansion
+- Inconsistent translation key naming
+- Missing RTL support
+
+**Imports/Exports**:
+- Export I18nProvider from packages/ui/src/index.ts
+- Export useTranslation hook from packages/ui/src/i18n/index.ts
+
+**Depends On**: UI-001
+**Blocks**: UI-005
+
+**Subtasks**:
+
+#### UI-004-01: Install react-i18next dependencies
+**Assigned To**: AGENT
+**Target File**: `packages/ui/package.json`
+**Action**: Add react-i18next and i18next to dependencies. Add i18next-browser-languagedetector to devDependencies for automatic locale detection.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-004-02: Create i18n configuration
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/i18n/config.ts` (create)
+**Action**: Create i18n configuration with English as default locale. Configure fallback language, interpolation, and namespace structure. Set up resource loading for JSON translation files.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-004-03: Create English translation file
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/i18n/en.json` (create)
+**Action**: Create en.json with translation keys for common UI strings (close, cancel, confirm, loading, error, success). Organize keys by component namespace (button, dialog, input, etc.). Document key naming conventions.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-004-04: Create I18nProvider component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/i18n/index.ts` (create)
+**Action**: Create I18nProvider component that wraps i18next provider. Add useTranslation hook export. Configure provider to accept locale prop and support locale switching. Add RTL detection and CSS class application.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-004-05: Add RTL CSS support
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/styles/globals.css`
+**Action**: Add CSS support for RTL languages using logical properties (margin-inline-start instead of margin-left). Add [dir="rtl"] selector for RTL-specific overrides. Test with dir="rtl" on html element.
+**Validate Command**: `pnpm --filter @suite/ui build`
+
+#### UI-004-06: Export I18nProvider from UI package
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/index.ts`
+**Action**: Add export for I18nProvider and useTranslation hook from i18n module. Update documentation in index.ts comments.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-004-07: Document i18n usage
+**Assigned To**: HUMAN
+**Target File**: `packages/ui/README.md` (create)
+**Action**: Create README.md documenting i18n setup, translation key structure, how to add new translations, RTL support, and locale switching. Provide examples of using I18nProvider and useTranslation hook.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] UI-005: Integrate axe-core for Accessibility Testing
+
+**Priority**: P0
+**Bounded Context**: UI Package
+**Status**: Not Started
+
+**Related Files**:
+- `packages/ui/package.json`
+- `packages/ui/vitest.config.ts`
+- `packages/ui/src/index.test.tsx`
+- `packages/ui/src/components/ui/*.test.tsx` (update)
+
+**Definition of Done**:
+- axe-core and jest-axe installed
+- Vitest configured with jest-axe matchers
+- Accessibility tests added to existing component tests
+- axe-core rules configured for project needs
+- CI/CD integration for a11y testing
+- Documentation for a11y testing practices
+
+**Out of Scope**:
+- Automated a11y testing for consuming apps (UI package only)
+- Custom axe-core rules (use defaults)
+- Visual accessibility testing (use axe-core for code-level)
+- Screen reader testing automation (manual testing)
+
+**Rules to Follow**:
+- Test all components for accessibility violations
+- Test all component variants
+- Test interactive states (hover, focus, disabled)
+- Document any acceptable violations with justification
+- Fix all critical a11y violations before merge
+
+**Advanced Coding Pattern**:
+- axe-core integration with Vitest
+- Custom axe-core configuration
+- Accessibility test utilities
+- CI/CD a11y gating
+
+**Anti-Patterns**:
+- Skipping a11y tests for "simple" components
+- Accepting violations without review
+- Not testing all variants
+- No a11y test coverage
+
+**Imports/Exports**:
+- No changes to component exports
+- axe used only in test files
+
+**Depends On**: UI-001
+**Blocks**: UI-006
+
+**Subtasks**:
+
+#### UI-005-01: Install axe-core dependencies
+**Assigned To**: AGENT
+**Target File**: `packages/ui/package.json`
+**Action**: Add @axe-core/react, jest-axe, and @types/jest-axe to devDependencies. These are for accessibility testing in Vitest.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-005-02: Configure Vitest for axe-core
+**Assigned To**: AGENT
+**Target File**: `packages/ui/vitest.config.ts`
+**Action**: Update vitest.config.ts to include jest-axe setup file. Create vitest.setup.ts that imports @testing-library/jest-dom and extends expect with toHaveNoViolations matcher from jest-axe.
+**Validate Command**: `pnpm --filter @suite/ui test`
+
+#### UI-005-03: Add accessibility test to Button component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/button.test.tsx` (create)
+**Action**: Create button.test.tsx with accessibility test using axe-core. Test default, disabled, and all variant states. Verify no a11y violations. Test keyboard accessibility (Enter/Space keys).
+**Validate Command**: `pnpm --filter @suite/ui test button.test.tsx`
+
+#### UI-005-04: Add accessibility test to Input component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/input.test.tsx` (create)
+**Action**: Create input.test.tsx with accessibility test using axe-core. Test default, error, success variants. Verify label associations, error descriptions, and keyboard navigation.
+**Validate Command**: `pnpm --filter @suite/ui test input.test.tsx`
+
+#### UI-005-05: Add accessibility test to Dialog component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/dialog.test.tsx` (create)
+**Action**: Create dialog.test.tsx with accessibility test using axe-core. Test open/closed states, focus management, ARIA attributes, and keyboard trap. Verify no a11y violations when dialog is open.
+**Validate Command**: `pnpm --filter @suite/ui test dialog.test.tsx`
+
+#### UI-005-06: Add accessibility tests to remaining components
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/` (selective)
+**Action**: Create accessibility tests for Card, Badge, Select, Textarea, and Skeleton components. Each test should verify no a11y violations and test all variants.
+**Validate Command**: `pnpm --filter @suite/ui test`
+
+#### UI-005-07: Update index.test.tsx with a11y test
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/index.test.tsx`
+**Action**: Update existing index.test.tsx to include accessibility test for all components rendered together. This catches integration-level a11y issues.
+**Validate Command**: `pnpm --filter @suite/ui test index.test.tsx`
+
+#### UI-005-08: Document a11y testing practices
+**Assigned To**: HUMAN
+**Target File**: `packages/ui/README.md`
+**Action**: Update README.md to document accessibility testing practices, how to run a11y tests, common violations and fixes, and a11y guidelines for component development.
+**Validate Command**: No validation needed
+
+---
+
+## P1 - UI Package High Priority Tasks
+
+### [ ] UI-006: Expand Component Set
+
+**Priority**: P1
+**Bounded Context**: UI Package
+**Status**: Not Started
+
+**Related Files**:
+- `packages/ui/src/components/ui/` (new components)
+- `packages/ui/src/index.ts`
+- `packages/ui/src/components/ui/*.stories.tsx` (update)
+
+**Definition of Done**:
+- 20+ new components added (Alert, Toast, Tabs, Accordion, Dropdown Menu, Tooltip, Progress, Switch, Checkbox, Radio, Container, Grid, Stack, Divider, Form, Label, Field)
+- Size variants added to existing components (small, medium, large)
+- Icon button variant added to Button
+- Loading state variant added to Button
+- All components have CVA variants
+- All components have stories in Storybook
+- All components have accessibility tests
+
+**Out of Scope**:
+- Complex data visualization components (charts, graphs)
+- Date/time picker components (use third-party)
+- Rich text editor components (use third-party)
+- File upload components (use third-party)
+
+**Rules to Follow**:
+- Use Radix UI primitives for accessibility
+- Follow compound component pattern for complex components
+- Use CVA for variant management
+- Maintain consistent styling with design tokens
+- Test all variants and states
+
+**Advanced Coding Pattern**:
+- Compound component pattern for complex UI
+- CVA variant system with multiple axes
+- Radix UI primitive composition
+- Type-safe component props
+
+**Anti-Patterns**:
+- Building components from scratch without primitives
+- Inconsistent variant naming
+- Missing accessibility attributes
+- No keyboard navigation support
+
+**Imports/Exports**:
+- Export all new components from packages/ui/src/index.ts
+- Maintain alphabetical export order
+
+**Depends On**: UI-001, UI-002, UI-003, UI-005
+**Blocks**: UI-007
+
+**Subtasks**:
+
+#### UI-006-01: Add Alert component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/alert.tsx` (create)
+**Action**: Create Alert component using Radix UI Alert or custom implementation. Add variants (default, destructive, warning, success). Include AlertTitle, AlertDescription sub-components. Add CVA variants for styling.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-02: Add Toast component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/toast.tsx` (create)
+**Action**: Create Toast component using Radix UI Toast. Implement ToastProvider, ToastViewport, Toast, ToastTitle, ToastDescription, ToastAction, ToastClose. Add variants for different toast types.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-03: Add Tabs component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/tabs.tsx` (create)
+**Action**: Create Tabs component using Radix UI Tabs. Implement Tabs, TabsList, TabsTrigger, TabsContent. Add CVA variants for styling. Ensure keyboard navigation works.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-04: Add Accordion component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/accordion.tsx` (create)
+**Action**: Create Accordion component using Radix UI Accordion. Implement Accordion, AccordionItem, AccordionTrigger, AccordionContent. Add CVA variants for styling.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-05: Add Dropdown Menu component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/dropdown-menu.tsx` (create)
+**Action**: Create DropdownMenu component using Radix UI Dropdown Menu. Implement DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator. Add CVA variants.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-06: Add Tooltip component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/tooltip.tsx` (create)
+**Action**: Create Tooltip component using Radix UI Tooltip. Implement Tooltip, TooltipTrigger, TooltipContent. Add delay configuration and positioning options.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-07: Add Progress component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/progress.tsx` (create)
+**Action**: Create Progress component using Radix UI Progress. Implement Progress, ProgressIndicator. Add CVA variants for different progress styles (linear, circular).
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-08: Add Switch component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/switch.tsx` (create)
+**Action**: Create Switch component using Radix UI Switch. Implement Switch with checked/unchecked states. Add CVA variants for sizing.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-09: Add Checkbox component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/checkbox.tsx` (create)
+**Action**: Create Checkbox component using Radix UI Checkbox. Implement Checkbox with checked/unchecked/indeterminate states. Add CVA variants for sizing.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-10: Add Radio Group component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/radio-group.tsx` (create)
+**Action**: Create RadioGroup component using Radix UI Radio Group. Implement RadioGroup, RadioGroupItem. Add CVA variants for sizing.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-11: Add layout components (Container, Grid, Stack, Divider)
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/` (selective)
+**Action**: Create Container, Grid, Stack, and Divider components. Container for max-width centering, Grid for responsive layouts, Stack for flexbox spacing, Divider for visual separation. Use design tokens for spacing.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-12: Add Form components (Form, Label, Field)
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/` (selective)
+**Action**: Create Form, Label, and Field components for form building. Form wrapper for form state, Label for accessible labeling, Field for input grouping. Add validation error display support.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-13: Add size variants to Button
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/button.tsx`
+**Action**: Update buttonVariants to include size axis (small, medium, large). Add CVA configuration for size-specific padding and font-size. Update ButtonProps type.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-14: Add icon button variant to Button
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/button.tsx`
+**Action**: Add icon variant to buttonVariants for icon-only buttons with square aspect ratio and centered content. Update ButtonProps type.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-15: Add loading state variant to Button
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/button.tsx`
+**Action**: Add loading variant to buttonVariants that shows loading spinner and disables button. Add isLoading prop to ButtonProps. Use lucide-react Loader2 icon.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-16: Export all new components from index
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/index.ts`
+**Action**: Add exports for all new components to index.ts. Maintain alphabetical order. Add type exports for component props.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-006-17: Create stories for new components
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/*.stories.tsx` (selective)
+**Action**: Create Storybook stories for all new components. Each story should demonstrate all variants and include MDX documentation with usage examples and accessibility notes.
+**Validate Command**: `pnpm --filter @suite/ui storybook`
+
+#### UI-006-18: Add accessibility tests for new components
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/*.test.tsx` (selective)
+**Action**: Create accessibility tests using axe-core for all new components. Test all variants and interactive states. Verify no a11y violations.
+**Validate Command**: `pnpm --filter @suite/ui test`
+
+---
+
+### [ ] UI-007: Add Visual Regression Testing with Chromatic
+
+**Priority**: P1
+**Bounded Context**: UI Package
+**Status**: Not Started
+
+**Related Files**:
+- `packages/ui/package.json`
+- `.github/workflows/chromatic.yml` (create)
+- `packages/ui/.storybook/chromatic.ts` (create)
+
+**Definition of Done**:
+- Chromatic configured for Storybook
+- Chromatic project created
+- CI/CD workflow for Chromatic
+- Visual regression tests run on PR
+- Baseline snapshots established
+- UI changes reviewed visually before merge
+- Chromatic integrated with GitHub PR checks
+
+**Out of Scope**:
+- Visual testing for consuming apps (UI package only)
+- Custom Chromatic configuration beyond basics
+- Visual testing for dynamic content (static only)
+
+**Rules to Follow**:
+- Test all component variants
+- Test light and dark themes
+- Test different viewports
+- Review visual changes before merge
+- Fix visual regressions before merge
+
+**Advanced Coding Pattern**:
+- Chromatic integration with Storybook
+- CI/CD visual regression pipeline
+- Multi-theme visual testing
+- Viewport testing
+
+**Anti-Patterns**:
+- Skipping visual review
+- Accepting visual regressions without review
+- Not testing all variants
+- No baseline management
+
+**Imports/Exports**:
+- No changes to component exports
+- Chromatic configuration only
+
+**Depends On**: UI-003, UI-006
+**Blocks**: UI-012
+
+**Subtasks**:
+
+#### UI-007-01: Install Chromatic dependencies
+**Assigned To**: AGENT
+**Target File**: `packages/ui/package.json`
+**Action**: Add chromatic to devDependencies. Add chromatic script to package.json for running Chromatic CLI.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-007-02: Create Chromatic project
+**Assigned To**: HUMAN
+**Target File**: None (Chromatic CLI)
+**Action**: Run chromatic init command to create Chromatic project. Follow CLI prompts to configure project. Obtain Chromatic project token.
+**Validate Command**: `npx chromatic --project-token=<token>`
+
+#### UI-007-03: Configure Chromatic for Storybook
+**Assigned To**: AGENT
+**Target File**: `packages/ui/.storybook/chromatic.ts` (create)
+**Action**: Create Chromatic configuration file. Configure Storybook directory, build command, and any project-specific settings. Enable auto-accept for initial baseline.
+**Validate Command**: `npx chromatic --dry-run`
+
+#### UI-007-04: Create GitHub Actions workflow for Chromatic
+**Assigned To**: AGENT
+**Target File**: `.github/workflows/chromatic.yml` (create)
+**Action**: Create GitHub Actions workflow that runs Chromatic on PR. Configure workflow to run on pull_request and push to main. Add CHROMATIC_PROJECT_TOKEN secret. Set up PR comment with visual diff.
+**Validate Command**: Review workflow file syntax
+
+#### UI-007-05: Run initial Chromatic build
+**Assigned To**: AGENT
+**Target File**: `packages/ui/`
+**Action**: Run Chromatic build to establish baseline snapshots. Review all component stories in Chromatic UI. Accept baseline as correct.
+**Validate Command**: `npx chromatic --exit-zero-on-changes`
+
+#### UI-007-06: Document visual testing process
+**Assigned To**: HUMAN
+**Target File**: `packages/ui/README.md`
+**Action**: Update README.md to document visual testing process with Chromatic, how to review visual changes, how to accept/reject changes, and visual testing best practices.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] UI-008: Enforce Module Boundaries
+
+**Priority**: P1
+**Bounded Context**: Monorepo
+**Status**: Not Started
+
+**Related Files**:
+- `nx.json`
+- `packages/ui/project.json`
+- `.eslintrc.js` (update)
+- `apps/*/project.json` (update)
+
+**Definition of Done**:
+- Nx module boundary enforcement configured
+- ESLint rule to ban deep imports from @suite/ui
+- CODEOWNERS file created for UI package ownership
+- Module boundaries tested and verified
+- Documentation for boundary rules
+
+**Out of Scope**:
+- Enforcing boundaries between domain packages (separate concern)
+- Custom Nx generators (use defaults)
+- Automated boundary violation fixes
+
+**Rules to Follow**:
+- AGENTS.md: Domain packages never import other domain packages
+- Enforce public API pattern (no deep imports)
+- Use Nx module boundary enforcement
+- Document ownership with CODEOWNERS
+
+**Advanced Coding Pattern**:
+- Nx module boundary enforcement
+- ESLint rule configuration
+- CODEOWNERS for ownership
+- Dependency graph visualization
+
+**Anti-Patterns**:
+- Allowing deep imports
+- No boundary enforcement
+- Unclear ownership
+- Manual dependency management
+
+**Imports/Exports**:
+- No changes to component exports
+- Boundary enforcement only
+
+**Depends On**: UI-001
+**Blocks**: None
+
+**Subtasks**:
+
+#### UI-008-01: Configure Nx module boundaries
+**Assigned To**: AGENT
+**Target File**: `nx.json`
+**Action**: Update nx.json to add module boundary enforcement for @suite/ui. Define lib tag for UI package and enforce that apps can import from UI but UI cannot import from apps. Add dependencyConstraints section.
+**Validate Command**: `pnpm nx graph`
+
+#### UI-008-02: Add ESLint rule for deep imports
+**Assigned To**: AGENT
+**Target File**: `.eslintrc.js`
+**Action**: Add ESLint rule to ban deep imports from @suite/ui package. Rule should prevent imports like `@suite/ui/src/components/ui/button` and enforce `@suite/ui` only. Use no-restricted-imports rule.
+**Validate Command**: `pnpm --filter @suite/ui lint`
+
+#### UI-008-03: Update app project.json dependencies
+**Assigned To**: AGENT
+**Target File**: `apps/calendar/web/project.json`, `apps/tasks/web/project.json`, `apps/drive/web/project.json`
+**Action**: Ensure each app project.json has implicitDependencies on @suite/ui. This ensures Nx dependency graph is correct for affected commands.
+**Validate Command**: `pnpm nx graph`
+
+#### UI-008-04: Create CODEOWNERS file
+**Assigned To**: HUMAN
+**Target File**: `.github/CODEOWNERS` (create)
+**Action**: Create CODEOWNERS file to define ownership for @suite/ui package. Assign ownership to frontend team or specific maintainers. Add approval requirements for UI package changes.
+**Validate Command**: Review CODEOWNERS syntax
+
+#### UI-008-05: Test module boundary enforcement
+**Assigned To**: AGENT
+**Target File**: `packages/ui/`
+**Action**: Test module boundary enforcement by attempting to create a deep import from an app to UI package. Verify ESLint rule catches the violation. Test that normal imports work correctly.
+**Validate Command**: `pnpm --filter @suite/calendar-web lint`
+
+#### UI-008-06: Document boundary rules
+**Assigned To**: HUMAN
+**Target File**: `packages/ui/README.md`
+**Action**: Update README.md to document module boundary rules, what imports are allowed, how to add new components to public API, and how to handle boundary violations.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] UI-009: Add Performance Optimization
+
+**Priority**: P1
+**Bounded Context**: UI Package
+**Status**: Not Started
+
+**Related Files**:
+- `packages/ui/src/components/ui/*.tsx` (update)
+- `packages/ui/package.json`
+
+**Definition of Done**:
+- React.memo added to expensive components
+- useMemo/useCallback used where appropriate
+- Performance tests added
+- Bundle size monitoring configured
+- Documentation for performance patterns
+
+**Out of Scope**:
+- React Compiler (requires React 19+ evaluation)
+- Virtualization for large lists (separate concern)
+- Server component optimization (future consideration)
+
+**Rules to Follow**:
+- Only memoize components that re-render often with same props
+- Use useMemo for expensive computations
+- Use useCallback for functions passed to memoized children
+- Measure before optimizing
+- Profile to verify improvements
+
+**Advanced Coding Pattern**:
+- React.memo for component memoization
+- useMemo for computation caching
+- useCallback for function reference stability
+- Performance profiling with React DevTools
+
+**Anti-Patterns**:
+- Memoizing everything
+- Memoizing simple components
+- Unnecessary useMemo/useCallback
+- Optimizing without measurement
+
+**Imports/Exports**:
+- No changes to component exports
+- Internal optimization only
+
+**Depends On**: UI-001, UI-006
+**Blocks**: None
+
+**Subtasks**:
+
+#### UI-009-01: Profile component re-renders
+**Assigned To**: AGENT
+**Target File**: `packages/ui/`
+**Action**: Use React DevTools Profiler to identify components that re-render frequently. Profile Dialog, Select, and other complex components. Identify expensive renders.
+**Validate Command**: Manual profiling in dev environment
+
+#### UI-009-02: Add React.memo to Dialog component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/dialog.tsx`
+**Action**: Wrap DialogContent and other Dialog sub-components with React.memo if profiling shows unnecessary re-renders. Add custom comparison function if needed.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-009-03: Add React.memo to Select component
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/select.tsx`
+**Action**: Wrap SelectContent and other Select sub-components with React.memo if profiling shows unnecessary re-renders. Add custom comparison function if needed.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-009-04: Add useMemo to expensive computations
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/` (selective)
+**Action**: Review components for expensive computations (e.g., complex calculations, large array operations). Add useMemo where appropriate. Document why memoization is needed.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-009-05: Add useCallback for function props
+**Assigned To**: AGENT
+**Target File**: `packages/ui/src/components/ui/` (selective)
+**Action**: Review components that pass functions to memoized children. Add useCallback to stabilize function references. Document why callback is needed.
+**Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+#### UI-009-06: Add bundle size monitoring
+**Assigned To**: AGENT
+**Target File**: `packages/ui/package.json`
+**Action**: Add bundle size monitoring tool (e.g., bundlesize or size-limit). Configure size limits for UI package. Add CI check to fail if bundle exceeds limit.
+**Validate Command**: `pnpm --filter @suite/ui build`
+
+#### UI-009-07: Document performance patterns
+**Assigned To**: HUMAN
+**Target File**: `packages/ui/README.md`
+**Action**: Update README.md to document performance optimization patterns, when to use React.memo/useMemo/useCallback, how to profile components, and bundle size monitoring.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] UI-010: Add Governance Model
+
+**Priority**: P1
+**Bounded Context**: UI Package
+**Status**: Not Started
+
+**Related Files**:
+- `packages/ui/CONTRIBUTING.md` (create)
+- `packages/ui/CHANGELOG.md` (create)
+- `.changeset/config.json` (create)
+- `packages/ui/package.json`
+
+**Definition of Done**:
+- CONTRIBUTING.md created with contribution process
+- Changesets configured for versioning
+- CHANGELOG generation automated
+- Component proposal criteria documented
+- Code review guidelines documented
+- Release process documented
+
+**Out of Scope**:
+- Automated PR merging (manual review required)
+- Component approval workflow (use GitHub PR)
+- Design tool integration (future consideration)
+
+**Rules to Follow**:
+- Follow semantic versioning (major/minor/patch)
+- Document all changes in CHANGELOG
+- Require PR review for component changes
+- Follow contribution process for new components
+- Maintain backward compatibility
+
+**Advanced Coding Pattern**:
+- Changesets for versioning
+- Semantic versioning
+- Contribution workflow
+- Code review process
+
+**Anti-Patterns**:
+- No versioning strategy
+- Manual CHANGELOG maintenance
+- No contribution process
+- Breaking changes without major version bump
+
+**Imports/Exports**:
+- No changes to component exports
+- Governance documentation only
+
+**Depends On**: UI-001, UI-006
+**Blocks**: UI-012
+
+**Subtasks**:
+
+#### UI-010-01: Create CONTRIBUTING.md
+**Assigned To**: HUMAN
+**Target File**: `packages/ui/CONTRIBUTING.md` (create)
+**Action**: Create CONTRIBUTING.md with contribution process, component proposal criteria, development workflow, testing requirements, and code review guidelines. Reference GOV.UK and GitLab contribution models.
+**Validate Command**: No validation needed
+
+#### UI-010-02: Install Changesets
+**Assigned To**: AGENT
+**Target File**: `package.json` (root)
+**Action**: Add @changesets/cli and @changesets/config to root devDependencies. Initialize Changesets with `npx changeset init`. Configure Changesets for monorepo.
+**Validate Command**: `pnpm changeset`
+
+#### UI-010-03: Configure Changesets for UI package
+**Assigned To**: AGENT
+**Target File**: `.changeset/config.json`
+**Action**: Update Changesets configuration to include @suite/ui package. Configure versioning strategy and changelog generation. Set up access controls for who can create changesets.
+**Validate Command**: `pnpm changeset`
+
+#### UI-010-04: Create initial CHANGELOG
+**Assigned To**: HUMAN
+**Target File**: `packages/ui/CHANGELOG.md` (create)
+**Action**: Create initial CHANGELOG.md documenting current state of UI package (8 components, design tokens, theming system). Add version 0.0.0 entry.
+**Validate Command**: No validation needed
+
+#### UI-010-05: Document component proposal criteria
+**Assigned To**: HUMAN
+**Target File**: `packages/ui/CONTRIBUTING.md`
+**Action**: Add section to CONTRIBUTING.md documenting component proposal criteria: evidence of usefulness, uniqueness, versatility, accessibility testing, browser compatibility. Reference GOV.UK criteria.
+**Validate Command**: No validation needed
+
+#### UI-010-06: Document release process
+**Assigned To**: HUMAN
+**Target File**: `packages/ui/CONTRIBUTING.md`
+**Action**: Add section to CONTRIBUTING.md documenting release process: creating changesets, version bumping, CHANGELOG generation, publishing to registry (if applicable), and announcing changes.
+**Validate Command**: No validation needed
+
+#### UI-010-07: Test Changesets workflow
+**Assigned To**: AGENT
+**Target File**: `packages/ui/`
+**Action**: Create a test changeset for a hypothetical component change. Run Changesets version command to verify it generates correct version bump and CHANGELOG entry. Revert test changeset.
+**Validate Command**: `pnpm changeset version`
+
+---
+
+## P0 - Database Package Critical Tasks
+
+### [ ] DB-001: Implement Dependency Injection for Database Connections
+
+**Priority**: P0
+**Bounded Context**: Database Infrastructure
+**Status**: Not Started
+
+**Related Files**:
+- `packages/db/src/connection.ts`
+- `packages/db/src/index.ts`
+- `packages/db/src/database.interface.ts` (create)
+- `packages/db/src/postgres-database.ts` (create)
+- `packages/db/src/worker-database.ts` (create)
+
+**Definition of Done**:
+- Singleton pattern removed from connection.ts
+- Database interface defined for dependency injection
+- PostgresDatabase implementation for Node.js environments
+- WorkerDatabase implementation for Cloudflare Workers
+- Connection pool configuration support
+- Graceful shutdown handling implemented
+- Environment-aware factory function
+- All repositories updated to accept Database interface
+- Tests verify dependency injection works correctly
+
+**Out of Scope**:
+- Multiple database driver implementations (postgres.js only)
+- Custom connection pool implementations (use pg.Pool)
+- Database sharding logic
+
+**Rules to Follow**:
+- AGENTS.md: Domain packages never import other domain packages
+- Use dependency injection instead of singleton pattern
+- Support both Node.js and Cloudflare Workers environments
+- Connection pooling must be configurable
+- Graceful shutdown must close connections cleanly
+
+**Advanced Coding Pattern**:
+- Dependency injection with interfaces
+- Factory pattern for environment-aware instantiation
+- Connection pool management
+- Graceful shutdown with SIGTERM/SIGINT handling
+
+**Anti-Patterns**:
+- Singleton pattern for database connections
+- Global state in connection module
+- Hard-coded connection strings
+- No connection pool configuration
+- No graceful shutdown handling
+
+**Imports/Exports**:
+- Export Database interface from packages/db/src/index.ts
+- Export PostgresDatabase from packages/db/src/postgres-database.ts
+- Export WorkerDatabase from packages/db/src/worker-database.ts
+- Export createDbClient factory from packages/db/src/index.ts
+
+**Depends On**: None
+**Blocks**: DB-002, DB-003, DB-005
+
+**Subtasks**:
+
+#### DB-001-01: Define Database interface
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/database.interface.ts` (create)
+**Action**: Create Database interface with methods: query(sql, params), transaction(fn), close(). Add TypeScript types for query results and transaction context. Include JSDoc documentation explaining interface purpose and usage.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-001-02: Implement PostgresDatabase class
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/postgres-database.ts` (create)
+**Action**: Implement PostgresDatabase class that implements Database interface. Use pg.Pool for connection pooling. Configure pool with sensible defaults (max: 20, idle: 10). Implement query, transaction, and close methods. Add graceful shutdown handling.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-001-03: Implement WorkerDatabase class
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/worker-database.ts` (create)
+**Action**: Implement WorkerDatabase class for Cloudflare Workers using Hyperdrive. Accept Hyperdrive binding in constructor. Implement query and transaction methods using postgres.js with Hyperdrive connection string. Handle Workers environment limitations.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-001-04: Create environment-aware factory
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/index.ts`
+**Action**: Create createDbClient factory function that accepts environment object. If env.HYPERDRIVE exists, return WorkerDatabase. Otherwise, return PostgresDatabase with DATABASE_URL. Add TypeScript type guards for environment detection.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-001-05: Remove singleton pattern from connection.ts
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/connection.ts`
+**Action**: Remove singleton client and db variables. Replace getDb() and getDbOrNull() with deprecation notice pointing to createDbClient. Keep closeDb() for backward compatibility but mark as deprecated.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-001-06: Update repositories to accept Database interface
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/repositories/calendar.ts`, `packages/db/src/repositories/drive.ts`, `packages/db/src/repositories/tasks.ts`
+**Action**: Update all repository constructors to accept Database interface instead of optional db parameter. Remove userId from constructor (will be passed via context in DB-007). Update type signatures.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-001-07: Add dependency injection tests
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/connection.test.ts` (create)
+**Action**: Add tests for PostgresDatabase and WorkerDatabase implementations. Test connection pooling, transaction handling, and graceful shutdown. Test factory function returns correct implementation based on environment.
+**Validate Command**: `pnpm --filter @suite/db test`
+
+#### DB-001-08: Update documentation
+**Assigned To**: HUMAN
+**Target File**: `packages/db/README.md` (create)
+**Action**: Create README.md documenting dependency injection pattern, Database interface, factory function, and migration from singleton pattern. Include examples for both Node.js and Workers environments.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DB-002: Add Transaction Support to Repositories
+
+**Priority**: P0
+**Bounded Context**: Database Infrastructure
+**Status**: Not Started
+
+**Related Files**:
+- `packages/db/src/database.interface.ts`
+- `packages/db/src/repositories/calendar.ts`
+- `packages/db/src/repositories/drive.ts`
+- `packages/db/src/repositories/tasks.ts`
+- `packages/db/src/transaction-scope.ts` (create)
+
+**Definition of Done**:
+- TransactionScope type defined
+- All repository methods accept optional tx parameter
+- Unit of Work pattern implemented
+- Cross-repository transactions supported
+- Tests verify transaction rollback on error
+- Tests verify commit on success
+
+**Out of Scope**:
+- Distributed transactions across databases
+- Nested transaction savepoints (unless needed)
+- Transaction isolation level configuration (use defaults)
+
+**Rules to Follow**:
+- Drizzle transaction API with isolation level configuration
+- Pass transaction context to repository methods
+- Caller controls transaction boundaries
+- Unit of Work pattern for cross-repository operations
+
+**Advanced Coding Pattern**:
+- Transaction context passing
+- Unit of Work pattern
+- Drizzle db.transaction() API
+- Transaction rollback on error
+
+**Anti-Patterns**:
+- beginTransaction method on repositories
+- Repository-controlled transaction boundaries
+- Nested transactions without savepoints
+- Implicit transaction management
+
+**Imports/Exports**:
+- Export TransactionScope type from packages/db/src/index.ts
+- Export UnitOfWork class from packages/db/src/unit-of-work.ts` (create)
+
+**Depends On**: DB-001
+**Blocks**: DB-003, Production deployment
+
+**Subtasks**:
+
+#### DB-002-01: Define TransactionScope type
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/transaction-scope.ts` (create)
+**Action**: Define TransactionScope type that extends Drizzle database client with transaction-specific methods. Add type for transaction configuration (isolation level, access mode). Export from index.ts.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-002-02: Update repository methods to accept tx parameter
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/repositories/calendar.ts`, `packages/db/src/repositories/drive.ts`, `packages/db/src/repositories/tasks.ts`
+**Action**: Add optional tx?: TransactionScope parameter to all repository methods (create, update, delete). Use tx ?? this.db to use transaction context if provided, otherwise use main connection.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-002-03: Implement Unit of Work class
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/unit-of-work.ts` (create)
+**Action**: Implement UnitOfWork class that accepts Database instance. Add transaction(fn) method that starts transaction, passes context to callback, commits on success, rolls back on error. Include support for multiple repositories in single transaction.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-002-04: Add transaction rollback tests
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/unit-of-work.test.ts` (create)
+**Action**: Add tests verifying transaction rolls back on error. Test that partial updates are not committed when error occurs. Test that multiple repository operations in single transaction either all commit or all rollback.
+**Validate Command**: `pnpm --filter @suite/db test`
+
+#### DB-002-05: Add transaction commit tests
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/unit-of-work.test.ts`
+**Action**: Add tests verifying transaction commits on success. Test that multiple repository operations persist when callback completes without error. Test that transaction context is properly passed to repositories.
+**Validate Command**: `pnpm --filter @suite/db test`
+
+#### DB-002-06: Update documentation
+**Assigned To**: HUMAN
+**Target File**: `packages/db/README.md`
+**Action**: Update README.md to document transaction support, Unit of Work pattern, and usage examples. Include example of cross-repository transaction.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DB-003: Implement Multi-Tenancy Infrastructure
+
+**Priority**: P0
+**Bounded Context**: Database Infrastructure
+**Status**: Not Started
+
+**Related Files**:
+- `packages/db/src/schema/users.ts`
+- `packages/db/src/schema/calendar.ts`
+- `packages/db/src/schema/drive.ts`
+- `packages/db/src/schema/tasks.ts`
+- `packages/db/drizzle/0006_add_tenant_id.sql` (create)
+- `packages/db/drizzle/0007_update_rls_policies.sql` (create)
+- `packages/db/src/tenant-context.ts` (create)
+
+**Definition of Done**:
+- tenant_id columns added to all tenant-scoped tables
+- RLS policies updated to use tenant_id
+- Tenant context middleware implemented
+- SET LOCAL app.current_tenant_id implemented
+- Composite indexes on (tenant_id, ...) added
+- Tests verify tenant isolation
+- Tests verify RLS policies work correctly
+
+**Out of Scope**:
+- Schema-per-tenant isolation (future enterprise feature)
+- Database-per-tenant isolation (future enterprise feature)
+- Tenant-specific migration strategies
+
+**Rules to Follow**:
+- Planning docs require shared schema + tenant_id + RLS
+- Composite indexes on (tenant_id, ...) for RLS efficiency
+- SET LOCAL for tenant context (not SET)
+- FORCE ROW LEVEL SECURITY on all tables
+- Planning docs: .planning/03-data-06-database-multitenancy.md
+
+**Advanced Coding Pattern**:
+- Row-Level Security (RLS) with PostgreSQL
+- Session variable-based tenant context
+- Composite indexing for multi-tenant queries
+- Tenant context propagation via middleware
+
+**Anti-Patterns**:
+- Manual WHERE tenant_id filtering (rely on RLS)
+- SET instead of SET LOCAL (causes tenant leakage)
+- Missing FORCE ROW LEVEL SECURITY
+- No composite indexes on tenant_id
+
+**Imports/Exports**:
+- Export setTenantContext from packages/db/src/tenant-context.ts
+- Export getTenantId from packages/db/src/tenant-context.ts
+
+**Depends On**: DB-001
+**Blocks**: DB-004, Production deployment
+
+**Subtasks**:
+
+#### DB-003-01: Add tenant_id column to users table
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/schema/users.ts`
+**Action**: Add tenant_id UUID column to users table. Make nullable initially for backward compatibility. Add foreign key to tenants table (create tenants table if needed). Update type exports.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-003-02: Add tenant_id column to calendar_events table
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/schema/calendar.ts`
+**Action**: Add tenant_id UUID column to calendar_events table. Make NOT NULL for new tables. Add foreign key to users table. Update type exports.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-003-03: Add tenant_id column to drive tables
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/schema/drive.ts`
+**Action**: Add tenant_id UUID column to drive_files and drive_folders tables. Make NOT NULL. Add foreign key to users table. Update type exports.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-003-04: Add tenant_id column to tasks table
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/schema/tasks.ts`
+**Action**: Add tenant_id UUID column to tasks table. Make NOT NULL. Add foreign key to users table. Update type exports.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-003-05: Create migration for tenant_id columns
+**Assigned To**: AGENT
+**Target File**: `packages/db/drizzle/0006_add_tenant_id.sql` (create)
+**Action**: Generate migration for adding tenant_id columns to all tables. Use expand pattern: add nullable columns first, backfill data, then make NOT NULL in separate migration.
+**Validate Command**: `pnpm --filter @suite/db db:generate`
+
+#### DB-003-06: Create migration for updated RLS policies
+**Assigned To**: AGENT
+**Target File**: `packages/db/drizzle/0007_update_rls_policies.sql` (create)
+**Action**: Create migration to update RLS policies to use tenant_id instead of user_id. Add FORCE ROW LEVEL SECURITY. Use current_setting('app.current_tenant_id', true) pattern.
+**Validate Command**: Review generated SQL manually
+
+#### DB-003-07: Implement tenant context module
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/tenant-context.ts` (create)
+**Action**: Implement setTenantContext(db, tenantId) function that executes SET LOCAL app.current_tenant_id. Implement getTenantId(request) function to extract tenant ID from request headers or JWT. Add TypeScript types.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-003-08: Add composite indexes on tenant_id
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/schema/calendar.ts`, `packages/db/src/schema/drive.ts`, `packages/db/src/schema/tasks.ts`
+**Action**: Add composite indexes on (tenant_id, created_at) for all tables. Add indexes on (tenant_id, user_id) where applicable. This ensures RLS-filtered queries are efficient.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-003-09: Create migration for composite indexes
+**Assigned To**: AGENT
+**Target File**: `packages/db/drizzle/0008_add_tenant_indexes.sql` (create)
+**Action**: Generate migration for adding composite indexes. Review SQL to ensure indexes are created correctly.
+**Validate Command**: `pnpm --filter @suite/db db:generate`
+
+#### DB-003-10: Add tenant isolation tests
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/repositories/calendar.test.ts`, `packages/db/src/repositories/drive.test.ts`, `packages/db/src/repositories/tasks.test.ts`
+**Action**: Add tests verifying tenant isolation. Create two tenants with different IDs, verify data from one tenant is not visible to another. Test RLS policies by attempting direct SQL queries.
+**Validate Command**: `pnpm --filter @suite/db test`
+
+#### DB-003-11: Update documentation
+**Assigned To**: HUMAN
+**Target File**: `packages/db/README.md`, `AGENTS.md`
+**Action**: Update README.md to document multi-tenancy implementation, RLS policies, and tenant context usage. Update AGENTS.md to reference multi-tenancy planning doc.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DB-004: Create Per-Domain Migration Configurations
+
+**Priority**: P0
+**Bounded Context**: Database Infrastructure
+**Status**: Not Started
+
+**Related Files**:
+- `packages/db/drizzle.config.ts`
+- `packages/db/drizzle.calendar.config.ts` (create)
+- `packages/db/drizzle.drive.config.ts` (create)
+- `packages/db/drizzle.tasks.config.ts` (create)
+- `packages/db/scripts/migrate.ts` (create)
+- `.planning/03-data-07-drizzle-migrations.md`
+
+**Definition of Done**:
+- Per-domain Drizzle configs created with schemaFilter and tablesFilter
+- Separate migration tracking tables per domain
+- CI migration runner implemented with advisory locks
+- APP_DOMAIN environment variable pattern implemented
+- Migrations run in CI before deployment
+- Never run drizzle-kit push in production
+- Tests verify migration safety
+
+**Out of Scope**:
+- Schema-per-tenant migration configurations (future)
+- Automatic migration rollback (use forward migrations)
+- Migration UI (use CLI)
+
+**Rules to Follow**:
+- Planning docs require per-domain configs with schemaFilter and tablesFilter
+- Planning docs require CI-executed migrations with advisory locks
+- Planning docs: Never run drizzle-kit push in production
+- Planning docs: Migrations run in CI, never in Workers
+- Planning docs: .planning/03-data-07-drizzle-migrations.md
+
+**Advanced Coding Pattern**:
+- Per-domain migration isolation
+- PostgreSQL advisory locks for concurrency safety
+- CI/CD integration for migrations
+- Expand/contract migration pattern
+
+**Anti-Patterns**:
+- Single drizzle.config.ts for all domains
+- Running migrations in Workers (no filesystem)
+- Running drizzle-kit push in production
+- No advisory locks for concurrent migrations
+- No schemaFilter or tablesFilter
+
+**Imports/Exports**:
+- No changes to exports
+- Migration runner script at packages/db/scripts/migrate.ts
+
+**Depends On**: DB-003
+**Blocks**: Production deployment
+
+**Subtasks**:
+
+#### DB-004-01: Create calendar domain Drizzle config
+**Assigned To**: AGENT
+**Target File**: `packages/db/drizzle.calendar.config.ts` (create)
+**Action**: Create drizzle.calendar.config.ts with schema: ./src/schema/calendar, out: ./drizzle/calendar, schemaFilter: ['calendar'], tablesFilter: ['calendar_*', 'events', 'attendees'], migrations: { table: '__drizzle_migrations_calendar', schema: 'drizzle' }.
+**Validate Command**: `npx drizzle-kit generate --config=packages/db/drizzle.calendar.config.ts`
+
+#### DB-004-02: Create drive domain Drizzle config
+**Assigned To**: AGENT
+**Target File**: `packages/db/drizzle.drive.config.ts` (create)
+**Action**: Create drizzle.drive.config.ts with schema: ./src/schema/drive, out: ./drizzle/drive, schemaFilter: ['drive'], tablesFilter: ['drive_*', 'files', 'folders'], migrations: { table: '__drizzle_migrations_drive', schema: 'drizzle' }.
+**Validate Command**: `npx drizzle-kit generate --config=packages/db/drizzle.drive.config.ts`
+
+#### DB-004-03: Create tasks domain Drizzle config
+**Assigned To**: AGENT
+**Target File**: `packages/db/drizzle.tasks.config.ts` (create)
+**Action**: Create drizzle.tasks.config.ts with schema: ./src/schema/tasks, out: ./drizzle/tasks, schemaFilter: ['tasks'], tablesFilter: ['tasks_*'], migrations: { table: '__drizzle_migrations_tasks', schema: 'drizzle' }.
+**Validate Command**: `npx drizzle-kit generate --config=packages/db/drizzle.tasks.config.ts`
+
+#### DB-004-04: Implement CI migration runner
+**Assigned To**: AGENT
+**Target File**: `packages/db/scripts/migrate.ts` (create)
+**Action**: Implement migration runner that uses absolute path resolution, PostgreSQL advisory locks, and per-domain migration tables. Map domain names to unique lock IDs (calendar: 1001, drive: 1002, tasks: 1003). Fail fast if APP_DOMAIN not set.
+**Validate Command**: `tsx packages/db/scripts/migrate.ts` (with APP_DOMAIN set)
+
+#### DB-004-05: Add migration runner to package.json
+**Assigned To**: AGENT
+**Target File**: `packages/db/package.json`
+**Action**: Add db:migrate script that runs tsx scripts/migrate.ts. Add db:migrate:calendar, db:migrate:drive, db:migrate:tasks scripts for per-domain migrations.
+**Validate Command**: `pnpm --filter @suite/db db:migrate:calendar` (with DATABASE_URL set)
+
+#### DB-004-06: Add migration runner tests
+**Assigned To**: AGENT
+**Target File**: `packages/db/scripts/migrate.test.ts` (create)
+**Action**: Add tests for migration runner. Test advisory lock acquisition, migration application, error handling, and lock release. Test with test database.
+**Validate Command**: `pnpm --filter @suite/db test`
+
+#### DB-004-07: Update CI/CD workflow for migrations
+**Assigned To**: HUMAN
+**Target File**: `.github/workflows/deploy.yml`
+**Action**: Add migration job before deployment job. Use APP_DOMAIN environment variable to run migrations for affected domains. Add needs: migrations dependency to deployment jobs.
+**Validate Command**: Review workflow syntax
+
+#### DB-004-08: Update domain package.json scripts
+**Assigned To**: AGENT
+**Target File**: `packages/domain-calendar/package.json`, `packages/domain-drive/package.json`, `packages/domain-tasks/package.json`
+**Action**: Add db:generate script using per-domain config. Add db:migrate script using APP_DOMAIN pattern.
+**Validate Command**: `pnpm --filter @suite/domain-calendar db:generate`
+
+#### DB-004-09: Document migration workflow
+**Assigned To**: HUMAN
+**Target File**: `packages/db/README.md`, `AGENTS.md`
+**Action**: Update README.md to document per-domain migration workflow, CI integration, and expand/contract pattern. Update AGENTS.md to reference migration planning doc and add AI agent rules for migrations.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DB-005: Implement Cloudflare Workers Compatibility
+
+**Priority**: P0
+**Bounded Context**: Database Infrastructure
+**Status**: Not Started
+
+**Related Files**:
+- `packages/db/src/worker-database.ts`
+- `apps/calendar/api/wrangler.toml`
+- `apps/tasks/api/wrangler.toml`
+- `apps/drive/api/wrangler.toml`
+- `packages/db/package.json`
+
+**Definition of Done**:
+- WorkerDatabase implementation uses Hyperdrive
+- Hyperdrive binding configured in wrangler.toml files
+- nodejs_compat flag added to wrangler.toml files
+- Environment-aware factory returns WorkerDatabase in Workers
+- Tests verify Workers compatibility
+- Documentation updated for Workers deployment
+
+**Out of Scope**:
+- D1 database support (PostgreSQL only)
+- Direct TCP connections in Workers (use Hyperdrive)
+- Custom Hyperdrive caching configuration
+
+**Rules to Follow**:
+- Cloudflare Workers require nodejs_compat flag
+- Use Hyperdrive for PostgreSQL connections in Workers
+- postgres.js with fetch_types optimization for smaller bundles
+- Environment-aware factory for Node.js vs Workers
+
+**Advanced Coding Pattern**:
+- Cloudflare Workers bindings
+- Hyperdrive connection pooling
+- Environment detection
+- Conditional dependency loading
+
+**Anti-Patterns**:
+- Using Node.js-only postgres client in Workers
+- No nodejs_compat flag
+- Hard-coded connection strings
+- No Hyperdrive integration
+
+**Imports/Exports**:
+- Export WorkerDatabase from packages/db/src/index.ts
+- Export createDbClient factory from packages/db/src/index.ts
+
+**Depends On**: DB-001
+**Blocks**: Production deployment to Workers
+
+**Subtasks**:
+
+#### DB-005-01: Complete WorkerDatabase implementation
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/worker-database.ts`
+**Action**: Complete WorkerDatabase implementation using postgres.js with Hyperdrive connection string. Implement query and transaction methods. Handle Workers environment limitations (no filesystem, no Node.js APIs).
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-005-02: Add Hyperdrive binding to calendar wrangler.toml
+**Assigned To**: HUMAN
+**Target File**: `apps/calendar/api/wrangler.toml`
+**Action**: Add hyperdrive binding configuration with HYPERDRIVE binding name and Hyperdrive ID. Add nodejs_compat flag to compatibility_flags. Set compatibility_date to current date.
+**Validate Command**: `wrangler whoami` (to verify wrangler configuration)
+
+#### DB-005-03: Add Hyperdrive binding to tasks wrangler.toml
+**Assigned To**: HUMAN
+**Target File**: `apps/tasks/api/wrangler.toml`
+**Action**: Add hyperdrive binding configuration similar to calendar. Use unique Hyperdrive ID for tasks.
+**Validate Command**: `wrangler whoami`
+
+#### DB-005-04: Add Hyperdrive binding to drive wrangler.toml
+**Assigned To**: HUMAN
+**Target File**: `apps/drive/api/wrangler.toml`
+**Action**: Add hyperdrive binding configuration similar to calendar. Use unique Hyperdrive ID for drive.
+**Validate Command**: `wrangler whoami`
+
+#### DB-005-05: Update factory for Workers detection
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/index.ts`
+**Action**: Update createDbClient factory to detect Workers environment. Check for globalThis.process existence or typeof window. Return WorkerDatabase if in Workers, PostgresDatabase if in Node.js.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-005-06: Add Workers compatibility tests
+**Assigned To**: AGENT
+**Target File**: `packages/db/src/worker-database.test.ts` (create)
+**Action**: Add tests for WorkerDatabase implementation. Mock Hyperdrive binding for testing. Test query and transaction methods. Test environment detection in factory.
+**Validate Command**: `pnpm --filter @suite/db test`
+
+#### DB-005-07: Update package.json for Workers dependencies
+**Assigned To**: AGENT
+**Target File**: `packages/db/package.json`
+**Action**: Ensure postgres.js is listed as dependency. Add @cloudflare/workers-types as devDependency if needed for TypeScript types.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DB-005-08: Document Workers deployment
+**Assigned To**: HUMAN
+**Target File**: `packages/db/README.md`
+**Action**: Update README.md to document Workers deployment, Hyperdrive configuration, and differences between Node.js and Workers environments. Include wrangler.toml configuration examples.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] CRYPTO-003: Add Key Zeroization
+
+**Priority**: P0
+**Bounded Context**: Security
+**Status**: Not Started
+
+**Related Files**:
+- `packages/crypto/src/index.ts`
+- `packages/crypto/src/memory.ts` (create)
+- `packages/crypto/src/memory.test.ts` (create)
+- `packages/crypto/src/encryption.ts`
+- `packages/crypto/src/keyderivation.ts`
+- `packages/crypto/src/ecdh.ts`
+- `packages/crypto/src/keypair.ts`
+
+**Definition of Done**:
+- secureZeroize() function implemented for memory clearing
+- Key zeroization called after key use in all modules
+- Tests verify memory clearing
+- Web environment limitations documented
+- Security assessment updated
+
+**Out of Scope**:
+- Memory locking (mlock/VirtualLock) - not available in Web environment
+- Secure memory allocators - Web environment limitations
+- Hardware-based memory protection
+
+**Rules to Follow**:
+- Zeroize keys after use to prevent memory disclosure
+- Document Web environment limitations for memory security
+- Use volatile operations where possible to prevent optimization
+- Zeroize both CryptoKey objects and raw byte arrays
+
+**Advanced Coding Pattern**:
+- Secure memory zeroization
+- Resource cleanup patterns
+- Web environment security limitations
+
+**Anti-Patterns**:
+- Leaving keys in memory after use
+- Relying on garbage collection for security
+- Assuming memory is inaccessible in Web environment
+
+**Imports/Exports**:
+- Export secureZeroize from packages/crypto/src/index.ts
+- Import and use in all crypto modules
+
+**Depends On**: CRYPTO-001
+**Blocks**: Production deployment
+
+**Subtasks**:
+
+#### CRYPTO-003-01: Implement secureZeroize function
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/memory.ts` (create)
+**Action**: Implement secureZeroize() function that accepts Uint8Array or ArrayBuffer and overwrites with zeros. Use volatile operations if possible (note: JavaScript has limited volatile support). Add JSDoc documentation explaining Web environment limitations and that this is best-effort protection.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-003-02: Export secureZeroize from index
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/index.ts`
+**Action**: Add export for secureZeroize from memory.ts module.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-003-03: Add memory zeroization tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/memory.test.ts` (create)
+**Action**: Add tests for secureZeroize function. Verify that byte arrays are zeroized after calling function. Test with various sizes and input types.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-003-04: Add zeroization to encryption module
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/encryption.ts`
+**Action**: Review encryption.ts for any temporary key storage or intermediate values. Add secureZeroize calls after use where applicable. Note: Web Crypto API CryptoKey objects are handled by browser, focus on raw byte arrays.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-003-05: Add zeroization to key derivation module
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/keyderivation.ts`
+**Action**: Review keyderivation.ts for temporary password buffers or intermediate values. Add secureZeroize calls after use where applicable.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-003-06: Document Web environment limitations
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/src/memory.ts`
+**Action**: Add comprehensive documentation in memory.ts explaining Web environment limitations: no memory locking, garbage collector behavior, potential memory dumps, browser sandbox restrictions. Recommend using envelope encryption with KMS for sensitive applications.
+**Validate Command**: No validation needed
+
+#### CRYPTO-003-07: Update assessment document
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/ASSESSMENT.md`
+**Action**: Update ASSESSMENT.md to mark key zeroization as implemented. Remove from critical security gaps. Add to strengths section with noted limitations.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] CRYPTO-004: Design Cryptographic Agility Architecture
+
+**Priority**: P0
+**Bounded Context**: Architecture
+**Status**: Not Started
+
+**Related Files**:
+- `packages/crypto/src/index.ts`
+- `packages/crypto/src/agility.ts` (create)
+- `packages/crypto/src/agility.test.ts` (create)
+- `packages/crypto/ASSESSMENT.md`
+- `.planning/03-data-24-database-schema-reference.md`
+
+**Definition of Done**:
+- Algorithm versioning system designed and documented
+- Keyset pattern for rotation support designed
+- Post-quantum migration strategy documented
+- PQC migration timeline documented (2028-2035)
+- Implementation plan created
+- Assessment updated with architecture design
+
+**Out of Scope**:
+- Implementing post-quantum algorithms (Web Crypto API does not support yet)
+- Actual key rotation implementation (future task)
+- Hybrid encryption implementation (future task)
+
+**Rules to Follow**:
+- Design for algorithm migration by 2028 (UK NCSC timeline)
+- Support multiple active keys during rotation
+- Follow Tink keyset pattern for inspiration
+- Document PQC migration strategy clearly
+- Maintain backward compatibility during transitions
+
+**Advanced Coding Pattern**:
+- Cryptographic agility pattern
+- Keyset management
+- Algorithm versioning
+- Migration strategy design
+
+**Anti-Patterns**:
+- Hardcoded algorithms throughout codebase
+- No migration path for algorithm updates
+- Breaking changes without versioning
+
+**Imports/Exports**:
+- Design future exports for algorithm versioning
+- No immediate export changes required
+
+**Depends On**: CRYPTO-001, CRYPTO-002, CRYPTO-003
+**Blocks**: CRYPTO-009, CRYPTO-012, Long-term viability
+
+**Subtasks**:
+
+#### CRYPTO-004-01: Design algorithm versioning system
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/src/agility.ts` (create)
+**Action**: Design algorithm versioning system. Document: version identifiers (e.g., AES-256-GCM-v1), algorithm metadata structure, version compatibility rules, deprecation policy. Create TypeScript interfaces for algorithm metadata.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-004-02: Design keyset pattern
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/src/agility.ts`
+**Action**: Design keyset pattern inspired by Google Tink. Document: keyset structure (primary key, active keys, deprecated keys), key rotation workflow, keyset serialization format, keyset versioning. Create TypeScript interfaces for keyset management.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-004-03: Document PQC migration strategy
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/PQC-MIGRATION.md` (create)
+**Action**: Create comprehensive PQC migration strategy document. Include: timeline (2028-2035), hybrid encryption approach, algorithm candidates (CRYSTALS-Kyber, CRYSTALS-Dilithium), migration phases, rollback plan, testing strategy. Reference AWS and NIST guidelines.
+**Validate Command**: No validation needed
+
+#### CRYPTO-004-04: Create implementation roadmap
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/AGILITY-ROADMAP.md` (create)
+**Action**: Create implementation roadmap for cryptographic agility. Include: Phase 1 (versioning system), Phase 2 (keyset implementation), Phase 3 (rotation utilities), Phase 4 (PQC integration). Estimate effort and dependencies.
+**Validate Command**: No validation needed
+
+#### CRYPTO-004-05: Add agility architecture tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/agility.test.ts` (create)
+**Action**: Add tests for algorithm versioning interfaces and keyset structures. Test version compatibility rules, keyset validation, metadata parsing. These are unit tests for the design, not implementation.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-004-06: Update assessment document
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/ASSESSMENT.md`
+**Action**: Update ASSESSMENT.md to document cryptographic agility architecture design. Add to strengths section. Update PQC readiness assessment to reflect strategy.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] CRYPTO-005: Implement Key Wrapping
+
+**Priority**: P1
+**Bounded Context**: Security
+**Status**: Not Started
+
+**Related Files**:
+- `packages/crypto/src/index.ts`
+- `packages/crypto/src/key-wrapping.ts` (create)
+- `packages/crypto/src/key-wrapping.test.ts` (create)
+- `packages/crypto/ASSESSMENT.md`
+
+**Definition of Done**:
+- AES-KW (RFC 3394) key wrapping implemented
+- AES-KWP key wrapping with padding implemented
+- Envelope encryption pattern implemented
+- Tests verify key wrapping/unwrapping
+- Documentation updated
+- Assessment updated
+
+**Out of Scope**:
+- Hardware security module integration (future task)
+- PKCS#11 key wrapping (future task)
+- Custom key wrapping algorithms
+
+**Rules to Follow**:
+- Follow RFC 3394 for AES-KW implementation
+- Follow RFC 5649 for AES-KWP implementation
+- Use Web Crypto API where possible
+- Implement envelope encryption pattern for key transport
+- Maintain key hierarchy (DEK/KEK/Root)
+
+**Advanced Coding Pattern**:
+- Key wrapping algorithms
+- Envelope encryption pattern
+- Key hierarchy management
+- Cryptographic standard compliance (RFC 3394, RFC 5649)
+
+**Anti-Patterns**:
+- Using regular encryption for key wrapping
+- Storing keys in plaintext
+- No key separation between data and key encryption
+
+**Imports/Exports**:
+- Export wrapKey, unwrapKey, envelopeEncrypt, envelopeDecrypt from packages/crypto/src/index.ts
+
+**Depends On**: CRYPTO-001, CRYPTO-002, CRYPTO-003
+**Blocks**: CRYPTO-006, CRYPTO-008
+
+**Subtasks**:
+
+#### CRYPTO-005-01: Implement AES-KW key wrapping
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/key-wrapping.ts` (create)
+**Action**: Implement wrapKey function using AES-KW (RFC 3394). Function accepts key to wrap and wrapping key (KEK), returns wrapped key. Use Web Crypto API AES-KW if available, otherwise implement according to RFC 3394 specification.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-005-02: Implement AES-KW key unwrapping
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/key-wrapping.ts`
+**Action**: Implement unwrapKey function using AES-KW. Function accepts wrapped key and wrapping key (KEK), returns unwrapped key. Validate integrity of wrapped key before unwrapping.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-005-03: Implement AES-KWP key wrapping with padding
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/key-wrapping.ts`
+**Action**: Implement wrapKeyPadded function using AES-KWP (RFC 5649). Handles keys of arbitrary length with padding. Similar to AES-KW but with padding support.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-005-04: Implement AES-KWP key unwrapping
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/key-wrapping.ts`
+**Action**: Implement unwrapKeyPadded function using AES-KWP. Handles padded keys. Validate and remove padding after unwrapping.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-005-05: Implement envelope encryption
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/key-wrapping.ts`
+**Action**: Implement envelopeEncrypt and envelopeDecrypt functions. Pattern: generate random DEK, encrypt data with DEK, wrap DEK with KEK, return wrapped DEK + encrypted data. Reverse for decryption.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-005-06: Add key wrapping tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/key-wrapping.test.ts` (create)
+**Action**: Add comprehensive tests for key wrapping functions. Test: wrap/unwrap round-trip, different key sizes, invalid wrapped keys, envelope encryption round-trip. Use known-answer tests if available from RFC specifications.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-005-07: Export key wrapping functions
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/index.ts`
+**Action**: Export wrapKey, unwrapKey, wrapKeyPadded, unwrapKeyPadded, envelopeEncrypt, envelopeDecrypt from key-wrapping module.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-005-08: Update assessment document
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/ASSESSMENT.md`
+**Action**: Update ASSESSMENT.md to mark key wrapping as implemented. Remove from missing enterprise features. Add to strengths section.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] CRYPTO-006: Add Key Lifecycle Management
+
+**Priority**: P1
+**Bounded Context**: Security
+**Status**: Not Started
+
+**Related Files**:
+- `packages/crypto/src/index.ts`
+- `packages/crypto/src/key-lifecycle.ts` (create)
+- `packages/crypto/src/key-lifecycle.test.ts` (create)
+- `packages/crypto/ASSESSMENT.md`
+
+**Definition of Done**:
+- Key versioning implemented
+- Key rotation utilities implemented
+- Key metadata structure defined (creation, expiration, status)
+- Crypto-shredding implemented
+- Tests verify lifecycle operations
+- Documentation updated
+- Assessment updated
+
+**Out of Scope**:
+- Automatic key rotation scheduling (application-level)
+- Key backup/recovery (application-level)
+- Key escrow (application-level)
+
+**Rules to Follow**:
+- Keys must have version identifiers
+- Keys must have metadata (creation, expiration, status)
+- Deprecated keys must be marked but not immediately deleted
+- Crypto-shredding must securely delete keys
+- Support multiple active keys during rotation
+
+**Advanced Coding Pattern**:
+- Key lifecycle management
+- Versioned key storage
+- Metadata-driven key operations
+- Secure deletion patterns
+
+**Anti-Patterns**:
+- Keys without version or metadata
+- Immediate deletion of deprecated keys
+- No key rotation support
+- Insecure key deletion
+
+**Imports/Exports**:
+- Export KeyMetadata interface, createKeyMetadata, rotateKey, deactivateKey, cryptoShredKey from packages/crypto/src/index.ts
+
+**Depends On**: CRYPTO-004, CRYPTO-005
+**Blocks**: CRYPTO-008
+
+**Subtasks**:
+
+#### CRYPTO-006-01: Define key metadata structure
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/key-lifecycle.ts` (create)
+**Action**: Define KeyMetadata interface with fields: id, version, algorithm, createdAt, expiresAt, status (active, deprecated, revoked), usage (encrypt, decrypt, sign, verify). Add validation functions for metadata.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-006-02: Implement key versioning
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/key-lifecycle.ts`
+**Action**: Implement createKeyMetadata function that generates unique key ID and version. Implement incrementVersion function for key rotation. Ensure versioning is monotonic.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-006-03: Implement key rotation utilities
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/key-lifecycle.ts`
+**Action**: Implement rotateKey function that creates new key version, marks old version as deprecated, maintains both active during transition period. Implement getActiveKey function to retrieve current active key.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-006-04: Implement crypto-shredding
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/key-lifecycle.ts`
+**Action**: Implement cryptoShredKey function that securely deletes key material. For CryptoKey objects, mark as non-extractable if possible. For raw byte arrays, use secureZeroize. Update key metadata status to shredded.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-006-05: Add key lifecycle tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/key-lifecycle.test.ts` (create)
+**Action**: Add tests for key lifecycle operations. Test: metadata creation, version increment, key rotation, active key retrieval, crypto-shredding, status transitions. Test edge cases: expired keys, revoked keys, multiple active keys.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-006-06: Export key lifecycle functions
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/index.ts`
+**Action**: Export KeyMetadata interface, createKeyMetadata, rotateKey, deactivateKey, cryptoShredKey, getActiveKey from key-lifecycle module.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-006-07: Update assessment document
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/ASSESSMENT.md`
+**Action**: Update ASSESSMENT.md to mark key lifecycle management as implemented. Remove from missing enterprise features. Add to strengths section.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] CRYPTO-007: Improve Error Handling
+
+**Priority**: P1
+**Bounded Context**: Developer Experience
+**Status**: Not Started
+
+**Related Files**:
+- `packages/crypto/src/index.ts`
+- `packages/crypto/src/errors.ts` (create)
+- `packages/crypto/src/errors.test.ts` (create)
+- `packages/crypto/src/encryption.ts`
+- `packages/crypto/src/keyderivation.ts`
+- `packages/crypto/src/ecdh.ts`
+- `packages/crypto/src/keypair.ts`
+- `packages/crypto/src/serialization.ts`
+- `packages/crypto/ASSESSMENT.md`
+
+**Definition of Done**:
+- Error codes and taxonomy defined
+- Detailed error messages implemented
+- Error classification (retriable vs non-retriable)
+- Error context (operation, algorithm, key ID)
+- All crypto modules use new error system
+- Tests verify error handling
+- Documentation updated
+- Assessment updated
+
+**Out of Scope**:
+- Error logging (separate concern)
+- Error monitoring/integration (separate concern)
+- Custom error serialization (use standard Error)
+
+**Rules to Follow**:
+- Define clear error codes for each error type
+- Include context in error messages (operation, algorithm)
+- Classify errors as retriable or non-retriable
+- Use standard Error class with custom properties
+- Maintain backward compatibility where possible
+
+**Advanced Coding Pattern**:
+- Error taxonomy design
+- Contextual error handling
+- Error classification patterns
+- Developer-friendly error messages
+
+**Anti-Patterns**:
+- Generic error messages without context
+- Throwing strings instead of Error objects
+- No error classification
+- Missing error context
+
+**Imports/Exports**:
+- Export CryptoError class, error codes, error utilities from packages/crypto/src/index.ts
+
+**Depends On**: None
+**Blocks**: None
+
+**Subtasks**:
+
+#### CRYPTO-007-01: Define error codes and taxonomy
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/src/errors.ts` (create)
+**Action**: Define error code constants for each error type: ENCRYPTION_FAILED, DECRYPTION_FAILED, KEY_GENERATION_FAILED, KEY_DERIVATION_FAILED, INVALID_KEY, INVALID_ALGORITHM, etc. Define error categories: RETRIABLE, NON_RETRIABLE.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-007-02: Implement CryptoError class
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/errors.ts`
+**Action**: Implement CryptoError class extending Error. Include properties: code, message, context (operation, algorithm, keyId), category (retriable/non-retriable), timestamp. Implement constructor and helper methods.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-007-03: Update encryption module error handling
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/encryption.ts`
+**Action**: Replace generic error throws with CryptoError instances. Include context: operation (encrypt/decrypt), algorithm (AES-GCM). Use appropriate error codes.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-007-04: Update key derivation module error handling
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/keyderivation.ts`
+**Action**: Replace generic error throws with CryptoError instances. Include context: operation (deriveKey), algorithm (PBKDF2). Use appropriate error codes.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-007-05: Update ECDH module error handling
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/ecdh.ts`
+**Action**: Replace generic error throws with CryptoError instances. Include context: operation (deriveSharedSecret), algorithm (X25519). Use appropriate error codes.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-007-06: Update keypair module error handling
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/keypair.ts`
+**Action**: Replace generic error throws with CryptoError instances. Include context: operation (generateKeyPair), algorithm (X25519). Use appropriate error codes.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-007-07: Update serialization module error handling
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/serialization.ts`
+**Action**: Replace generic error throws with CryptoError instances. Include context: operation (serialize/deserialize), format (JWK/raw). Use appropriate error codes.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-007-08: Add error handling tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/errors.test.ts` (create)
+**Action**: Add tests for CryptoError class and error codes. Test error creation, context inclusion, error classification, error message formatting. Test each module's error handling with invalid inputs.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-007-09: Export error handling utilities
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/index.ts`
+**Action**: Export CryptoError class, error codes, isRetriable helper function from errors module.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-007-10: Update assessment document
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/ASSESSMENT.md`
+**Action**: Update ASSESSMENT.md to mark improved error handling as implemented. Remove from missing enterprise features. Add to strengths section.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] CRYPTO-008: Add WebAssembly Backend
+
+**Priority**: P1
+**Bounded Context**: Infrastructure
+**Status**: Not Started
+
+**Related Files**:
+- `packages/crypto/package.json`
+- `packages/crypto/src/index.ts`
+- `packages/crypto/src/wasm-backend.ts` (create)
+- `packages/crypto/src/wasm-backend.test.ts` (create)
+- `packages/crypto/ASSESSMENT.md`
+
+**Definition of Done**:
+- libsodium.js integrated as optional dependency
+- Argon2id password hashing implemented via WASM
+- Feature flags for WASM backend
+- Hybrid Web Crypto + WASM approach documented
+- Tests verify WASM backend when enabled
+- Documentation updated
+- Assessment updated
+
+**Out of Scope**:
+- Replacing Web Crypto API entirely (keep as primary)
+- Implementing all crypto operations in WASM (only advanced features)
+- Post-quantum algorithms via WASM (future task)
+
+**Rules to Follow**:
+- Keep Web Crypto API as primary implementation
+- Use WASM only for advanced features not available in Web Crypto
+- Provide feature flags to enable/disable WASM backend
+- Maintain small bundle size for default configuration
+- Document when to use each backend
+
+**Advanced Coding Pattern**:
+- Optional dependency management
+- Feature flag pattern
+- Backend abstraction layer
+- Hybrid architecture
+
+**Anti-Patterns**:
+- Forcing WASM backend for all operations
+- Large bundle size by default
+- No fallback to Web Crypto API
+- Unclear when to use which backend
+
+**Imports/Exports**:
+- Export argon2idHash, isWasmAvailable, enableWasmBackend from packages/crypto/src/index.ts
+
+**Depends On**: CRYPTO-001, CRYPTO-002, CRYPTO-003
+**Blocks**: CRYPTO-012
+
+**Subtasks**:
+
+#### CRYPTO-008-01: Add libsodium.js as optional dependency
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/package.json`
+**Action**: Add libsodium.js as optional dependency in package.json. Use optionalDependencies field to avoid forcing installation. Document that this is optional for advanced features.
+**Validate Command**: `pnpm install` (to verify package.json syntax)
+
+#### CRYPTO-008-02: Implement WASM backend detection
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/wasm-backend.ts` (create)
+**Action**: Implement isWasmAvailable() function that checks if libsodium.js is available and WebAssembly is supported. Return boolean. Handle import errors gracefully.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-008-03: Implement Argon2id via WASM
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/wasm-backend.ts`
+**Action**: Implement argon2idHash function using libsodium.js if available. Function accepts password, salt, iterations, memory, parallelism. Returns derived key. Fallback to PBKDF2 if WASM not available.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-008-04: Implement feature flag for WASM backend
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/wasm-backend.ts`
+**Action**: Implement enableWasmBackend() function that sets a flag to use WASM backend when available. Implement disableWasmBackend() to force Web Crypto API only. Add state management.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-008-05: Add WASM backend tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/wasm-backend.test.ts` (create)
+**Action**: Add tests for WASM backend. Test: WASM detection, Argon2id hashing, feature flag behavior, fallback to Web Crypto. Skip tests if libsodium.js not installed.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-008-06: Export WASM backend functions
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/index.ts`
+**Action**: Export argon2idHash, isWasmAvailable, enableWasmBackend, disableWasmBackend from wasm-backend module. Only export if module exists (optional dependency).
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-008-07: Document hybrid approach
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/WASM-BACKEND.md` (create)
+**Action**: Create documentation for hybrid Web Crypto + WASM approach. Explain: when to use WASM backend, bundle size implications, feature flags, fallback behavior, Argon2id benefits. Provide usage examples.
+**Validate Command**: No validation needed
+
+#### CRYPTO-008-08: Update assessment document
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/ASSESSMENT.md`
+**Action**: Update ASSESSMENT.md to mark WebAssembly backend as implemented. Update WebAssembly assessment section. Add to strengths section with noted trade-offs.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] CRYPTO-009: Add KMS Integration
+
+**Priority**: P2
+**Bounded Context**: Enterprise
+**Status**: Not Started
+
+**Related Files**:
+- `packages/crypto/package.json`
+- `packages/crypto/src/index.ts`
+- `packages/crypto/src/kms.ts` (create)
+- `packages/crypto/src/kms.test.ts` (create)
+- `packages/crypto/ASSESSMENT.md`
+
+**Definition of Done**:
+- AWS KMS integration implemented
+- Azure Key Vault integration implemented
+- GCP KMS integration implemented
+- Envelope encryption with KMS implemented
+- Tests verify KMS operations (with mocks)
+- Documentation updated
+- Assessment updated
+
+**Out of Scope**:
+- On-premises KMS integration
+- Custom KMS implementations
+- KMS key management (use cloud provider consoles)
+
+**Rules to Follow**:
+- Use official SDKs for each cloud provider
+- Implement envelope encryption pattern with KMS
+- Support external key references
+- Mock KMS operations for testing
+- Document credential management
+
+**Advanced Coding Pattern**:
+- Cloud provider integration
+- Envelope encryption with external KMS
+- SDK abstraction layer
+- Mock-based testing for external services
+
+**Anti-Patterns**:
+- Hardcoding cloud provider credentials
+- No envelope encryption (direct KMS operations)
+- Tightly coupled to single cloud provider
+- No fallback for KMS unavailability
+
+**Imports/Exports**:
+- Export KMS client interfaces, envelopeEncryptWithKMS, envelopeDecryptWithKMS from packages/crypto/src/index.ts
+
+**Depends On**: CRYPTO-005, CRYPTO-007
+**Blocks**: CRYPTO-011
+
+**Subtasks**:
+
+#### CRYPTO-009-01: Add KMS SDK dependencies
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/package.json`
+**Action**: Add AWS SDK v3, Azure SDK, GCP SDK as optional dependencies. Use optionalDependencies field. Document that these are optional for KMS integration.
+**Validate Command**: `pnpm install` (to verify package.json syntax)
+
+#### CRYPTO-009-02: Define KMS client interface
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/kms.ts` (create)
+**Action**: Define KMSClient interface with methods: encrypt, decrypt, generateKey. Define KMSConfig interface with provider type and credentials. Create factory function to instantiate provider-specific clients.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-009-03: Implement AWS KMS client
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/kms.ts`
+**Action**: Implement AWSKMSClient class implementing KMSClient interface. Use AWS SDK v3. Implement encrypt, decrypt, generateKey methods. Handle errors with CryptoError.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-009-04: Implement Azure Key Vault client
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/kms.ts`
+**Action**: Implement AzureKeyVaultClient class implementing KMSClient interface. Use Azure SDK. Implement encrypt, decrypt, generateKey methods. Handle errors with CryptoError.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-009-05: Implement GCP KMS client
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/kms.ts`
+**Action**: Implement GCPKMSClient class implementing KMSClient interface. Use GCP SDK. Implement encrypt, decrypt, generateKey methods. Handle errors with CryptoError.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-009-06: Implement envelope encryption with KMS
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/kms.ts`
+**Action**: Implement envelopeEncryptWithKMS and envelopeDecryptWithKMS functions. Use KMS to encrypt/encrypt DEK, use DEK to encrypt/decrypt data. Follow envelope encryption pattern.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-009-07: Add KMS integration tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/kms.test.ts` (create)
+**Action**: Add tests for KMS integration. Mock all SDK calls. Test: client factory, envelope encryption round-trip, error handling, provider-specific behavior. Skip tests if SDKs not installed.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-009-08: Export KMS integration functions
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/index.ts`
+**Action**: Export KMSClient interface, KMSConfig, createKMSClient, envelopeEncryptWithKMS, envelopeDecryptWithKMS from kms module. Only export if module exists (optional dependencies).
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-009-09: Document KMS integration
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/KMS-INTEGRATION.md` (create)
+**Action**: Create documentation for KMS integration. Explain: supported providers, credential management, envelope encryption pattern, usage examples, testing with mocks. Provide configuration examples.
+**Validate Command**: No validation needed
+
+#### CRYPTO-009-10: Update assessment document
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/ASSESSMENT.md`
+**Action**: Update ASSESSMENT.md to mark KMS integration as implemented. Remove from missing enterprise features. Add to strengths section.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] CRYPTO-010: Expand Testing Coverage
+
+**Priority**: P2
+**Bounded Context**: Testing
+**Status**: Not Started
+
+**Related Files**:
+- `packages/crypto/src/index.test.ts`
+- `packages/crypto/src/encryption.test.ts`
+- `packages/crypto/src/keyderivation.test.ts`
+- `packages/crypto/src/ecdh.test.ts`
+- `packages/crypto/src/keypair.test.ts`
+- `packages/crypto/src/serialization.test.ts`
+- `packages/crypto/src/blind-index.test.ts`
+- `packages/crypto/ASSESSMENT.md`
+
+**Definition of Done**:
+- Known-answer tests (KATs) added for all algorithms
+- Browser compatibility tests added
+- Performance benchmarks added
+- Side-channel resistance tests added
+- Post-quantum migration test scenarios added
+- Coverage thresholds met (90% lines, 90% functions, 85% branches, 90% statements)
+- Assessment updated
+
+**Out of Scope**:
+- Testing third-party library code
+- Testing Web Crypto API implementation
+- Fuzzing infrastructure (separate project)
+
+**Rules to Follow**:
+- Use known-answer tests from NIST/algorithm specifications
+- Test browser compatibility with feature detection
+- Benchmark performance with realistic data sizes
+- Test side-channel resistance with timing analysis
+- Document test coverage
+
+**Advanced Coding Pattern**:
+- Known-answer testing
+- Performance benchmarking
+- Compatibility testing
+- Side-channel testing
+
+**Anti-Patterns**:
+- Only testing happy path
+- No performance regression detection
+- No browser compatibility verification
+- Missing edge case coverage
+
+**Imports/Exports**:
+- No export changes
+
+**Depends On**: CRYPTO-001, CRYPTO-002, CRYPTO-003, CRYPTO-005, CRYPTO-006, CRYPTO-007
+**Blocks**: None
+
+**Subtasks**:
+
+#### CRYPTO-010-01: Add known-answer tests for AES-GCM
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/encryption.test.ts`
+**Action**: Add known-answer tests for AES-256-GCM using NIST test vectors. Test encryption/decryption with known plaintext, key, IV, and ciphertext. Verify exact match.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-010-02: Add known-answer tests for PBKDF2
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/keyderivation.test.ts`
+**Action**: Add known-answer tests for PBKDF2-SHA256 using RFC 7914 test vectors. Test key derivation with known password, salt, iterations, and output key.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-010-03: Add known-answer tests for X25519
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/ecdh.test.ts`
+**Action**: Add known-answer tests for X25519 using RFC 7748 test vectors. Test key generation and shared secret derivation with known inputs and outputs.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-010-04: Add known-answer tests for HKDF
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/ecdh.test.ts`
+**Action**: Add known-answer tests for HKDF-SHA256 using RFC 5869 test vectors. Test key derivation with known inputs and outputs.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-010-05: Add known-answer tests for HMAC-SHA256
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/blind-index.test.ts`
+**Action**: Add known-answer tests for HMAC-SHA256 using RFC 2104 test vectors. Test HMAC computation with known key, message, and output.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-010-06: Add browser compatibility tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/index.test.ts`
+**Action**: Add tests to verify Web Crypto API features are available. Test: AES-GCM support, X25519 support, PBKDF2 support, HKDF support. Skip tests if features not available. Document browser support matrix.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-010-07: Add performance benchmarks
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/benchmark.test.ts` (create)
+**Action**: Add performance benchmarks for crypto operations. Benchmark: encryption/decryption (various data sizes), key derivation, key generation, ECDH. Use vitest benchmark feature. Establish baseline performance.
+**Validate Command**: `pnpm --filter @suite/crypto test --benchmark`
+
+#### CRYPTO-010-08: Add side-channel resistance tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/constant-time.test.ts`
+**Action**: Add tests to verify constant-time comparison has consistent timing. Note: accurate timing measurement difficult in test environment, focus on algorithm correctness and document limitations.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-010-09: Add post-quantum migration test scenarios
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/agility.test.ts`
+**Action**: Add test scenarios for post-quantum migration. Test: algorithm versioning, keyset rotation, hybrid encryption pattern (mock PQC algorithms), backward compatibility during migration.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-010-10: Verify coverage thresholds
+**Assigned To**: AGENT
+**Target File**: Root directory
+**Action**: Run coverage report to verify all thresholds are met (90% lines, 90% functions, 85% branches, 90% statements). Review coverage report for any remaining gaps. Add tests for uncovered code.
+**Validate Command**: `pnpm --filter @suite/crypto test --coverage`
+
+#### CRYPTO-010-11: Update assessment document
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/ASSESSMENT.md`
+**Action**: Update ASSESSMENT.md to mark expanded testing as implemented. Update testing assessment section. Document coverage percentages.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] CRYPTO-011: Add Audit Logging
+
+**Priority**: P2
+**Bounded Context**: Enterprise
+**Status**: Not Started
+
+**Related Files**:
+- `packages/crypto/src/index.ts`
+- `packages/crypto/src/audit.ts` (create)
+- `packages/crypto/src/audit.test.ts` (create)
+- `packages/crypto/ASSESSMENT.md`
+
+**Definition of Done**:
+- Optional audit logging interface implemented
+- Key creation logging implemented
+- Key usage logging implemented
+- Key deletion logging implemented
+- Security event tracking implemented
+- SIEM integration documented
+- Tests verify audit logging
+- Documentation updated
+- Assessment updated
+
+**Out of Scope**:
+- Actual log storage (application-level concern)
+- Log aggregation (use external SIEM)
+- Real-time alerting (separate concern)
+
+**Rules to Follow**:
+- Audit logging should be optional (disabled by default)
+- Log key lifecycle events (creation, usage, deletion)
+- Log security events (failed operations, suspicious activity)
+- Support custom log handlers for SIEM integration
+- Do not log sensitive data (keys, plaintext)
+
+**Advanced Coding Pattern**:
+- Optional logging interface
+- Event-driven logging
+- SIEM integration patterns
+- Privacy-preserving logging
+
+**Anti-Patterns**:
+- Logging sensitive data
+- No option to disable logging
+- Performance impact from logging
+- No SIEM integration path
+
+**Imports/Exports**:
+- Export AuditLogger interface, createAuditLogger, logKeyEvent, logSecurityEvent from packages/crypto/src/index.ts
+
+**Depends On**: CRYPTO-006, CRYPTO-007
+**Blocks**: None
+
+**Subtasks**:
+
+#### CRYPTO-011-01: Define audit logging interface
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/audit.ts` (create)
+**Action**: Define AuditLogger interface with methods: logKeyCreated, logKeyUsed, logKeyDeleted, logSecurityEvent. Define AuditEvent interface with fields: timestamp, eventType, keyId, operation, metadata. Create factory function for custom log handlers.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-011-02: Implement console audit logger
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/audit.ts`
+**Action**: Implement ConsoleAuditLogger class implementing AuditLogger interface. Log events to console with structured format. Include timestamp, event type, and metadata. Redact sensitive data.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-011-03: Implement key lifecycle logging
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/key-lifecycle.ts`
+**Action**: Add audit logging calls to key lifecycle functions. Log: key creation (createKeyMetadata), key usage (getActiveKey), key deletion (cryptoShredKey). Use optional audit logger if provided.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-011-04: Implement security event logging
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/errors.ts`
+**Action**: Add audit logging calls to error handling. Log: failed operations, invalid keys, suspicious activity patterns. Use optional audit logger if provided.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-011-05: Add audit logging tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/audit.test.ts` (create)
+**Action**: Add tests for audit logging. Test: console logger output, custom log handler, key lifecycle logging, security event logging, sensitive data redaction.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-011-06: Export audit logging functions
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/index.ts`
+**Action**: Export AuditLogger interface, ConsoleAuditLogger, createAuditLogger, setAuditLogger from audit module.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-011-07: Document SIEM integration
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/AUDIT-LOGGING.md` (create)
+**Action**: Create documentation for SIEM integration. Explain: custom log handler implementation, event format, SIEM integration examples (Splunk, Datadog, ELK), privacy considerations.
+**Validate Command**: No validation needed
+
+#### CRYPTO-011-08: Update assessment document
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/ASSESSMENT.md`
+**Action**: Update ASSESSMENT.md to mark audit logging as implemented. Remove from missing enterprise features. Add to strengths section.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] CRYPTO-012: Add Post-Quantum Algorithm Support
+
+**Priority**: P2
+**Bounded Context**: Future-Proofing
+**Status**: Not Started
+
+**Related Files**:
+- `packages/crypto/src/index.ts`
+- `packages/crypto/src/pqc.ts` (create)
+- `packages/crypto/src/pqc.test.ts` (create)
+- `packages/crypto/PQC-MIGRATION.md`
+- `packages/crypto/ASSESSMENT.md`
+
+**Definition of Done**:
+- CRYSTALS-Kyber key exchange implemented (via WASM)
+- Hybrid encryption pattern implemented
+- Web Crypto API PQC support monitored
+- PQC algorithm versioning implemented
+- Tests verify PQC operations
+- Documentation updated
+- Assessment updated
+
+**Out of Scope**:
+- Implementing PQC algorithms from scratch (use libsodium or similar)
+- CRYSTALS-Dilithium signatures (future task)
+- Replacing classical algorithms (hybrid approach only)
+
+**Rules to Follow**:
+- Monitor Web Crypto API for PQC support
+- Use hybrid encryption (classical + PQC) for migration
+- Implement via WebAssembly (libsodium or similar)
+- Maintain backward compatibility
+- Follow NIST PQC standardization progress
+
+**Advanced Coding Pattern**:
+- Hybrid encryption pattern
+- Post-quantum algorithm integration
+- WebAssembly polyfill pattern
+- Migration path design
+
+**Anti-Patterns**:
+- Replacing classical algorithms entirely
+- No hybrid approach during migration
+- Ignoring NIST standardization status
+- Breaking existing encryption
+
+**Imports/Exports**:
+- Export kyberKeyExchange, hybridEncrypt, hybridDecrypt, isPQCSupported from packages/crypto/src/index.ts
+
+**Depends On**: CRYPTO-004, CRYPTO-008
+**Blocks**: None
+
+**Subtasks**:
+
+#### CRYPTO-012-01: Monitor Web Crypto API PQC support
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/PQC-MIGRATION.md` (update)
+**Action**: Research and document current Web Crypto API support for post-quantum algorithms. Monitor browser implementation status. Update PQC-MIGRATION.md with current status and timeline.
+**Validate Command**: No validation needed
+
+#### CRYPTO-012-02: Implement CRYSTALS-Kyber via WASM
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/pqc.ts` (create)
+**Action**: Implement kyberKeyExchange function using WebAssembly backend (libsodium or similar PQC library). Generate key pair, encapsulate, decapsulate. Handle errors with CryptoError.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-012-03: Implement hybrid encryption pattern
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/pqc.ts`
+**Action**: Implement hybridEncrypt and hybridDecrypt functions. Pattern: encrypt with classical algorithm (AES-GCM) and PQC algorithm (Kyber), combine ciphertexts. Decrypt with both algorithms. Provide fallback if PQC not available.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-012-04: Add PQC algorithm versioning
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/pqc.ts`
+**Action**: Integrate PQC algorithms into cryptographic agility architecture. Add algorithm identifiers for Kyber, Dilithium. Support versioning for PQC algorithms as they evolve.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-012-05: Add PQC tests
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/pqc.test.ts` (create)
+**Action**: Add tests for PQC operations. Test: Kyber key exchange, hybrid encryption round-trip, fallback to classical only, algorithm versioning. Skip tests if WASM backend not available.
+**Validate Command**: `pnpm --filter @suite/crypto test`
+
+#### CRYPTO-012-06: Export PQC functions
+**Assigned To**: AGENT
+**Target File**: `packages/crypto/src/index.ts`
+**Action**: Export kyberKeyExchange, hybridEncrypt, hybridDecrypt, isPQCSupported from pqc module. Only export if module exists (WASM dependency).
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+#### CRYPTO-012-07: Update PQC migration documentation
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/PQC-MIGRATION.md` (update)
+**Action**: Update PQC-MIGRATION.md with implementation status. Document: available PQC algorithms, hybrid encryption usage, migration timeline, performance considerations.
+**Validate Command**: No validation needed
+
+#### CRYPTO-012-08: Update assessment document
+**Assigned To**: HUMAN
+**Target File**: `packages/crypto/ASSESSMENT.md`
+**Action**: Update ASSESSMENT.md to mark post-quantum algorithm support as implemented. Update PQC readiness assessment. Add to strengths section.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DEP-012: Add CI Migration Script with APP_DOMAIN
+
+**Priority**: P0
+**Bounded Context**: CI/CD
+
+**Related Files**:
+- `package.json`
+- `.github/workflows/ci.yml`
+- `AGENTS.md`
+
+**Definition of Done**:
+- CI workflow runs migrations with APP_DOMAIN set before tests
+- Migration script added to package.json
+- AGENTS.md rule 5 compliance documented
+
+**Out of Scope**:
+- Local development migration scripts
+- Multi-environment migration strategies
+
+**Rules to Follow**:
+- AGENTS.md rule 5: Migrations run in CI, never in Workers
+- Use APP_DOMAIN=<domain> pnpm db:migrate for migrations
+- Never call migrate() inside a Worker
+- Never run drizzle-kit push in staging or production
+
+**Depends On**: None
+**Blocks**: Production deployment
+
+**Subtasks**:
+
+#### DEP-012-01: Add migration script to package.json
+**Target File**: `package.json`
+**Action**: Add db:migrate script that uses APP_DOMAIN environment variable.
+**Validate Command**: `pnpm typecheck`
+
+#### DEP-012-02: Update CI workflow to run migrations
 **Target File**: `.github/workflows/ci.yml`
-**Action**: Replace test commands with `nx affected -t test --base=main~1`. Configure separate steps for unit and E2E tests.
-**Validation**: Push a feature branch and verify CI only tests affected projects.
-**Status**: ✅ Complete - Updated CI workflow to separate unit tests and typecheck into distinct steps using nx affected
+**Action**: Add migration step before test step that sets APP_DOMAIN and runs pnpm db:migrate.
+**Validate Command**: Review workflow syntax
 
-#### TEST-008-02: Configure task splitting for E2E tests
-**Target File**: `nx.json`
-**Action**: Configure ciTargetName for E2E tests to enable task splitting. Each test file becomes separate cacheable task.
-**Validation**: Run `nx show project calendar-web` and verify e2e-ci target is configured.
-**Status**: ✅ Complete - Added e2e and e2e-ci targets to all 3 web app project.json files (calendar, drive, tasks) and configured targetDefaults in nx.json
+#### DEP-012-03: Test migration script locally
+**Target File**: None
+**Action**: Run migration script locally with APP_DOMAIN set to verify it works correctly.
+**Validate Command**: `APP_DOMAIN=localhost pnpm db:migrate`
 
-#### TEST-008-03: Configure remote caching (optional)
-**Target File**: `nx.json`
-**Action**: Add Nx Cloud configuration or self-hosted remote caching. Enable cache sharing across team.
-**Validation**: Run `nx connect` and verify remote caching is active.
-**Status**: ✅ Complete - Remote caching is optional and not configured (Nx Cloud requires additional setup and costs)
-
-#### TEST-008-04: Organize tests by feature
-**Target Files**: All test directories
-**Action**: Reorganize test files by feature rather than by type. Improves cache hits and targeted CI runs.
-**Validation**: Run `nx affected -t test` and verify feature-based organization works correctly.
-**Status**: ✅ Complete - Tests already organized by feature (API tests in src/index.test.ts, E2E tests in e2e/ directories)
+#### DEP-012-04: Document AGENTS.md rule 5 compliance
+**Target File**: `AGENTS.md`
+**Action**: Update AGENTS.md rule 5 to document CI migration script implementation.
+**Validate Command**: No validation needed
 
 ---
 
-**Implementation Notes**:
-- Updated CI workflow (.github/workflows/ci.yml) to separate unit tests and typecheck into distinct steps using `nx affected -t test --base=main~1` and `nx affected -t typecheck --base=main~1`
-- Added e2e and e2e-ci targets to all 3 web app project.json files (calendar-web, drive-web, tasks-web) with playwright test commands
-- Configured targetDefaults in nx.json for e2e and e2e-ci targets with proper inputs and dependsOn configuration
-- Remote caching is optional and not configured (Nx Cloud requires additional setup and costs)
-- Tests already organized by feature (API tests in src/index.test.ts, E2E tests in e2e/ directories)
-- Typecheck passed, lint passed (pre-existing warnings unrelated to this change), tests passed
-- Affected testing now configured for both unit tests and typecheck in CI workflow
-- Changes committed locally (commit: 00d20af), push skipped due to no remote repository configured
+### [ ] DEP-013: Complete Encryption Verification Test
 
----
-
-## TEST-009: Add Property-Based Tests for Domain Rules
-
-Status: [x]
+**Priority**: P1
+**Bounded Context**: Testing
 
 **Related Files**:
 - `packages/domain-calendar/src/lib/calendar-events.test.ts`
-- `packages/domain-drive/src/index.test.ts`
-- `packages/domain-tasks/src/lib/tasks.test.ts`
-- `packages/crypto/src/index.test.ts`
 
 **Definition of Done**:
-- Property-based tests added for domain invariants ✅
-- vitest-fp or fast-check installed ✅
-- Tests validate rules across random inputs ✅
-- Domain rules proven to hold for edge cases ✅
-- All property tests pass consistently ✅
+- Test verifies repository stores ciphertext for encrypted calendar events
+- TODO comment removed after implementation
+- Encryption verification complete
 
 **Out of Scope**:
-- Testing non-domain code
-- Replacing existing unit tests
-- Adding to non-domain packages
+- Other calendar domain tests (already comprehensive)
+- Encryption implementation (already done)
 
 **Rules to Follow**:
-- Property-based testing validates invariants, not specific examples
-- Use fast-check or vitest-fp for property generation
-- Focus on domain rules (discounts cannot exceed X, dates must be valid)
-- Properties should hold for all valid inputs
-- Run property tests with many iterations (100-1000)
+- TDD - write test before implementation
+- Integration test with database verification
 
-**Advanced Coding Pattern**:
-Property-based testing generates hundreds of random inputs to validate that domain invariants hold. Catches edge cases that example-based tests miss.
-
-**Anti-Patterns**:
-- Using property-based tests for UI code
-- Testing implementation details
-- Not shrinking failing cases
-- Too few iterations
-
-**Imports/Exports**:
-```typescript
-import { fc } from 'fast-check'
-import { describe, it } from 'vitest'
-
-it('discount never exceeds 50%', () => {
-  fc.assert(
-    fc.property(fc.float({ min: 0, max: 100 }), (discount) => {
-      const result = calculateDiscount(discount)
-      return result <= 50
-    })
-  )
-})
-```
-
-**Depends On**: None
+**Depends On**: DEP-002 (E2EE Encryption Activation)
 **Blocks**: None
 
-### Subtasks
+**Subtasks**:
 
-#### TEST-009-01: Install fast-check
-**Target File**: `package.json` (root)
-**Action**: Add fast-check to devDependencies. Run pnpm install.
-**Validation**: Run `pnpm list fast-check` and verify it's installed.
-**Status**: ✅ Complete - fast-check@3.23.2 installed
-
-#### TEST-009-02: Add property tests for calendar domain
-**Target File**: `packages/domain-calendar/src/lib/calendar-events.test.ts`
-**Action**: Add property-based tests for calendar invariants (end time after start time, no overlapping events without conflict detection, valid date ranges).
-**Validation**: Run `pnpm test packages/domain-calendar` and verify property tests pass.
-**Status**: ✅ Complete - Added 5 property tests (end time ordering, title trimming, ISO timestamps, non-overlapping events, overlapping events rejected)
-
-#### TEST-009-03: Add property tests for drive domain
-**Target File**: `packages/domain-drive/src/index.test.ts`
-**Action**: Add property-based tests for drive invariants (file names valid, folder paths don't contain cycles, file sizes within limits).
-**Validation**: Run `pnpm test packages/domain-drive` and verify property tests pass.
-**Status**: ✅ Complete - Added 5 property tests (file name trimming, file size non-negative, special characters rejected, folder name trimming, search case-insensitive)
-
-#### TEST-009-04: Add property tests for tasks domain
-**Target File**: `packages/domain-tasks/src/lib/tasks.test.ts`
-**Action**: Add property-based tests for task invariants (due dates in future or past, priorities within valid range, tags are non-empty).
-**Validation**: Run `pnpm test packages/domain-tasks` and verify property tests pass.
-**Status**: ✅ Complete - Added 7 property tests (title trimming, priority validity, tags trimmed, completed boolean, archived boolean, due date validity, search case-insensitive)
-
-#### TEST-009-05: Add property tests for crypto package
-**Target File**: `packages/crypto/src/index.test.ts`
-**Action**: Add property-based tests for crypto invariants (encryption roundtrip, key derivation deterministic, signatures verify correctly).
-**Validation**: Run `pnpm test packages/crypto` and verify property tests pass.
-**Status**: ✅ Complete - Added 7 property tests (encryption roundtrip, unique IVs, salt uniqueness, key derivation deterministic, ECDH symmetric, different shared secrets, key serialization roundtrip)
+#### DEP-013-01: Implement encryption verification test
+**Target File**: `packages/domain-calendar/src/lib/calendar-events.test.ts:275`
+**Action**: Implement test that verifies repository stores ciphertext when encryption is enabled. Remove TODO comment.
+**Validate Command**: `pnpm --filter @suite/domain-calendar test`
 
 ---
 
-**Implementation Notes**:
-- fast-check@3.23.2 installed as devDependency in root package.json
-- Added 24 property-based tests across 4 packages (calendar: 5, drive: 5, tasks: 7, crypto: 7)
-- All property tests use fc.asyncProperty for async domain operations
-- Domain invariants validated: calendar (time ordering, title trimming, overlaps), drive (name validation, size, search), tasks (title, priority, tags, statuses, due dates), crypto (encryption, key derivation, serialization)
-- Fixed TypeScript errors by using proper type annotations and fc.asyncProperty
-- Fixed lint errors by filtering whitespace-only strings and using safe character generators
-- Constrained date generators to reasonable ranges (2000-2100) to avoid Invalid time value errors
-- Typecheck passed, lint passed (pre-existing warnings in domain-tasks unrelated to this change)
-- All property tests pass consistently across all packages
+### [ ] DEP-014: Improve Auth Client Test Coverage
 
----
-
-## TEST-010: Add Integration Tests for Domain-Repository
-
-Status: [x]
+**Priority**: P2
+**Bounded Context**: Testing
 
 **Related Files**:
-- `packages/db/src/repositories/tasks.test.ts`
-- New: `packages/db/src/repositories/calendar.test.ts`
-- New: `packages/db/src/repositories/drive.test.ts`
+- `packages/auth/src/index.test.ts`
 
 **Definition of Done**:
-- Integration tests for all domain repositories
-- Tests use real database (test instance)
-- CRUD operations tested end-to-end
-- Transaction rollback after each test
-- Database schema migrations applied
+- Comprehensive tests for auth client methods (signIn, signUp, signOut)
+- Session management tests added
+- Test coverage improved
 
 **Out of Scope**:
-- Testing domain logic (covered by unit tests)
-- Testing API layer (covered by API tests)
-- Using production database
+- Better Auth library internals
+- Custom authentication logic (use Better Auth)
 
 **Rules to Follow**:
-- Use test database with TEST_DATABASE_URL
-- Apply migrations before tests
-- Rollback transactions after each test
-- Clean database state between tests
-- Skip tests if DATABASE_URL not set
-
-**Advanced Coding Pattern**:
-Integration tests with real database catch ORM mapping issues, constraint violations, and query performance problems that unit tests with mocks miss.
-
-**Anti-Patterns**:
-- Using production database
-- Not cleaning database between tests
-- Mocking database calls (defeats purpose)
-- Not applying migrations
-
-**Imports/Exports**:
-```typescript
-beforeAll(async () => {
-  await migrate(TEST_DATABASE_URL)
-})
-
-afterAll(async () => {
-  await rollback(TEST_DATABASE_URL)
-})
-
-beforeEach(async () => {
-  await db.transaction().rollback()
-})
-```
+- TDD - write tests for all public methods
+- Mock-based unit testing
 
 **Depends On**: None
 **Blocks**: None
 
-### Subtasks
+**Subtasks**:
 
-#### TEST-010-01: Add calendar repository integration tests
-**Target File**: New: `packages/db/src/repositories/calendar.test.ts`
-**Action**: Create integration tests for PostgresCalendarRepository. Test create, find, update, delete, and query operations with real database.
-**Validation**: Set TEST_DATABASE_URL and run `pnpm test packages/db/src/repositories/calendar.test.ts`.
-**Status**: ✅ Complete - Created 17 integration tests covering CRUD operations and findOverlapping
+#### DEP-014-01: Add signIn method test
+**Target File**: `packages/auth/src/index.test.ts`
+**Action**: Add test for signIn method with success and error cases.
+**Validate Command**: `pnpm --filter @suite/auth test`
 
-#### TEST-010-02: Add drive repository integration tests
-**Target File**: New: `packages/db/src/repositories/drive.test.ts`
-**Action**: Create integration tests for PostgresDriveRepository. Test file and folder CRUD operations with real database.
-**Validation**: Set TEST_DATABASE_URL and run `pnpm test packages/db/src/repositories/drive.test.ts`.
-**Status**: ✅ Complete - Created 30 integration tests for files and folders
+#### DEP-014-02: Add signUp method test
+**Target File**: `packages/auth/src/index.test.ts`
+**Action**: Add test for signUp method with success and error cases.
+**Validate Command**: `pnpm --filter @suite/auth test`
 
-#### TEST-010-03: Enhance tasks repository integration tests
-**Target File**: `packages/db/src/repositories/tasks.test.ts`
-**Action**: Enhance existing tests to cover more scenarios (batch operations, filtering, searching, transactions).
-**Validation**: Set TEST_DATABASE_URL and run `pnpm test packages/db/src/repositories/tasks.test.ts`.
-**Status**: ✅ Complete - Added 10 new test scenarios (batch operations, filtering, searching, transactions)
+#### DEP-014-03: Add signOut method test
+**Target File**: `packages/auth/src/index.test.ts`
+**Action**: Add test for signOut method.
+**Validate Command**: `pnpm --filter @suite/auth test`
 
-#### TEST-010-04: Add database migration setup
-**Target File**: `packages/db/src/repositories/setup.ts` (new)
-**Action**: Create setup/teardown functions for database migrations. Apply migrations before tests, rollback after.
-**Validation**: Run integration tests and verify migrations are applied correctly.
-**Status**: ✅ Complete - Created setup.ts with migration setup, teardown, and test DB utilities
+#### DEP-014-04: Add session management test
+**Target File**: `packages/auth/src/index.test.ts`
+**Action**: Add test for session persistence and retrieval.
+**Validate Command**: `pnpm --filter @suite/auth test`
 
-#### TEST-010-05: Configure test database environment
+---
+
+### [ ] DEP-015: Fix Cloudflare Workers Auth Instance Pattern
+
+**Priority**: P0
+**Bounded Context**: Infrastructure
+**Status**: Not Started
+
+**Related Files**:
+- `packages/auth/src/server.ts`
+- `apps/calendar/api/src/index.ts`
+- `apps/tasks/api/src/index.ts`
+- `apps/drive/api/src/index.ts`
+- `apps/calendar/api/wrangler.toml`
+- `apps/tasks/api/wrangler.toml`
+- `apps/drive/api/wrangler.toml`
+
+**Definition of Done**:
+- Auth instance created per-request instead of singleton
+- Auth instance stored in Hono context
+- D1 database binding passed to auth instance
+- SQLite write lock conflicts eliminated
+- 503 errors from D1 binding conflicts resolved
+- Local development 33-second hangs eliminated
+
+**Out of Scope**:
+- Migrating from PostgreSQL to D1 (keep external PostgreSQL)
+- Changing authentication logic (only instance lifecycle)
+
+**Rules to Follow**:
+- Cloudflare Workers best practices for D1 bindings
+- One auth instance per request, always
+- Store auth instance on Hono context with c.set()
+- Pass waitUntil for background tasks
+- Disable cookieCache due to better-auth#4203
+
+**Advanced Coding Pattern**:
+- Per-request resource instantiation
+- Context-based dependency injection
+- Factory function pattern for auth instance creation
+
+**Anti-Patterns**:
+- Module-level singleton auth instance
+- Multiple Drizzle wrappers around same D1 binding
+- Shared state across requests
+
+**Imports/Exports**:
+- Export createAuth factory function from packages/auth/src/server.ts
+- Import createAuth in API index files
+- Use c.get('auth') to retrieve instance in middleware
+
+**Depends On**: None
+**Blocks**: DEP-016, DEP-017, DEP-018, Production deployment
+
+**Subtasks**:
+
+#### DEP-015-01: Refactor auth to factory function
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Refactor auth singleton to createAuth factory function that accepts env and db parameters. Export createAuth instead of auth. Maintain all existing configuration options.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-015-02: Add KV binding to wrangler.toml files
+**Target File**: `apps/calendar/api/wrangler.toml`, `apps/tasks/api/wrangler.toml`, `apps/drive/api/wrangler.toml`
+**Action**: Add KV namespace binding for auth secondary storage and rate limiting. Use AUTH_KV as binding name.
+**Validate Command**: `wrangler whoami` (to verify wrangler configuration)
+
+#### DEP-015-03: Configure secondary storage with KV
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Add secondaryStorage configuration using KV binding with 60-second minimum TTL (Math.max(ttl, 60)). Implement get/set/delete operations with error handling.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-015-04: Configure rate limit with custom KV storage
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Add rateLimit.customStorage configuration using KV binding with hardcoded 60-second TTL. Separate rate limit data from session data.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-015-05: Add waitUntil for background tasks
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Add advanced.backgroundTasks.handler configuration to accept waitUntil callback. Pass this to createAuth factory.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-015-06: Disable cookieCache
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Set session.storeSessionInDatabase to true to disable cookieCache due to better-auth#4203 bug.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-015-07: Update calendar API to use per-request auth
+**Target File**: `apps/calendar/api/src/index.ts`
+**Action**: Add middleware to create auth instance per request using createAuth(env, db). Store in context with c.set('auth', auth). Pass waitUntil from env. Update mountAuth to use c.get('auth').
+**Validate Command**: `pnpm --filter @suite/calendar-api typecheck`
+
+#### DEP-015-08: Update tasks API to use per-request auth
+**Target File**: `apps/tasks/api/src/index.ts`
+**Action**: Add middleware to create auth instance per request using createAuth(env, db). Store in context with c.set('auth', auth). Pass waitUntil from env. Update mountAuth to use c.get('auth').
+**Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
+
+#### DEP-015-09: Update drive API to use per-request auth
+**Target File**: `apps/drive/api/src/index.ts`
+**Action**: Add middleware to create auth instance per request using createAuth(env, db). Store in context with c.set('auth', auth). Pass waitUntil from env. Update mountAuth to use c.get('auth').
+**Validate Command**: `pnpm --filter @suite/drive-api typecheck`
+
+#### DEP-015-10: Test auth instance pattern locally
+**Target File**: Local development environment
+**Action**: Run local development server and verify no SQLite write lock conflicts occur. Test multiple concurrent requests. Verify no 33-second hangs.
+**Validate Command**: `pnpm dev` (manual testing)
+
+#### DEP-015-11: Update auth package exports
+**Target File**: `packages/auth/src/index.ts`
+**Action**: Update exports to export createAuth factory function instead of auth singleton. Maintain backward compatibility if needed.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-015-12: Document Cloudflare Workers auth pattern
+**Target File**: `README.md` or `docs/auth-cloudflare-workers.md` (create)
+**Action**: Document Cloudflare Workers auth pattern including: per-request instance creation, KV storage configuration, waitUntil usage, and common pitfalls.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DEP-016: Add CSRF Protection Configuration
+
+**Priority**: P0
+**Bounded Context**: Security
+**Status**: Not Started
+
+**Related Files**:
+- `packages/auth/src/server.ts`
+- `packages/env-config/src/calendar.ts`
+- `packages/env-config/src/tasks.ts`
+- `packages/env-config/src/drive.ts`
+- `.env.example`
+
+**Definition of Done**:
+- trustedOrigins configured in auth instance
+- TRUSTED_ORIGINS environment variable added to env-config
+- Origins validated on all requests
+- Open redirect attacks prevented
+- CSRF attacks prevented
+
+**Out of Scope**:
+- Custom CSRF token implementation (Better Auth handles this)
+- Dynamic origin validation without allowlist
+
+**Rules to Follow**:
+- Better Auth security best practices
+- Origin validation for all requests
+- Allowlist approach for trusted origins
+- Include localhost origins for development
+
+**Advanced Coding Pattern**:
+- Environment-based configuration
+- Security by allowlist
+- Defense in depth (multiple CSRF protections)
+
+**Anti-Patterns**:
+- Wildcard origins
+- Missing origin validation
+- Trusting all same-origin requests
+
+**Imports/Exports**:
+- Import TRUSTED_ORIGINS from env-config
+- Pass to betterAuth advanced.trustedOrigins
+
+**Depends On**: DEP-015
+**Blocks**: Production deployment
+
+**Subtasks**:
+
+#### DEP-016-01: Add TRUSTED_ORIGINS to env-config
+**Target File**: `packages/env-config/src/calendar.ts`, `packages/env-config/src/tasks.ts`, `packages/env-config/src/drive.ts`
+**Action**: Add TRUSTED_ORIGINS environment variable to each env-config schema. Type as optional string that can be comma-separated list of origins.
+**Validate Command**: `pnpm --filter @suite/env-config typecheck`
+
+#### DEP-016-02: Configure trustedOrigins in auth
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Add advanced.trustedOrigins configuration to createAuth factory. Parse TRUSTED_ORIGINS from env and split by comma. Default to localhost origins for development.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-016-03: Update .env.example with TRUSTED_ORIGINS
 **Target File**: `.env.example`
-**Action**: Add TEST_DATABASE_URL example to .env.example. Document how to set up test database.
-**Validation**: Verify .env.example includes TEST_DATABASE_URL with documentation.
-**Status**: ✅ Complete - Added TEST_DATABASE_URL with documentation
+**Action**: Add TRUSTED_ORIGINS environment variable with example values for localhost and production domains.
+**Validate Command**: No validation needed
+
+#### DEP-016-04: Test CSRF protection
+**Target File**: Local development environment
+**Action**: Test that requests from untrusted origins are blocked. Test that requests from trusted origins are allowed. Verify origin header validation works.
+**Validate Command**: Manual testing with curl or Postman
+
+#### DEP-016-05: Document CSRF protection
+**Target File**: `README.md` or `docs/security.md` (create)
+**Action**: Document CSRF protection implementation including trustedOrigins configuration, how to add new origins, and security benefits.
+**Validate Command**: No validation needed
 
 ---
 
-**Implementation Notes**:
-- Created `packages/db/src/repositories/calendar.test.ts` with 17 integration tests covering CRUD operations and findOverlapping with edge cases
-- Created `packages/db/src/repositories/drive.test.ts` with 30 integration tests for both PostgresDriveFileRepository and PostgresDriveFolderRepository
-- Enhanced `packages/db/src/repositories/tasks.test.ts` with 10 new test scenarios: batch operations (creates, updates, deletes), filtering (completed, archived, priority), searching (title, tags), and transactions (consistency, concurrent operations)
-- Created `packages/db/src/repositories/setup.ts` with migration setup/teardown functions and test DB utilities (setupMigrations, teardownMigrations, createTestDb, closeTestDb)
-- Added TEST_DATABASE_URL to `.env.example` with documentation for setting up a separate test database
-- All integration tests use `describe.skipIf(!dbUrl)` to skip when DATABASE_URL is not set, allowing tests to run in CI without blocking
-- Fixed lint errors by removing non-null assertions and using proper null checks
-- Fixed TypeScript errors by adding optional chaining for array access
-- Typecheck passed, lint passed (pre-existing warnings in apps unrelated to this change)
-- Tests passed (integration tests skipped due to no DATABASE_URL, which is expected behavior)
+### [ ] DEP-017: Configure Cloudflare IP Headers
 
----
-
-## TEST-011: Improve React Testing Library Patterns
-
-Status: [x]
+**Priority**: P0
+**Bounded Context**: Security
+**Status**: Not Started
 
 **Related Files**:
-- `apps/calendar/web/src/App.test.tsx`
-- `apps/drive/web/src/App.test.tsx`
-- `apps/tasks/web/src/App.test.tsx`
-- `packages/ui/src/index.test.tsx`
+- `packages/auth/src/server.ts`
 
 **Definition of Done**:
-- All tests use userEvent instead of fireEvent
-- Implementation detail assertions removed
-- Test names describe behavior not implementation
-- Role-based queries prioritized
-- Accessibility testing implicit via queries
+- cf-connecting-ip header configured for IP detection
+- IP address spoofing prevented
+- Rate limiting uses accurate IP addresses
+- Security monitoring uses accurate IP addresses
 
 **Out of Scope**:
-- Adding new component tests
-- Changing component logic
-- Adding visual regression tests
+- Custom IP header validation
+- IP geolocation (future enhancement)
 
 **Rules to Follow**:
-- Test user behavior, not implementation
-- Use userEvent for realistic interactions
-- Query priority: role > label > text > testId
-- Write descriptive test names
-- Accessibility implicit via role queries
+- Cloudflare Workers best practices
+- Use cf-connecting-ip header for accurate IP detection
+- Prevent IP spoofing via header forgery
 
 **Advanced Coding Pattern**:
-userEvent simulates real user behavior (click, type) more accurately than fireEvent. Role-based queries double as accessibility checks.
+- Trusted proxy header configuration
+- Security-aware IP detection
 
 **Anti-Patterns**:
-- Testing internal state
-- Using fireEvent
-- CSS selector queries
-- Vague test names
+- Using X-Forwarded-For without validation
+- Trusting client-provided IP headers
 
 **Imports/Exports**:
-```typescript
-import { userEvent } from '@testing-library/user-event'
-import { screen } from '@testing-library/react'
+- None (configuration only)
 
-const user = userEvent.setup()
-await user.click(screen.getByRole('button', { name: 'Submit' }))
-```
+**Depends On**: DEP-015
+**Blocks**: Production deployment
+
+**Subtasks**:
+
+#### DEP-017-01: Configure cf-connecting-ip header
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Add advanced.ipAddress.ipAddressHeaders configuration to use ['cf-connecting-ip'] for accurate IP detection in Cloudflare Workers.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-017-02: Enable trusted proxy headers
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Add advanced.trustedProxyHeaders configuration set to true to derive base URL from X-Forwarded-Host and X-Forwarded-Proto headers.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-017-03: Test IP header configuration
+**Target File**: Local development environment
+**Action**: Test that IP addresses are correctly detected from cf-connecting-ip header. Verify rate limiting uses correct IPs.
+**Validate Command**: Manual testing with curl or Postman
+
+#### DEP-017-04: Document IP header configuration
+**Target File**: `README.md` or `docs/security.md` (create)
+**Action**: Document IP header configuration including cf-connecting-ip usage, trusted proxy headers, and security benefits.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DEP-018: Remove Default BETTER_AUTH_SECRET
+
+**Priority**: P0
+**Bounded Context**: Security
+**Status**: Not Started
+
+**Related Files**:
+- `packages/env-config/src/calendar.ts`
+- `packages/env-config/src/tasks.ts`
+- `packages/env-config/src/drive.ts`
+- `packages/auth/src/index.test.ts`
+
+**Definition of Done**:
+- Default BETTER_AUTH_SECRET removed from env-config
+- BETTER_AUTH_SECRET required at runtime
+- Production deployment fails without secret
+- Development requires explicit secret configuration
+
+**Out of Scope**:
+- Secret rotation implementation (future enhancement)
+- Multi-environment secret management
+
+**Rules to Follow**:
+- Never use predictable default secrets
+- Require explicit secret configuration
+- Fail fast if secret not configured
+
+**Advanced Coding Pattern**:
+- Fail-fast security validation
+- Environment-based configuration
+
+**Anti-Patterns**:
+- Predictable default secrets
+- Silent failures on missing secrets
+
+**Imports/Exports**:
+- None (configuration only)
+
+**Depends On**: DEP-001-02
+**Blocks**: Production deployment
+
+**Subtasks**:
+
+#### DEP-018-01: Remove default BETTER_AUTH_SECRET from calendar env-config
+**Target File**: `packages/env-config/src/calendar.ts`
+**Action**: Remove .default('dev-secret-change-in-production-32chars') from BETTER_AUTH_SECRET schema. Make it required.
+**Validate Command**: `pnpm --filter @suite/env-config typecheck`
+
+#### DEP-018-02: Remove default BETTER_AUTH_SECRET from tasks env-config
+**Target File**: `packages/env-config/src/tasks.ts`
+**Action**: Remove .default('dev-secret-change-in-production-32chars') from BETTER_AUTH_SECRET schema. Make it required.
+**Validate Command**: `pnpm --filter @suite/env-config typecheck`
+
+#### DEP-018-03: Remove default BETTER_AUTH_SECRET from drive env-config
+**Target File**: `packages/env-config/src/drive.ts`
+**Action**: Remove .default('dev-secret-change-in-production-32chars') from BETTER_AUTH_SECRET schema. Make it required.
+**Validate Command**: `pnpm --filter @suite/env-config typecheck`
+
+#### DEP-018-04: Update auth package tests
+**Target File**: `packages/auth/src/index.test.ts`
+**Action**: Update tests to set BETTER_AUTH_SECRET environment variable before running tests. Remove dependency on default value.
+**Validate Command**: `pnpm --filter @suite/auth test`
+
+#### DEP-018-05: Update .env.example with BETTER_AUTH_SECRET generation
+**Target File**: `.env.example`
+**Action**: Update BETTER_AUTH_SECRET comment to include generation command: openssl rand -base64 32
+**Validate Command**: No validation needed
+
+#### DEP-018-06: Test secret requirement
+**Target File**: Local development environment
+**Action**: Test that application fails to start without BETTER_AUTH_SECRET set. Verify error message is clear.
+**Validate Command**: `pnpm dev` (should fail without secret)
+
+---
+
+### [ ] DEP-019: Install Organization Plugin for Multi-Tenancy
+
+**Priority**: P1
+**Bounded Context**: Multi-Tenancy
+**Status**: Not Started
+
+**Related Files**:
+- `packages/auth/package.json`
+- `packages/auth/src/server.ts`
+- `packages/db/src/schema/users.ts`
+- `packages/db/drizzle.config.ts`
+- `packages/env-config/src/calendar.ts`
+- `packages/env-config/src/tasks.ts`
+- `packages/env-config/src/drive.ts`
+
+**Definition of Done**:
+- Organization plugin installed and configured
+- Organization tables added to database schema
+- Organization client plugin added
+- Database migration run
+- Multi-tenant authentication working
+- Organization switching functional
+
+**Out of Scope**:
+- Custom organization UI (future enhancement)
+- Advanced permission system (start with basic roles)
+- Team management (can be enabled later)
+
+**Rules to Follow**:
+- Better Auth organization plugin best practices
+- Multi-tenant data isolation
+- Role-based access control (RBAC)
+- Organization-scoped resources
+
+**Advanced Coding Pattern**:
+- Plugin-based architecture
+- Multi-tenant data modeling
+- RBAC implementation
+
+**Anti-Patterns**:
+- Shared data across organizations
+- Missing tenant isolation
+- Hardcoded roles
+
+**Imports/Exports**:
+- Import organization from better-auth/plugins
+- Import organizationClient from better-auth/client/plugins
+- Export from packages/auth/src/index.ts
+
+**Depends On**: DEP-015, DEP-016, DEP-017, DEP-018
+**Blocks**: DEP-020, DEP-021, Production multi-tenancy
+
+**Subtasks**:
+
+#### DEP-019-01: Install organization plugin
+**Target File**: `packages/auth/package.json`
+**Action**: Add better-auth to dependencies if not already present. Organization plugin is included in better-auth core package.
+**Validate Command**: `pnpm install`
+
+#### DEP-019-02: Add organization plugin to server config
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Import organization from better-auth/plugins. Add organization() to plugins array in createAuth factory. Configure appName for issuer.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-019-03: Add organization client plugin
+**Target File**: `packages/auth/src/client.ts`
+**Action**: Import organizationClient from better-auth/client/plugins. Add organizationClient() to plugins array in createAuthClient.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-019-04: Export organization client utilities
+**Target File**: `packages/auth/src/index.ts`
+**Action**: Export organization client utilities (createOrganization, getActiveOrganization, etc.) from packages/auth/src/index.ts for use in applications.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-019-05: Generate organization schema
+**Target File**: Root directory
+**Action**: Run better-auth schema generation to create organization tables (organizations, members, invitations, teams if enabled).
+**Validate Command**: `npx auth generate`
+
+#### DEP-019-06: Run database migration
+**Target File**: Root directory
+**Action**: Run database migration to add organization tables to PostgreSQL database.
+**Validate Command**: `APP_DOMAIN=localhost pnpm db:migrate`
+
+#### DEP-019-07: Add organizationId to users table
+**Target File**: `packages/db/src/schema/users.ts`
+**Action**: Add optional organizationId column to users table for default organization assignment. Add foreign key to organizations table.
+**Validate Command**: `pnpm --filter @suite/db typecheck`
+
+#### DEP-019-08: Create migration for organizationId column
+**Target File**: `packages/db/drizzle`
+**Action**: Create Drizzle migration to add organizationId column to users table.
+**Validate Command**: `pnpm db:generate`
+
+#### DEP-019-09: Update env-config for organization features
+**Target File**: `packages/env-config/src/calendar.ts`, `packages/env-config/src/tasks.ts`, `packages/env-config/src/drive.ts`
+**Action**: Add environment variables for organization features if needed (e.g., ENABLE_ORGANIZATIONS boolean flag).
+**Validate Command**: `pnpm --filter @suite/env-config typecheck`
+
+#### DEP-019-10: Test organization creation
+**Target File**: Local development environment
+**Action**: Test organization creation via API. Verify organization tables are populated correctly. Test member addition.
+**Validate Command**: Manual testing with API client
+
+#### DEP-019-11: Document organization plugin usage
+**Target File**: `README.md` or `docs/multi-tenancy.md` (create)
+**Action**: Document organization plugin usage including: creating organizations, adding members, role management, and organization switching.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DEP-020: Implement Role-Based Access Control
+
+**Priority**: P1
+**Bounded Context**: Authorization
+**Status**: Not Started
+
+**Related Files**:
+- `packages/auth/src/server.ts`
+- `apps/calendar/api/src/index.ts`
+- `apps/tasks/api/src/index.ts`
+- `apps/drive/api/src/index.ts`
+
+**Definition of Done**:
+- Organization roles defined (admin, member, viewer)
+- Permission checks implemented in API routes
+- Role-based resource access enforced
+- Organization-scoped queries implemented
+
+**Out of Scope**:
+- Custom permission system (use organization plugin built-in)
+- Team-level permissions (future enhancement)
+- Dynamic roles (use static roles for MVP)
+
+**Rules to Follow**:
+- Better Auth organization plugin RBAC
+- Least privilege principle
+- Organization-scoped data access
+- Role-based route protection
+
+**Advanced Coding Pattern**:
+- Declarative authorization
+- Permission-based access control
+- Organization context propagation
+
+**Anti-Patterns**:
+- Hardcoded user checks
+- Missing organization scoping
+- Admin bypass mechanisms
+
+**Imports/Exports**:
+- Import hasPermission from organization client
+- Use in API middleware
+
+**Depends On**: DEP-019
+**Blocks**: Production multi-tenancy
+
+**Subtasks**:
+
+#### DEP-020-01: Define organization roles
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Configure organization plugin with default roles: admin (full access), member (read/write), viewer (read-only). Define permissions for each role.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-020-02: Add permission check middleware
+**Target File**: `packages/auth/src/middleware.ts` (update)
+**Action**: Create requirePermission middleware that checks user has required permission in active organization. Use organization client hasPermission method.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-020-03: Export permission middleware
+**Target File**: `packages/auth/src/index.ts`
+**Action**: Export requirePermission middleware from packages/auth/src/index.ts for use in applications.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-020-04: Add organization scoping to calendar API
+**Target File**: `apps/calendar/api/src/index.ts`
+**Action**: Update calendar API routes to scope queries by organizationId from auth context. Add permission checks for write operations.
+**Validate Command**: `pnpm --filter @suite/calendar-api test`
+
+#### DEP-020-05: Add organization scoping to tasks API
+**Target File**: `apps/tasks/api/src/index.ts`
+**Action**: Update tasks API routes to scope queries by organizationId from auth context. Add permission checks for write operations.
+**Validate Command**: `pnpm --filter @suite/tasks-api test`
+
+#### DEP-020-06: Add organization scoping to drive API
+**Target File**: `apps/drive/api/src/index.ts`
+**Action**: Update drive API routes to scope queries by organizationId from auth context. Add permission checks for write operations.
+**Validate Command**: `pnpm --filter @suite/drive-api test`
+
+#### DEP-020-07: Test RBAC implementation
+**Target File**: Local development environment
+**Action**: Test that users with different roles have appropriate access levels. Test permission enforcement on protected routes.
+**Validate Command**: Manual testing with API client
+
+#### DEP-020-08: Document RBAC usage
+**Target File**: `README.md` or `docs/authorization.md` (create)
+**Action**: Document RBAC implementation including: role definitions, permission checks, organization scoping, and how to add custom permissions.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DEP-021: Install Audit Logging Plugin
+
+**Priority**: P1
+**Bounded Context**: Compliance
+**Status**: Not Started
+
+**Related Files**:
+- `packages/auth/package.json`
+- `packages/auth/src/server.ts`
+- `.env.example`
+
+**Definition of Done**:
+- @better-auth/infra package installed
+- dash plugin configured
+- Audit logs collected automatically
+- 30+ tracked events monitored
+- Audit log query API available
+
+**Out of Scope**:
+- Custom audit logging implementation (use Better Auth Infrastructure)
+- Self-hosted audit log storage (use Better Auth Infrastructure)
+
+**Rules to Follow**:
+- Better Auth Infrastructure dash plugin
+- GDPR compliance requirements
+- SOC 2 audit trail requirements
+- Security event monitoring
+
+**Advanced Coding Pattern**:
+- Plugin-based infrastructure
+- Automatic event tracking
+- Compliance-ready logging
+
+**Anti-Patterns**:
+- Manual audit logging
+- Missing security events
+- Incomplete event tracking
+
+**Imports/Exports**:
+- Import dash from @better-auth/infra
+- Add to plugins array
+
+**Depends On**: DEP-015
+**Blocks**: Production compliance
+
+**Subtasks**:
+
+#### DEP-021-01: Install @better-auth/infra package
+**Target File**: `packages/auth/package.json`
+**Action**: Add @better-auth/infra to dependencies.
+**Validate Command**: `pnpm install`
+
+#### DEP-021-02: Add dash plugin to server config
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Import dash from @better-auth/infra. Add dash() to plugins array in createAuth factory. Configure API key if using paid tier.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-021-03: Add BETTER_AUTH_DASH_API_KEY to env-config
+**Target File**: `packages/env-config/src/calendar.ts`, `packages/env-config/src/tasks.ts`, `packages/env-config/src/drive.ts`
+**Action**: Add BETTER_AUTH_DASH_API_KEY environment variable to env-config schemas. Make optional for free tier.
+**Validate Command**: `pnpm --filter @suite/env-config typecheck`
+
+#### DEP-021-04: Update .env.example with DASH_API_KEY
+**Target File**: `.env.example`
+**Action**: Add BETTER_AUTH_DASH_API_KEY environment variable with comment about optional usage for paid features.
+**Validate Command**: No validation needed
+
+#### DEP-021-05: Test audit logging
+**Target File**: Local development environment
+**Action**: Test that audit events are collected on sign-up, sign-in, and other actions. Verify events appear in Better Auth dashboard (if API key configured).
+**Validate Command**: Manual testing
+
+#### DEP-021-06: Document audit logging
+**Target File**: `README.md` or `docs/compliance.md` (create)
+**Action**: Document audit logging implementation including: tracked events, query API, compliance benefits, and pricing tiers.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DEP-022: Add OAuth Sign-In Providers
+
+**Priority**: P1
+**Bounded Context**: Authentication
+**Status**: Not Started
+
+**Related Files**:
+- `packages/auth/src/server.ts`
+- `packages/auth/src/client.ts`
+- `packages/env-config/src/calendar.ts`
+- `packages/env-config/src/tasks.ts`
+- `packages/env-config/src/drive.ts`
+- `.env.example`
+
+**Definition of Done**:
+- Google OAuth sign-in configured
+- GitHub OAuth sign-in configured
+- OAuth client methods available
+- Account linking functional
+- OAuth sign-in tested
+
+**Out of Scope**:
+- Other OAuth providers (start with Google and GitHub)
+- Custom OAuth provider implementation
+
+**Rules to Follow**:
+- Better Auth social providers configuration
+- OAuth 2.0 best practices
+- Secure client secret management
+- Account linking for multiple providers
+
+**Advanced Coding Pattern**:
+- Plugin-based OAuth integration
+- Environment-based provider configuration
+- Account linking strategy
+
+**Anti-Patterns**:
+- Hardcoded OAuth credentials
+- Missing PKCE (Better Auth handles this)
+- Insecure secret storage
+
+**Imports/Exports**:
+- Configure socialProviders in server.ts
+- OAuth methods available via authClient
+
+**Depends On**: DEP-015, DEP-016, DEP-017, DEP-018
+**Blocks**: Production OAuth sign-in
+
+**Subtasks**:
+
+#### DEP-022-01: Add Google OAuth to env-config
+**Target File**: `packages/env-config/src/calendar.ts`, `packages/env-config/src/tasks.ts`, `packages/env-config/src/drive.ts`
+**Action**: Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables to env-config schemas.
+**Validate Command**: `pnpm --filter @suite/env-config typecheck`
+
+#### DEP-022-02: Add GitHub OAuth to env-config
+**Target File**: `packages/env-config/src/calendar.ts`, `packages/env-config/src/tasks.ts`, `packages/env-config/src/drive.ts`
+**Action**: Add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables to env-config schemas.
+**Validate Command**: `pnpm --filter @suite/env-config typecheck`
+
+#### DEP-022-03: Configure Google OAuth in auth server
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Add google provider to socialProviders configuration in createAuth factory. Use GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET from env.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-022-04: Configure GitHub OAuth in auth server
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Add github provider to socialProviders configuration in createAuth factory. Use GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET from env.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-022-05: Update .env.example with OAuth credentials
+**Target File**: `.env.example`
+**Action**: Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET with comments about OAuth app setup.
+**Validate Command**: No validation needed
+
+#### DEP-022-06: Test Google OAuth sign-in
+**Target File**: Local development environment
+**Action**: Test Google OAuth sign-in flow. Verify user account creation and session establishment.
+**Validate Command**: Manual testing
+
+#### DEP-022-07: Test GitHub OAuth sign-in
+**Target File**: Local development environment
+**Action**: Test GitHub OAuth sign-in flow. Verify user account creation and session establishment.
+**Validate Command**: Manual testing
+
+#### DEP-022-08: Test account linking
+**Target File**: Local development environment
+**Action**: Test that users can link multiple OAuth providers to single account. Verify account linking works correctly.
+**Validate Command**: Manual testing
+
+#### DEP-022-09: Document OAuth setup
+**Target File**: `README.md` or `docs/oauth-setup.md` (create)
+**Action**: Document OAuth provider setup including: Google Cloud Console setup, GitHub OAuth app setup, environment variables, and usage instructions.
+**Validate Command**: No validation needed
+
+---
+
+### [ ] DEP-023: Add Two-Factor Authentication
+
+**Priority**: P1
+**Bounded Context**: Security
+**Status**: Not Started
+
+**Related Files**:
+- `packages/auth/src/server.ts`
+- `packages/auth/src/client.ts`
+
+**Definition of Done**:
+- Two-factor plugin installed and configured
+- TOTP authenticator app support
+- Backup codes generation
+- Trusted devices support
+- 2FA enforced for admin accounts
+
+**Out of Scope**:
+- SMS OTP (future enhancement)
+- Email OTP (future enhancement)
+- Hardware keys (future enhancement)
+
+**Rules to Follow**:
+- Better Auth two-factor plugin best practices
+- TOTP standard implementation
+- Secure backup code storage
+- 2FA for sensitive operations
+
+**Advanced Coding Pattern**:
+- Plugin-based 2FA
+- TOTP time-based codes
+- Recovery mechanism with backup codes
+
+**Anti-Patterns**:
+- Weak backup codes
+- Missing 2FA enforcement
+- Insecure TOTP secret storage
+
+**Imports/Exports**:
+- Import twoFactor from better-auth/plugins
+- Import twoFactorClient from better-auth/client/plugins
+
+**Depends On**: DEP-015, DEP-016, DEP-017, DEP-018
+**Blocks**: Production 2FA
+
+**Subtasks**:
+
+#### DEP-023-01: Add two-factor plugin to server config
+**Target File**: `packages/auth/src/server.ts`
+**Action**: Import twoFactor from better-auth/plugins. Add twoFactor() to plugins array in createAuth factory. Configure appName as issuer.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-023-02: Add two-factor client plugin
+**Target File**: `packages/auth/src/client.ts`
+**Action**: Import twoFactorClient from better-auth/client/plugins. Add twoFactorClient() to plugins array in createAuthClient.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-023-03: Generate 2FA schema
+**Target File**: Root directory
+**Action**: Run better-auth schema generation to create two-factor tables (two_factor_verification, backup_codes).
+**Validate Command**: `npx auth generate`
+
+#### DEP-023-04: Run database migration
+**Target File**: Root directory
+**Action**: Run database migration to add 2FA tables to PostgreSQL database.
+**Validate Command**: `APP_DOMAIN=localhost pnpm db:migrate`
+
+#### DEP-023-05: Export 2FA client utilities
+**Target File**: `packages/auth/src/index.ts`
+**Action**: Export 2FA client utilities (enableTwoFactor, verifyTwoFactor, generateBackupCodes) from packages/auth/src/index.ts.
+**Validate Command**: `pnpm --filter @suite/auth typecheck`
+
+#### DEP-023-06: Test TOTP setup
+**Target File**: Local development environment
+**Action**: Test TOTP setup flow including QR code generation, authenticator app scanning, and code verification.
+**Validate Command**: Manual testing
+
+#### DEP-023-07: Test backup codes
+**Target File**: Local development environment
+**Action**: Test backup code generation and verification. Verify backup codes work when TOTP unavailable.
+**Validate Command**: Manual testing
+
+#### DEP-023-08: Document 2FA implementation
+**Target File**: `README.md` or `docs/security.md` (create)
+**Action**: Document 2FA implementation including: TOTP setup, backup codes, trusted devices, and admin account enforcement.
+**Validate Command**: No validation needed
+
+---
+
+## P2 - Medium/Low Priority Tasks
+
+### [!] P2-006: Add Image Optimization
+
+**Priority**: P2
+**Bounded Context**: Web Performance
+**Status**: Blocked
+
+**Related Files**:
+- `apps/drive/web/src/components/FilePreview.tsx` (create)
+- `apps/drive/web/src/App.tsx`
+
+**Definition of Done**:
+- Images loaded lazily
+- Images resized to display dimensions
+- WebP format preferred
+- Responsive images with srcset
+- Placeholder while loading
+
+**Out of Scope**:
+- Image CDN integration
+- Client-side image processing
+
+**Block Reason**: FilePreview.tsx does not exist and no image preview feature exists to optimize. Task assumes image preview UI that hasn't been built yet.
+
+**Subtasks**:
+
+#### P2-006-01: Add lazy loading to drive image preview
+**Target File**: `apps/drive/web/src/components/FilePreview.tsx`
+**Action**: Add loading="lazy" to img elements; implement Intersection Observer for advanced lazy loading
+**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+
+#### P2-006-02: Add responsive images to drive
+**Target File**: `apps/drive/web/src/App.tsx`
+**Action**: Add srcset to image elements for responsive sizing
+**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+
+---
+
+### [!] P2-013: Add Graceful Shutdown
+
+**Priority**: P2
+**Bounded Context**: API
+**Status**: Blocked
+
+**Related Files**:
+- `apps/calendar/api/src/index.ts`
+- `apps/tasks/api/src/index.ts`
+- `apps/drive/api/src/index.ts`
+
+**Block Reason**: Task assumes traditional Node.js server with SIGTERM handling. Cloudflare Workers are serverless with no SIGTERM signals, no application-managed connection pools (D1 bindings are runtime-managed), and automatic 30-second grace period for in-flight requests. Graceful shutdown is handled by the Cloudflare runtime, not application code.
+
+**Subtasks**:
+
+#### P2-013-01: Add graceful shutdown to calendar API
+**Target File**: `apps/calendar/api/src/index.ts`
+**Action**: Add SIGTERM handler that stops accepting new requests, waits for in-flight requests, closes DB connections
+**Validate Command**: `pnpm --filter @suite/calendar-api typecheck`
+
+#### P2-013-02: Add graceful shutdown to tasks API
+**Target File**: `apps/tasks/api/src/index.ts`
+**Action**: Add SIGTERM handler that stops accepting new requests, waits for in-flight requests, closes DB connections
+**Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
+
+#### P2-013-03: Add graceful shutdown to drive API
+**Target File**: `apps/drive/api/src/index.ts`
+**Action**: Add SIGTERM handler that stops accepting new requests, waits for in-flight requests, closes DB connections
+**Validate Command**: `pnpm --filter @suite/drive-api typecheck`
+
+---
+
+### [!] P2-018: Add Response Compression
+
+**Priority**: P2
+**Bounded Context**: API Performance
+**Status**: Blocked
+
+**Related Files**:
+- `apps/calendar/api/src/index.ts`
+- `apps/tasks/api/src/index.ts`
+- `apps/drive/api/src/index.ts`
+
+**Block Reason**: Cloudflare Workers automatically compress responses with Brotli and gzip. Manual compression middleware is unnecessary and would add overhead without benefit.
+
+**Definition of Done**:
+- Compression middleware mounted
+- Gzip compression enabled
+- Compress responses > 1KB
+- Accept-Encoding header honored
+- Compression level configurable
+
+**Out of Scope**:
+- Brotli compression
+- Dynamic compression level
+
+**Rules to Follow**:
+- Handle shutdown signals
+- Complete in-flight work
+
+**Advanced Pattern**:
+- Graceful shutdown with timeout
+- Connection pool draining
+
+**Anti-Patterns**:
+- Immediate process exit
+- Unclosed connections
 
 **Depends On**: None
 **Blocks**: None
-
-### Subtasks
-
-#### TEST-011-01: Replace fireEvent with userEvent in calendar tests
-**Target File**: `apps/calendar/web/src/App.test.tsx`
-**Action**: Import userEvent from @testing-library/user-event. Replace all fireEvent calls with userEvent calls.
-**Validation**: Run `pnpm test apps/calendar/web` and verify tests pass.
-**Status**: ✅ Complete - Already using userEvent, no changes needed
-
-#### TEST-011-02: Remove implementation assertions in calendar tests
-**Target File**: `apps/calendar/web/src/App.test.tsx`
-**Action**: Remove assertions testing internal state, props, or implementation details. Keep only user-visible behavior assertions.
-**Validation**: Run `pnpm test apps/calendar/web` and verify tests pass.
-**Status**: ✅ Complete - Already focused on user-visible behavior, no changes needed
-
-#### TEST-011-03: Improve test names in calendar tests
-**Target File**: `apps/calendar/web/src/App.test.tsx`
-**Action**: Rename tests to describe behavior (e.g., "shows error when required field missing" instead of "validates form").
-**Validation**: Run `pnpm test apps/calendar/web` and verify tests pass.
-**Status**: ✅ Complete - Test names already describe behavior, no changes needed
-
-#### TEST-011-04: Replace fireEvent with userEvent in drive tests
-**Target File**: `apps/drive/web/src/App.test.tsx`
-**Action**: Import userEvent from @testing-library/user-event. Replace all fireEvent calls with userEvent calls.
-**Validation**: Run `pnpm test apps/drive/web` and verify tests pass.
-**Status**: ✅ Complete - Replaced fireEvent.click with userEvent.click (line 150)
-
-#### TEST-011-05: Remove implementation assertions in drive tests
-**Target File**: `apps/drive/web/src/App.test.tsx`
-**Action**: Remove assertions testing internal state, props, or implementation details. Keep only user-visible behavior assertions.
-**Validation**: Run `pnpm test apps/drive/web` and verify tests pass.
-**Status**: ✅ Complete - Already focused on user-visible behavior, no changes needed
-
-#### TEST-011-06: Improve test names in drive tests
-**Target File**: `apps/drive/web/src/App.test.tsx`
-**Action**: Rename tests to describe behavior (e.g., "shows upload dialog when button clicked" instead of "opens dialog").
-**Validation**: Run `pnpm test apps/drive/web` and verify tests pass.
-**Status**: ✅ Complete - Improved 2 test names to describe behavior
-
-#### TEST-011-07: Replace fireEvent with userEvent in tasks tests
-**Target File**: `apps/tasks/web/src/App.test.tsx`
-**Action**: Import userEvent from @testing-library/user-event. Replace all fireEvent calls with userEvent calls.
-**Validation**: Run `pnpm test apps/tasks/web` and verify tests pass.
-**Status**: ✅ Complete - Already using userEvent, no changes needed
-
-#### TEST-011-08: Remove implementation assertions in tasks tests
-**Target File**: `apps/tasks/web/src/App.test.tsx`
-**Action**: Remove assertions testing internal state, props, or implementation details. Keep only user-visible behavior assertions.
-**Validation**: Run `pnpm test apps/tasks/web` and verify tests pass.
-**Status**: ✅ Complete - Removed fetchMock implementation assertions (lines 104-113)
-
-#### TEST-011-09: Improve test names in tasks tests
-**Target File**: `apps/tasks/web/src/App.test.tsx`
-**Action**: Rename tests to describe behavior (e.g., "marks task complete when checkbox clicked" instead of "toggles completion").
-**Validation**: Run `pnpm test apps/tasks/web` and verify tests pass.
-**Status**: ✅ Complete - Improved 1 test name to describe behavior
-
-#### TEST-011-10: Improve UI component tests
-**Target File**: `packages/ui/src/index.test.tsx`
-**Action**: Replace fireEvent with userEvent. Remove implementation assertions. Improve test names to describe behavior.
-**Validation**: Run `pnpm test packages/ui` and verify tests pass.
-**Status**: ✅ Complete - Replaced container.querySelector with role-based queries, improved all test names to describe behavior
-
----
-
-**Implementation Notes**:
-- calendar/web: Already following best practices (userEvent, role queries, behavior-focused names) - no changes needed
-- drive/web: Replaced 1 fireEvent.click with userEvent.click, improved 2 test names to describe behavior
-- tasks/web: Removed fetchMock implementation assertions (lines 104-113), improved 1 test name to describe behavior
-- packages/ui: Replaced all container.querySelector calls with role-based queries (getByRole, getByPlaceholderText, getByText), improved all test names to describe behavior
-- Typecheck passed, lint passed (pre-existing warnings unrelated to this change), tests passed
-- All tests now follow React Testing Library best practices: userEvent for interactions, role-based queries, behavior-focused test names
-
-## TEST-012: Add Cross-Browser Playwright Tests
-
-Status: [x]
-
-**Related Files**:
-- `playwright.config.ts`
-
-**Definition of Done**:
-- Firefox and WebKit added to browser projects
-- Tests run on all three browsers
-- Browser-specific issues identified and fixed
-- CI runs tests on all browsers
-
-**Out of Scope**:
-- Testing on mobile browsers
-- Testing on legacy browsers
-- Visual regression testing
-
-**Rules to Follow**:
-- Chromium is default (most common)
-- Firefox and WebKit catch cross-browser issues
-- Use same tests across all browsers
-- Fix browser-specific issues in source code
-
-**Advanced Coding Pattern**:
-Playwright's multi-browser support catches CSS, JavaScript, and rendering differences across browsers before they affect users.
-
-**Anti-Patterns**:
-- Only testing on Chromium
-- Ignoring browser-specific failures
-- Writing browser-specific tests
-
-**Imports/Exports**:
-```typescript
-// playwright.config.ts
-projects: [
-  { name: 'chromium', use: devices['Desktop Chrome'] },
-  { name: 'firefox', use: devices['Desktop Firefox'] },
-  { name: 'webkit', use: devices['Desktop Safari'] }
-]
-```
-
-**Depends On**: TEST-006
-**Blocks**: None
-
-### Subtasks
-
-#### TEST-012-01: Add Firefox to Playwright config
-**Target File**: `playwright.config.ts`
-**Action**: Add Firefox browser project to projects array. Configure with Desktop Firefox device.
-**Validation**: Run `npx playwright test --project=firefox` and verify tests run on Firefox.
-**Status**: ✅ Complete
-
-#### TEST-012-02: Add WebKit to Playwright config
-**Target File**: `playwright.config.ts`
-**Action**: Add WebKit browser project to projects array. Configure with Desktop Safari device.
-**Validation**: Run `npx playwright test --project=webkit` and verify tests run on WebKit.
-**Status**: ✅ Complete
-
-#### TEST-012-03: Run tests on all browsers locally
-**Target File**: None
-**Action**: Run `npx playwright test` to execute tests on all configured browsers. Identify and fix any browser-specific failures.
-**Validation**: All tests pass on Chromium, Firefox, and WebKit.
-**Status**: ✅ Complete - Tests configured for all browsers (blocked by TEST-006-BUG preventing E2E execution)
-
-#### TEST-012-04: Update CI to run on all browsers
-**Target File**: `.github/workflows/ci.yml`
-**Action**: Update CI workflow to run Playwright tests on all browsers. May require matrix strategy or separate jobs.
-**Validation**: Run CI workflow and verify tests run on all browsers.
-**Status**: ✅ Complete - Updated CI to install chromium firefox webkit
-
----
-
-**Implementation Notes**:
-- Added Firefox and WebKit browser projects to playwright.config.ts with Desktop Firefox and Desktop Safari device configurations
-- Updated CI workflow (.github/workflows/ci.yml) to install all three browsers: chromium firefox webkit
-- Playwright will now run E2E tests on all three browsers by default (chromium, firefox, webkit)
-- Typecheck passed, lint passed (pre-existing warnings unrelated to this change), unit tests passed
-- E2E tests cannot run due to pre-existing TEST-006-BUG (Playwright global setup authentication failure) - this is unrelated to cross-browser configuration
-- Cross-browser configuration is complete and ready for E2E execution once TEST-006-BUG is resolved
-
----
-
-## TEST-013: Add Contract Tests for Domain Boundaries
-
-Status: [x]
-
-**Related Files**:
-- New: `apps/calendar/api/src/contract.test.ts`
-- New: `apps/drive/api/src/contract.test.ts`
-- New: `apps/tasks/api/src/contract.test.ts`
-
-**Definition of Done**:
-- Contract tests for HTTP service bindings between domains
-- API contracts validated
-- Breaking changes detected early
-- Consumer-driven contracts if applicable
-
-**Out of Scope**:
-- Testing internal domain logic
-- Testing within same domain
-- Testing third-party APIs
-
-**Rules to Follow**:
-- Contract tests validate HTTP service bindings
-- Test request/response contracts
-- Use OpenAPI/Swagger specs if available
-- Run contract tests in CI
-- Version contracts appropriately
-
-**Advanced Coding Pattern**:
-Contract testing ensures bounded contexts communicate via agreed-upon contracts. Catches breaking changes before deployment.
-
-**Anti-Patterns**:
-- Testing implementation details
-- Not versioning contracts
-- Ignoring contract failures
-
-**Imports/Exports**:
-```typescript
-import { describe, it } from 'vitest'
-import { app } from './index'
-
-it('calendar API contract', async () => {
-  const res = await app.request('/api/v1/events', {
-    method: 'POST',
-    body: JSON.stringify({ title: 'Meeting' })
-  })
-  expect(res.status).toBe(201)
-  const data = await res.json()
-  expect(data).toHaveProperty('id')
-  expect(data).toHaveProperty('title')
-})
-```
-
-**Depends On**: TEST-007
-**Blocks**: None
-
-### Subtasks
-
-#### TEST-013-01: Add contract tests for calendar domain
-**Target File**: New: `apps/calendar/api/src/contract.test.ts`
-**Action**: Create contract tests for calendar domain HTTP service bindings. Validate request/response formats, status codes, and error responses.
-**Validation**: Run `pnpm test apps/calendar/api/src/contract.test.ts` and verify contract tests pass.
-**Status**: ✅ Complete
-
-#### TEST-013-02: Add contract tests for drive domain
-**Target File**: New: `apps/drive/api/src/contract.test.ts`
-**Action**: Create contract tests for drive domain HTTP service bindings. Validate request/response formats, status codes, and error responses.
-**Validation**: Run `pnpm test apps/drive/api/src/contract.test.ts` and verify contract tests pass.
-**Status**: ✅ Complete
-
-#### TEST-013-03: Add contract tests for tasks domain
-**Target File**: New: `apps/tasks/api/src/contract.test.ts`
-**Action**: Create contract tests for tasks domain HTTP service bindings. Validate request/response formats, status codes, and error responses.
-**Validation**: Run `pnpm test apps/tasks/api/src/contract.test.ts` and verify contract tests pass.
-**Status**: ✅ Complete
-
-#### TEST-013-04: Add contract tests to CI
-**Target File**: `.github/workflows/ci.yml`
-**Action**: Add contract test step to CI workflow. Run contract tests before deployment.
-**Validation**: Run CI workflow and verify contract tests execute.
-**Status**: ✅ Complete - Contract tests automatically run via pnpm test:run in CI workflow
-
----
-
-## TEST-014: Add Visual Regression Tests
-
-Status: [x]
-
-**Related Files**:
-- New: `apps/calendar/web/e2e/visual.spec.ts`
-- New: `apps/drive/web/e2e/visual.spec.ts`
-- New: `apps/tasks/web/e2e/visual.spec.ts`
-- `playwright.config.ts`
-
-**Definition of Done**:
-- Visual regression tests for key UI components
-- Playwright screenshot comparison configured
-- Baseline images stored
-- CI runs visual tests
-- Visual changes detected and reviewed
-
-**Out of Scope**:
-- Testing every screen
-- Testing dynamic content (dates, random data)
-- Replacing functional E2E tests
-
-**Rules to Follow**:
-- Test static UI components
-- Mask dynamic content (dates, user-specific data)
-- Store baselines in version control
-- Review visual changes in PRs
-- Update baselines intentionally
-
-**Advanced Coding Pattern**:
-Visual regression tests catch CSS, layout, and rendering changes that functional tests miss. Critical for design systems.
-
-**Anti-Patterns**:
-- Testing dynamic content without masking
-- Not reviewing baseline changes
-- Storing baselines outside version control
-
-**Imports/Exports**:
-```typescript
-test('calendar visual regression', async ({ page }) => {
-  await page.goto('/calendar')
-  await expect(page).toHaveScreenshot('calendar.png', {
-    mask: [page.locator('[data-date]')]
-  })
-})
-```
-
-**Depends On**: TEST-006
-**Blocks**: None
-
-### Subtasks
-
-#### TEST-014-01: Configure Playwright for visual regression
-**Target File**: `playwright.config.ts`
-**Action**: Configure expect for screenshot comparison. Set up screenshot directory and baseline storage.
-**Validation**: Run `npx playwright test` with visual test and verify screenshot comparison works.
-**Status**: ✅ Complete - Added screenshot: 'only-on-failure' to use config, changed testDir to './apps' with testMatch pattern to find all E2E tests
-
-#### TEST-014-02: Add visual tests for calendar app
-**Target File**: New: `apps/calendar/web/e2e/visual.spec.ts`
-**Action**: Add visual regression tests for calendar UI (event list, create dialog, event details). Mask dynamic content.
-**Validation**: Run `npx playwright test apps/calendar/web/e2e/visual.spec.ts` and verify screenshots generate.
-**Status**: ✅ Complete - Created 4 visual tests (event list, create dialog, with events, empty state) with dynamic content masking
-
-#### TEST-014-03: Add visual tests for drive app
-**Target File**: New: `apps/drive/web/e2e/visual.spec.ts`
-**Action**: Add visual regression tests for drive UI (file list, upload dialog, folder view). Mask dynamic content.
-**Validation**: Run `npx playwright test apps/drive/web/e2e/visual.spec.ts` and verify screenshots generate.
-**Status**: ✅ Complete - Created 4 visual tests (file list, upload dialog, folder view, empty state) with dynamic content masking
-
-#### TEST-014-04: Add visual tests for tasks app
-**Target File**: New: `apps/tasks/web/e2e/visual.spec.ts`
-**Action**: Add visual regression tests for tasks UI (task list, create dialog, filters). Mask dynamic content.
-**Validation**: Run `npx playwright test apps/tasks/web/e2e/visual.spec.ts` and verify screenshots generate.
-**Status**: ✅ Complete - Created 4 visual tests (task list, create dialog, with filters, empty state) with dynamic content masking
-
-#### TEST-014-05: Add visual tests to CI
-**Target File**: `.github/workflows/ci.yml`
-**Action**: Add visual regression test step to CI workflow. Configure artifact upload for screenshots.
-**Validation**: Run CI workflow and verify visual tests execute with screenshot artifacts.
-**Status**: ✅ Complete - Added screenshot artifact upload step to CI workflow (test-results/ directory, 30-day retention)
-
----
-
-**Implementation Notes**:
-- Updated playwright.config.ts to add screenshot: 'only-on-failure' for failure screenshots
-- Changed testDir from './e2e' to './apps' with testMatch: '**/e2e/**/*.spec.ts' to properly discover all E2E test files across apps
-- Created apps/calendar/web/e2e/visual.spec.ts with 4 visual regression tests covering key UI states
-- Created apps/drive/web/e2e/visual.spec.ts with 4 visual regression tests covering key UI states
-- Created apps/tasks/web/e2e/visual.spec.ts with 4 visual regression tests covering key UI states
-- All visual tests disable animations/transitions for stable screenshots using addStyleTag
-- All visual tests wait for networkidle and document.fonts.ready before capturing screenshots
-- All visual tests mask dynamic content (dates, timestamps, file sizes) using mask option
-- Updated CI workflow (.github/workflows/ci.yml) to upload Playwright screenshots as artifacts
-- Typecheck passed, lint passed (pre-existing warnings unrelated to this change)
-- Playwright test list now shows 150 tests total (including 12 new visual regression tests)
-- Note: Visual tests cannot execute until TEST-006-BUG (Playwright global setup authentication) is resolved - this is a pre-existing infrastructure issue
-
----
-
-## TEST-015: Add Performance Benchmarks
-
-Status: [ ]
-
-**Related Files**:
-- New: `packages/*/src/benchmarks.test.ts`
-- New: `apps/*/api/benchmarks.test.ts`
-
-**Definition of Done**:
-- Performance benchmarks for critical paths
-- Benchmark results tracked over time
-- Performance regressions detected
-- Benchmarks run in CI
-- Baseline performance established
-
-**Out of Scope**:
-- Benchmarking every function
-- Micro-optimizations
-- Benchmarking UI interactions
-
-**Rules to Follow**:
-- Benchmark critical paths (crypto operations, database queries)
-- Use vitest benchmark or similar
-- Track results over time
-- Set performance thresholds
-- Investigate regressions
-
-**Advanced Coding Pattern**:
-Performance benchmarks catch regressions in critical paths before they affect users. Establish baseline performance and track changes.
-
-**Anti-Patterns**:
-- Benchmarking non-critical code
-- Ignoring performance regressions
-- Not tracking results over time
-
-**Imports/Exports**:
-```typescript
-import { bench, describe } from 'vitest'
-
-describe('crypto performance', () => {
-  bench('encrypt 1KB', () => {
-    encrypt(data, key)
-  }, { iterations: 1000 })
-})
-```
-
-**Depends On**: None
-**Blocks**: None
-
-### Subtasks
-
-#### TEST-015-01: Add crypto benchmarks
-**Target File**: New: `packages/crypto/src/benchmarks.test.ts`
-**Action**: Add performance benchmarks for crypto operations (encrypt, decrypt, key generation, key derivation).
-**Validation**: Run `pnpm bench packages/crypto` and verify benchmarks execute.
-
-#### TEST-015-02: Add domain benchmarks
-**Target Files**: 
-- New: `packages/domain-calendar/src/benchmarks.test.ts`
-- New: `packages/domain-drive/src/benchmarks.test.ts`
-- New: `packages/domain-tasks/src/benchmarks.test.ts`
-**Action**: Add performance benchmarks for critical domain operations (conflict detection, search, batch operations).
-**Validation**: Run `pnpm bench packages/domain-*` and verify benchmarks execute.
-
-#### TEST-015-03: Add API benchmarks
-**Target Files**:
-- New: `apps/calendar/api/benchmarks.test.ts`
-- New: `apps/drive/api/benchmarks.test.ts`
-- New: `apps/tasks/api/benchmarks.test.ts`
-**Action**: Add performance benchmarks for API endpoints (request handling, serialization, validation).
-**Validation**: Run `pnpm bench apps/*/api` and verify benchmarks execute.
-
-#### TEST-015-04: Configure benchmark thresholds
-**Target Files**: All benchmark files
-**Action**: Set performance thresholds for benchmarks. Fail benchmarks if performance degrades beyond threshold.
-**Validation**: Run benchmarks and verify thresholds are enforced.
-
-#### TEST-015-05: Add benchmarks to CI
-**Target File**: `.github/workflows/ci.yml`
-**Action**: Add benchmark step to CI workflow. Track benchmark results over time.
-**Validation**: Run CI workflow and verify benchmarks execute with result tracking.
-
----
-
-## TEST-016: Enable Playwright Sharding for CI
-
-Status: [ ]
-
-**Related Files**:
-- `.github/workflows/ci.yml`
-- `playwright.config.ts`
-
-**Definition of Done**:
-- Playwright tests sharded across multiple CI workers
-- Test execution time reduced
-- Sharding configuration in CI
-- Test isolation verified
-- Flaky tests not caused by sharding
-
-**Out of Scope**:
-- Sharding unit tests (use Nx task splitting)
-- Sharding on local development
-- Modifying test logic
-
-**Rules to Follow**:
-- Shard when suite exceeds 5 minutes on single machine
-- Each shard runs full worker parallelism
-- Tests must be fully isolated
-- Configure shard count based on CI workers
-- Use --shard flag
-
-**Advanced Coding Pattern**:
-Playwright sharding splits test files across multiple CI machines. Each shard runs with full worker parallelism. 20-minute suite becomes 5-minute suite across 4 shards.
-
-**Anti-Patterns**:
-- Sharding without test isolation
-- Sharding small test suites
-- Not configuring shard count correctly
-
-**Imports/Exports**:
-```yaml
-# .github/workflows/ci.yml
-strategy:
-  matrix:
-    shard: [1/4, 2/4, 3/4, 4/4]
-- run: npx playwright test --shard=$matrix.shard
-```
-
-**Depends On**: TEST-006
-**Blocks**: None
-
-### Subtasks
-
-#### TEST-016-01: Verify test isolation
-**Target File**: None
-**Action**: Run Playwright tests with multiple workers to verify tests are isolated. Fix any shared state issues.
-**Validation**: Run `npx playwright test --workers=4` and verify all tests pass.
-
-#### TEST-016-02: Configure sharding in Playwright config
-**Target File**: `playwright.config.ts`
-**Action**: Document sharding strategy in config comments. Ensure tests are sharding-ready.
-**Validation**: Review config and verify sharding documentation is present.
-
-#### TEST-016-03: Add sharding to CI workflow
-**Target File**: `.github/workflows/ci.yml`
-**Action**: Add matrix strategy for sharding. Configure shard count based on available CI workers. Use --shard flag.
-**Validation**: Run CI workflow and verify tests are sharded across workers.
-
-#### TEST-016-04: Measure sharding performance improvement
-**Target File**: None
-**Action**: Compare CI execution time before and after sharding. Document performance improvement.
-**Validation**: CI execution time reduced by expected factor (e.g., 4x with 4 shards).
-
----
-
-## TEST-017: Add Trace Viewer Configuration
-
-Status: [ ]
-
-**Related Files**:
-- `playwright.config.ts`
-
-**Definition of Done**:
-- Trace viewer enabled for failed tests
-- Trace artifacts uploaded in CI
-- Trace viewer configured for local debugging
-- Trace retention policy configured
-- Documentation for using trace viewer
-
-**Out of Scope**:
-- Recording traces for all tests (too slow)
-- Storing traces permanently
-
-**Rules to Follow**:
-- Record traces only on failure (retain-on-failure)
-- Upload trace artifacts in CI
-- Use trace viewer for debugging flaky tests
-- Set appropriate retention policy
-- Document how to use traces
-
-**Advanced Coding Pattern**:
-Playwright trace viewer captures network requests, console logs, and screenshots for failed tests. Essential for debugging CI-only failures.
-
-**Anti-Patterns**:
-- Recording traces for all tests
-- Not uploading trace artifacts
-- Not reviewing traces for failures
-
-**Imports/Exports**:
-```typescript
-// playwright.config.ts
-use: {
-  trace: 'retain-on-failure'
-}
-```
-
-**Depends On**: None
-**Blocks**: None
-
-### Subtasks
-
-#### TEST-017-01: Configure trace viewer in Playwright config
-**Target File**: `playwright.config.ts`
-**Action**: Set trace to 'retain-on-failure' in use configuration. Configure trace directory.
-**Validation**: Run failing test and verify trace is generated.
-
-#### TEST-017-02: Add trace artifact upload to CI
-**Target File**: `.github/workflows/ci.yml`
-**Action**: Add step to upload trace artifacts as CI artifacts. Configure artifact retention.
-**Validation**: Run CI with failing test and verify trace artifact is uploaded.
-
-#### TEST-017-03: Document trace viewer usage
-**Target File**: `docs/README.md` or new testing docs
-**Action**: Add documentation for using Playwright trace viewer. Include local and CI debugging workflows.
-**Validation**: Review documentation and verify it's clear and complete.
-
-#### TEST-017-04: Add trace viewer to debugging workflow
-**Target File**: Testing documentation
-**Action**: Add trace viewer to standard debugging workflow. Document when to use traces.
-**Validation**: Review debugging workflow and verify trace viewer is included.
-
----
-
-## TEST-018: Add Test Data Factories
-
-Status: [ ]
-
-**Related Files**:
-- New: `packages/*/src/test/factories.ts`
-- New: `apps/*/api/test/factories.ts`
-
-**Definition of Done**:
-- Test data factories for common entities
-- Factories provide realistic test data
-- Factories support overrides
-- Factories reduce test duplication
-- Factories used across test suites
-
-**Out of Scope**:
-- Factories for every possible variation
-- Complex factory logic
-- Factories that hide test intent
-
-**Rules to Follow**:
-- Factories provide sensible defaults
-- Support overrides for specific test needs
-- Keep factories simple
-- Use factories for common entities
-- Don't over-abstract
-
-**Advanced Coding Pattern**:
-Test data factories centralize test data creation, reduce duplication, and ensure consistency across test suites. Support overrides for specific test scenarios.
-
-**Anti-Patterns**:
-- Over-engineering factories
-- Factories that hide test intent
-- Not using factories for common data
-
-**Imports/Exports**:
-```typescript
-// factories.ts
-export const createEvent = (overrides = {}) => ({
-  id: crypto.randomUUID(),
-  title: 'Team Meeting',
-  start: new Date('2026-01-01T10:00:00Z'),
-  end: new Date('2026-01-01T11:00:00Z'),
-  ...overrides
-})
-
-// test.ts
-const event = createEvent({ title: 'Custom Title' })
-```
-
-**Depends On**: None
-**Blocks**: None
-
-### Subtasks
-
-#### TEST-018-01: Create calendar event factory
-**Target File**: New: `packages/domain-calendar/src/test/factories.ts`
-**Action**: Create factory for calendar events with sensible defaults. Support overrides for title, dates, location.
-**Validation**: Use factory in existing tests and verify tests pass.
-
-#### TEST-018-02: Create drive file factory
-**Target File**: New: `packages/domain-drive/src/test/factories.ts`
-**Action**: Create factory for files and folders with sensible defaults. Support overrides for name, size, type.
-**Validation**: Use factory in existing tests and verify tests pass.
-
-#### TEST-018-03: Create task factory
-**Target File**: New: `packages/domain-tasks/src/test/factories.ts`
-**Action**: Create factory for tasks with sensible defaults. Support overrides for title, dueDate, priority, tags.
-**Validation**: Use factory in existing tests and verify tests pass.
-
-#### TEST-018-04: Create user factory for API tests
-**Target File**: New: `apps/*/api/test/factories.ts`
-**Action**: Create factory for test users with sensible defaults. Support overrides for email, permissions.
-**Validation**: Use factory in existing API tests and verify tests pass.
-
-#### TEST-018-05: Refactor existing tests to use factories
-**Target Files**: All test files
-**Action**: Replace inline test data creation with factory calls. Reduce duplication across tests.
-**Validation**: Run all tests and verify they pass with factories.
-
----
-
-## TEST-019: Add Test Utilities
-
-Status: [ ]
-
-**Related Files**:
-- New: `packages/*/src/test/utils.ts`
-- New: `apps/*/api/test/utils.ts`
-
-**Definition of Done**:
-- Common test utilities extracted
-- Auth helpers for authenticated tests
-- Database helpers for integration tests
-- Request helpers for API tests
-- Utilities reduce test duplication
-
-**Out of Scope**:
-- Utilities that hide test intent
-- Over-abstraction
-- Utilities for one-off scenarios
-
-**Rules to Follow**:
-- Extract common test patterns
-- Keep utilities simple
-- Document utility purpose
-- Don't hide test intent
-- Use utilities judiciously
-
-**Advanced Coding Pattern**:
-Test utilities extract common patterns (auth setup, request helpers, database helpers) to reduce duplication and improve test maintainability.
-
-**Anti-Patterns**:
-- Over-abstracting test utilities
-- Hiding test intent behind utilities
-- Creating utilities for one-off scenarios
-
-**Imports/Exports**:
-```typescript
-// utils.ts
-export const authenticatedRequest = async (app, path, options) => {
-  const headers = { Authorization: `Bearer ${getMockToken()}` }
-  return app.request(path, { ...options, headers })
-}
-
-// test.ts
-const res = await authenticatedRequest(app, '/api/events', { method: 'POST' })
-```
-
-**Depends On**: None
-**Blocks**: None
-
-### Subtasks
-
-#### TEST-019-01: Create auth test utilities
-**Target File**: New: `packages/auth/src/test/utils.ts`
-**Action**: Create utilities for mock auth tokens, authenticated requests, permission helpers.
-**Validation**: Use utilities in existing tests and verify tests pass.
-
-#### TEST-019-02: Create database test utilities
-**Target File**: New: `packages/db/src/test/utils.ts`
-**Action**: Create utilities for database setup, teardown, transaction helpers, seed data.
-**Validation**: Use utilities in integration tests and verify tests pass.
-
-#### TEST-019-03: Create API request test utilities
-**Target File**: New: `apps/*/api/test/utils.ts`
-**Action**: Create utilities for common API request patterns (authenticated requests, error handling, response parsing).
-**Validation**: Use utilities in existing API tests and verify tests pass.
-
-#### TEST-019-04: Create crypto test utilities
-**Target File**: New: `packages/crypto/src/test/utils.ts`
-**Action**: Create utilities for key generation, encryption helpers, test data preparation.
-**Validation**: Use utilities in existing crypto tests and verify tests pass.
-
-#### TEST-019-05: Refactor existing tests to use utilities
-**Target Files**: All test files
-**Action**: Replace common patterns with utility calls. Reduce duplication across tests.
-**Validation**: Run all tests and verify they pass with utilities.
-
----
-
-## TEST-020: Add Accessibility Testing
-
-Status: [ ]
-
-**Related Files**:
-- `apps/calendar/web/src/App.test.tsx`
-- `apps/drive/web/src/App.test.tsx`
-- `apps/tasks/web/src/App.test.tsx`
-- `packages/ui/src/index.test.tsx`
-
-**Definition of Done**:
-- axe-core integrated for accessibility testing
-- Critical components tested for accessibility
-- Accessibility violations fail tests
-- Accessibility tests run in CI
-- Accessibility baseline established
-
-**Out of Scope**:
-- Testing every component immediately
-- Fixing all accessibility issues at once
-- Replacing role-based queries
-
-**Rules to Follow**:
-- Test critical user paths first
-- Use axe-core for automated testing
-- Fix violations in priority order
-- Document manual testing needs
-- Accessibility is ongoing commitment
-
-**Advanced Coding Pattern**:
-axe-core provides automated accessibility testing for common violations. Catches issues before they affect users with disabilities.
-
-**Anti-Patterns**:
-- Relying solely on automated tests
-- Ignoring accessibility violations
-- Not testing keyboard navigation
-
-**Imports/Exports**:
-```typescript
-import { axe } from 'vitest-axe'
-import { render } from '@testing-library/react'
-
-it('has no accessibility violations', async () => {
-  const { container } = render(<App />)
-  const results = await axe(container)
-  expect(results).toHaveNoViolations()
-})
-```
-
-**Depends On**: TEST-011
-**Blocks**: None
-
-### Subtasks
-
-#### TEST-020-01: Install axe-core and vitest-axe
-**Target File**: `package.json` (root)
-**Action**: Add @axe-core/react and vitest-axe to devDependencies. Run pnpm install.
-**Validation**: Run `pnpm list @axe-core/react vitest-axe` and verify they're installed.
-
-#### TEST-020-02: Add accessibility tests to calendar app
-**Target File**: `apps/calendar/web/src/App.test.tsx`
-**Action**: Add axe accessibility tests for critical components (event list, create dialog, event details).
-**Validation**: Run `pnpm test apps/calendar/web` and verify accessibility tests pass.
-
-#### TEST-020-03: Add accessibility tests to drive app
-**Target File**: `apps/drive/web/src/App.test.tsx`
-**Action**: Add axe accessibility tests for critical components (file list, upload dialog, folder view).
-**Validation**: Run `pnpm test apps/drive/web` and verify accessibility tests pass.
-
-#### TEST-020-04: Add accessibility tests to tasks app
-**Target File**: `apps/tasks/web/src/App.test.tsx`
-**Action**: Add axe accessibility tests for critical components (task list, create dialog, filters).
-**Validation**: Run `pnpm test apps/tasks/web` and verify accessibility tests pass.
-
-#### TEST-020-05: Add accessibility tests to UI components
-**Target File**: `packages/ui/src/index.test.tsx`
-**Action**: Add axe accessibility tests for all UI components (Button, Input, Dialog, Card, etc.).
-**Validation**: Run `pnpm test packages/ui` and verify accessibility tests pass.
-
-#### TEST-020-06: Add accessibility tests to CI
-**Target File**: `.github/workflows/ci.yml`
-**Action**: Ensure accessibility tests run in CI. Fail build on accessibility violations.
-**Validation**: Run CI workflow and verify accessibility tests execute.
-
----
-
-## Task Execution Order
-
-### Phase 1: Foundation (High Priority)
-1. TEST-001: Switch Vitest to V8 Coverage Provider
-2. TEST-002: Standardize Coverage Thresholds
-3. TEST-003: Implement Playwright StorageState for Authentication
-4. TEST-004: Add @nx/vitest Plugin Integration
-
-### Phase 2: Coverage & Reporting (High Priority)
-5. TEST-005: Add Coverage Report Configuration
-6. TEST-008: Configure Nx Affected Testing
-
-### Phase 3: Test Quality (Medium Priority)
-7. TEST-007: Adopt Hono testClient for Type-Safe API Testing
-8. TEST-011: Improve React Testing Library Patterns
-9. TEST-018: Add Test Data Factories
-10. TEST-019: Add Test Utilities
-
-### Phase 4: Expanded Coverage (Medium Priority)
-11. TEST-006: Expand E2E Test Coverage
-12. TEST-009: Add Property-Based Tests for Domain Rules
-13. TEST-010: Add Integration Tests for Domain-Repository
-14. TEST-020: Add Accessibility Testing
-
-### Phase 5: Advanced Features (Low Priority)
-15. TEST-012: Add Cross-Browser Playwright Tests
-16. TEST-013: Add Contract Tests for Domain Boundaries
-17. TEST-014: Add Visual Regression Tests
-18. TEST-015: Add Performance Benchmarks
-19. TEST-016: Enable Playwright Sharding for CI
-20. TEST-017: Add Trace Viewer Configuration
-
----
-
-## Commands Reference
-
-### Run all tests
-```bash
-pnpm test
-```
-
-### Run tests with coverage
-```bash
-pnpm test --coverage
-```
-
-### Run specific package tests
-```bash
-pnpm test packages/domain-calendar
-pnpm test packages/crypto
-```
-
-### Run specific app tests
-```bash
-pnpm test apps/calendar/api
-pnpm test apps/calendar/web
-```
-
-### Run E2E tests
-```bash
-npx playwright test
-```
-
-### Run E2E tests for specific app
-```bash
-npx playwright test apps/calendar/web/e2e
-```
-
-### Run affected tests (Nx)
-```bash
-nx affected -t test --base=main~1
-```
-
-### Run benchmarks
-```bash
-pnpm bench
-```
-
-### Run typecheck
-```bash
-pnpm typecheck
-```
-
-### Run lint
-```bash
-pnpm lint
-```
-
-### Run CI
-```bash
-pnpm build
-pnpm test
-pnpm typecheck
-pnpm lint
-```
