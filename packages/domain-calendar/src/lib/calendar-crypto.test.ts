@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   setCalendarKeyProvider,
+  getCalendarKeyProvider,
   setCalendarKeyProviderFromEnv,
   isEncryptionEnabled,
   sealEvent,
   unsealEvent,
+  sealEvents,
+  unsealEvents,
   resetKeyProvider,
 } from './calendar-crypto.js';
 import { generateAESKey } from '@suite/crypto';
@@ -88,5 +91,76 @@ describe('calendar-crypto - encryption activation', () => {
     expect(decrypted.id).toBe(event.id);
     expect(decrypted.startAt).toBe(event.startAt);
     expect(decrypted.endAt).toBe(event.endAt);
+  });
+
+  it('should return the current key provider', () => {
+    const provider = getCalendarKeyProvider();
+    expect(provider).toBeDefined();
+    expect(typeof provider).toBe('function');
+  });
+
+  it('should batch encrypt multiple events', async () => {
+    const testKey = await generateAESKey(false);
+    setCalendarKeyProvider(async () => testKey);
+
+    const events: CalendarEvent[] = [
+      {
+        id: 'test-id-1',
+        title: 'Team Meeting',
+        startAt: '2025-01-15T10:00:00Z',
+        endAt: '2025-01-15T11:00:00Z',
+      },
+      {
+        id: 'test-id-2',
+        title: 'Code Review',
+        startAt: '2025-01-15T14:00:00Z',
+        endAt: '2025-01-15T15:00:00Z',
+      },
+    ];
+
+    const encrypted = await sealEvents(events);
+
+    expect(encrypted).toHaveLength(2);
+    expect(encrypted[0]?.encryptedTitle).toBeDefined();
+    expect(encrypted[1]?.encryptedTitle).toBeDefined();
+    expect(encrypted[0]?.encryptedTitle.ciphertext).not.toBe(events[0]?.title);
+    expect(encrypted[1]?.encryptedTitle.ciphertext).not.toBe(events[1]?.title);
+  });
+
+  it('should batch decrypt multiple events', async () => {
+    const testKey = await generateAESKey(false);
+    setCalendarKeyProvider(async () => testKey);
+
+    const events: CalendarEvent[] = [
+      {
+        id: 'test-id-1',
+        title: 'Team Meeting',
+        startAt: '2025-01-15T10:00:00Z',
+        endAt: '2025-01-15T11:00:00Z',
+      },
+      {
+        id: 'test-id-2',
+        title: 'Code Review',
+        startAt: '2025-01-15T14:00:00Z',
+        endAt: '2025-01-15T15:00:00Z',
+      },
+    ];
+
+    const encrypted = await sealEvents(events);
+    const decrypted = await unsealEvents(encrypted);
+
+    expect(decrypted).toHaveLength(2);
+    expect(decrypted[0]?.title).toBe(events[0]?.title);
+    expect(decrypted[1]?.title).toBe(events[1]?.title);
+    expect(decrypted[0]?.id).toBe(events[0]?.id);
+    expect(decrypted[1]?.id).toBe(events[1]?.id);
+  });
+
+  it('should handle empty array for batch operations', async () => {
+    const encrypted = await sealEvents([]);
+    const decrypted = await unsealEvents([]);
+
+    expect(encrypted).toHaveLength(0);
+    expect(decrypted).toHaveLength(0);
   });
 });

@@ -79,6 +79,13 @@ export function isEncryptionEnabled(): boolean {
 }
 
 /**
+ * Resets the key provider to default (for testing)
+ */
+export function resetKeyProvider(): void {
+  currentKeyProvider = defaultKeyProvider;
+}
+
+/**
  * Encrypts a task's title and tags before storage
  * @param task - Task with plaintext title and tags
  * @returns Task with encrypted title and tags
