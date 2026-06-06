@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { authClient, useSession as useBetterAuthSession } from '@suite/auth';
+import { authClient, useSession as useBetterAuthSession } from '@suite/auth/client';
 
 interface AuthContextType {
   user: any | null;
