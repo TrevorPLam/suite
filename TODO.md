@@ -817,7 +817,7 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] DEP-011: Fix Code Quality Issues
+### [x] DEP-011: Fix Code Quality Issues
 
 **Priority**: P1
 **Bounded Context**: Code Quality
@@ -826,7 +826,9 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 - `apps/drive/web/src/App.tsx`
 - `apps/drive/web/src/features/DriveFileList.tsx`
 - `apps/drive/web/src/features/FolderTree.tsx`
+- `apps/drive/web/src/components/VirtualizedFileList.tsx`
 - `apps/drive/api/src/bootstrap.ts`
+- `apps/drive/api/src/bootstrap.test.ts`
 - `packages/domain-drive/src/index.ts`
 
 **Definition of Done**:
@@ -849,35 +851,45 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### DEP-011-01: Update DriveFile and DriveFolder type definitions
+#### ✅ DEP-011-01: Update DriveFile and DriveFolder type definitions
 **Target File**: `packages/domain-drive/src/index.ts`
 **Action**: Add optional properties (folderId, mimeType, parentId) to DriveFile and DriveFolder type definitions.
 **Validate Command**: `pnpm --filter @suite/domain-drive typecheck`
 
-#### DEP-011-02: Replace as any assertions in Drive web App.tsx
+#### ✅ DEP-011-02: Replace as any assertions in Drive web App.tsx
 **Target File**: `apps/drive/web/src/App.tsx`
+**Action**: Replace all as any assertions with proper type-safe property access. Added proper type guards for unknown candidate values.
+**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+
+#### ✅ DEP-011-03: Replace as any assertions in DriveFileList.tsx
+**Target File**: `apps/drive/web/src/features/DriveFileList.tsx`, `apps/drive/web/src/components/VirtualizedFileList.tsx`
 **Action**: Replace all as any assertions with proper type-safe property access.
 **Validate Command**: `pnpm --filter @suite/drive-web typecheck`
 
-#### DEP-011-03: Replace as any assertions in DriveFileList.tsx
-**Target File**: `apps/drive/web/src/features/DriveFileList.tsx`
-**Action**: Replace all as any assertions with proper type-safe property access.
-**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
-
-#### DEP-011-04: Fix circuit breaker state preservation
+#### ✅ DEP-011-04: Fix circuit breaker state preservation
 **Target File**: `apps/drive/api/src/bootstrap.ts`
-**Action**: Move circuit breaker initialization outside R2StorageAdapter methods to preserve state across operations.
+**Action**: Move circuit breaker initialization to R2StorageAdapter constructor to preserve state across operations. Exported R2StorageAdapter and InMemoryStorageAdapter classes for testing.
 **Validate Command**: `pnpm --filter @suite/drive-api typecheck`
 
-#### DEP-011-05: Test circuit breaker state preservation
-**Target File**: `apps/drive/api/src/bootstrap.test.ts`
-**Action**: Add test to verify circuit breaker state persists across multiple R2 operations.
+#### ✅ DEP-011-05: Test circuit breaker state preservation
+**Target File**: `apps/drive/api/src/bootstrap.test.ts` (created)
+**Action**: Add test to verify circuit breaker state persists across multiple R2 operations. Added comprehensive test suite with 12 tests covering circuit breaker state preservation and storage adapter operations.
 **Validate Command**: `pnpm --filter @suite/drive-api test`
 
-#### DEP-011-06: Remove unused variable in FolderTree
+#### ✅ DEP-011-06: Remove unused variable in FolderTree
 **Target File**: `apps/drive/web/src/features/FolderTree.tsx:25`
 **Action**: Remove _currentFolder unused variable.
 **Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+
+**Implementation Notes**:
+- DriveFile and DriveFolder type definitions already had optional properties (folderId, mimeType, parentId) - no changes needed
+- Replaced all as any assertions in App.tsx (9 occurrences) with proper type-safe property access and type guards
+- Replaced all as any assertions in DriveFileList.tsx (2 occurrences) and VirtualizedFileList.tsx (2 occurrences)
+- Moved circuit breaker initialization from lazy initialization in each method to constructor in R2StorageAdapter
+- Exported R2StorageAdapter and InMemoryStorageAdapter classes for testing
+- Created bootstrap.test.ts with 12 tests covering circuit breaker state preservation and storage adapter operations
+- Removed unused _currentFolder variable in FolderTree.tsx
+- All typecheck, lint, and test checks passing
 
 ---
 

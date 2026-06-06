@@ -249,10 +249,10 @@ export function App() {
       modifiedAt: new Date().toISOString(),
     };
     if (data.folderId !== undefined) {
-      (optimisticFile as any).folderId = data.folderId;
+      optimisticFile.folderId = data.folderId;
     }
     if (data.mimeType !== undefined) {
-      (optimisticFile as any).mimeType = data.mimeType;
+      optimisticFile.mimeType = data.mimeType;
     }
 
     const previousFiles = [...files];
@@ -298,11 +298,11 @@ export function App() {
             createdAt: candidate.createdAt as string || new Date().toISOString(),
             modifiedAt: candidate.modifiedAt as string || new Date().toISOString(),
           };
-          if (candidate.folderId !== undefined) {
-            (savedFile as any).folderId = candidate.folderId;
+          if (typeof candidate.folderId === 'string') {
+            savedFile.folderId = candidate.folderId;
           }
-          if (candidate.mimeType !== undefined) {
-            (savedFile as any).mimeType = candidate.mimeType;
+          if (typeof candidate.mimeType === 'string') {
+            savedFile.mimeType = candidate.mimeType;
           };
 
           // Replace optimistic file with server response
@@ -366,11 +366,11 @@ export function App() {
             createdAt: candidate.createdAt as string || new Date().toISOString(),
             modifiedAt: candidate.modifiedAt as string || new Date().toISOString(),
           };
-          if (candidate.folderId !== undefined) {
-            (updatedFile as any).folderId = candidate.folderId;
+          if (typeof candidate.folderId === 'string') {
+            updatedFile.folderId = candidate.folderId;
           }
-          if (candidate.mimeType !== undefined) {
-            (updatedFile as any).mimeType = candidate.mimeType;
+          if (typeof candidate.mimeType === 'string') {
+            updatedFile.mimeType = candidate.mimeType;
           };
 
           setFiles((currentFiles) =>
@@ -460,8 +460,8 @@ export function App() {
             name: candidate.name,
             createdAt: candidate.createdAt as string || new Date().toISOString(),
           };
-          if (candidate.parentId !== undefined) {
-            (newFolder as any).parentId = candidate.parentId;
+          if (typeof candidate.parentId === 'string') {
+            newFolder.parentId = candidate.parentId;
           }
           setFolders((currentFolders) => [...currentFolders, newFolder]);
           setNewFolderName('');
@@ -589,11 +589,11 @@ export function App() {
             createdAt: candidate.createdAt as string || new Date().toISOString(),
             modifiedAt: candidate.modifiedAt as string || new Date().toISOString(),
           };
-          if (candidate.folderId !== undefined) {
-            (updatedFile as any).folderId = candidate.folderId;
+          if (typeof candidate.folderId === 'string') {
+            updatedFile.folderId = candidate.folderId;
           }
-          if (candidate.mimeType !== undefined) {
-            (updatedFile as any).mimeType = candidate.mimeType;
+          if (typeof candidate.mimeType === 'string') {
+            updatedFile.mimeType = candidate.mimeType;
           }
 
           setFiles((currentFiles) =>
@@ -616,7 +616,7 @@ export function App() {
     let current = folders.find((f) => f.id === currentFolderId);
     while (current) {
       path.unshift(current);
-      const parentId = (current as any).parentId;
+      const parentId = current.parentId;
       current = parentId ? folders.find((f) => f.id === parentId) : undefined;
     }
     return path;

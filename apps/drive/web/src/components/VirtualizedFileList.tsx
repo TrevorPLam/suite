@@ -54,7 +54,7 @@ export function VirtualizedFileList({
               <div style={{ display: 'grid', gap: 2, fontSize: 12, color: 'rgba(249, 250, 251, 0.5)' }}>
                 <span>Created: {formatDate(file.createdAt)}</span>
                 <span>Modified: {formatDate(file.modifiedAt)}</span>
-                {(file as any).mimeType && <span>Type: {(file as any).mimeType}</span>}
+                {file.mimeType && <span>Type: {file.mimeType}</span>}
               </div>
             </div>
 
@@ -72,7 +72,7 @@ export function VirtualizedFileList({
             </Button>
             {onMoveFile && folders.length > 0 && (
               <select
-                value={(file as any).folderId || ''}
+                value={file.folderId || ''}
                 onChange={(e) => onMoveFile(file, e.target.value || undefined)}
                 style={{
                   borderRadius: 8,

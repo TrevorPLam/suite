@@ -2,43 +2,29 @@ import { setDriveFileRepository, setDriveFolderRepository, setDriveKeyProviderFr
 import { PostgresDriveFileRepository, PostgresDriveFolderRepository } from '@suite/db';
 import { createCircuitBreaker, type CircuitBreaker } from '@suite/shared-kernel';
 
-// Circuit breaker for R2 operations
-let r2CircuitBreaker: CircuitBreaker | null = null;
-
 // R2 Storage Adapter for Cloudflare R2
-class R2StorageAdapter implements StorageAdapter {
+export class R2StorageAdapter implements StorageAdapter {
   private r2Bucket: R2Bucket;
+  private circuitBreaker: CircuitBreaker;
 
   constructor(r2Bucket: R2Bucket) {
     this.r2Bucket = r2Bucket;
+    this.circuitBreaker = createCircuitBreaker({
+      failureThreshold: 5,
+      timeoutMs: 30000,
+      successThreshold: 2,
+      logger: (message, data) => console.log(`[R2 Circuit Breaker] ${message}`, data),
+    });
   }
 
   async put(key: string, data: ReadableStream | Uint8Array | ArrayBuffer): Promise<void> {
-    if (!r2CircuitBreaker) {
-      r2CircuitBreaker = createCircuitBreaker({
-        failureThreshold: 5,
-        timeoutMs: 30000,
-        successThreshold: 2,
-        logger: (message, data) => console.log(`[R2 Circuit Breaker] ${message}`, data),
-      });
-    }
-
-    return r2CircuitBreaker.execute(async () => {
+    return this.circuitBreaker.execute(async () => {
       await this.r2Bucket.put(key, data);
     });
   }
 
   async get(key: string): Promise<ReadableStream | null> {
-    if (!r2CircuitBreaker) {
-      r2CircuitBreaker = createCircuitBreaker({
-        failureThreshold: 5,
-        timeoutMs: 30000,
-        successThreshold: 2,
-        logger: (message, data) => console.log(`[R2 Circuit Breaker] ${message}`, data),
-      });
-    }
-
-    return r2CircuitBreaker.execute(async () => {
+    return this.circuitBreaker.execute(async () => {
       const object = await this.r2Bucket.get(key);
       if (!object) {
         return null;
@@ -48,23 +34,14 @@ class R2StorageAdapter implements StorageAdapter {
   }
 
   async delete(key: string): Promise<void> {
-    if (!r2CircuitBreaker) {
-      r2CircuitBreaker = createCircuitBreaker({
-        failureThreshold: 5,
-        timeoutMs: 30000,
-        successThreshold: 2,
-        logger: (message, data) => console.log(`[R2 Circuit Breaker] ${message}`, data),
-      });
-    }
-
-    return r2CircuitBreaker.execute(async () => {
+    return this.circuitBreaker.execute(async () => {
       await this.r2Bucket.delete(key);
     });
   }
 }
 
 // In-memory storage adapter for development/testing
-class InMemoryStorageAdapter implements StorageAdapter {
+export class InMemoryStorageAdapter implements StorageAdapter {
   private storage = new Map<string, Uint8Array>();
 
   async put(key: string, data: ReadableStream | Uint8Array | ArrayBuffer): Promise<void> {
