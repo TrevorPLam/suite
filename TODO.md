@@ -1292,6 +1292,46 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
+### [!] CRYPTO-013: Add Type Declarations for libsodium
+
+**Priority**: P2
+**Bounded Context**: TypeScript
+**Status**: Blocked
+
+**Related Files**:
+- `packages/crypto/src/pqc.ts`
+- `packages/crypto/src/wasm-backend.ts`
+- `packages/crypto/package.json`
+
+**Definition of Done**:
+- @types/libsodium added as dev dependency
+- Type declarations resolve for libsodium imports
+- Typecheck passes for domain packages importing crypto
+
+**Out of Scope**:
+- Changing libsodium implementation
+
+**Rules to Follow**:
+- Add @types/libsodium if available
+- Otherwise create custom .d.ts declaration file
+
+**Depends On**: None
+**Blocks**: Domain package typecheck
+
+**Subtasks**:
+
+#### CRYPTO-013-01: Install @types/libsodium
+**Target File**: `packages/crypto/package.json`
+**Action**: Add @types/libsodium to devDependencies if available.
+**Validate Command**: `pnpm install`
+
+#### CRYPTO-013-02: Create custom type declarations if needed
+**Target File**: `packages/crypto/src/libsodium.d.ts` (create)
+**Action**: If @types/libsodium not available, create custom type declarations for libsodium module.
+**Validate Command**: `pnpm --filter @suite/crypto typecheck`
+
+---
+
 ### [ ] DEP-020: Implement Role-Based Access Control
 
 **Priority**: P1
