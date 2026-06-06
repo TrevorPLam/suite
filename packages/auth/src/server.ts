@@ -6,6 +6,7 @@ import { users, sessions, accounts } from '@suite/db';
 import { validateAuthEnv } from './env.js';
 import { logAuthEvent, createAuthEvent } from './audit-log.js';
 import { generateDeviceFingerprint, detectAnomalousDevice, logDeviceAnomaly } from './device-fingerprinting.js';
+import { extractGeolocationFromCF, detectLocationAnomaly, logLocationAnomaly, type GeolocationData } from './geolocation.js';
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
@@ -34,6 +35,7 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
     context?: {
       user?: { id?: string; email?: string };
       request?: { headers: { get(name: string): string | null } };
+      cf?: Partial<GeolocationData>;
     };
   };
 
@@ -136,6 +138,7 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
               // Log successful sign-in
               const user = ctx.context?.user;
               const request = ctx.context?.request;
+              const cf = ctx.context?.cf;
               const ip = request?.headers.get('cf-connecting-ip') || undefined;
               const userAgent = request?.headers.get('user-agent') || undefined;
               
@@ -149,6 +152,15 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
                   logDeviceAnomaly(user.id, user.email || '', deviceFingerprint, ip, userAgent);
                 }
                 
+                // Extract geolocation data
+                const location = cf ? extractGeolocationFromCF(cf) : {};
+                
+                // Detect location anomaly
+                const isLocationAnomalous = await detectLocationAnomaly(user.id, location, auth);
+                if (isLocationAnomalous) {
+                  logLocationAnomaly(user.id, user.email || '', location, ip, userAgent);
+                }
+                
                 // Enforce concurrent session limit
                 // Note: Session limit enforcement happens after session creation in Better Auth
                 // We skip enforcement here since Better Auth doesn't provide the session token in the hook context
@@ -159,7 +171,7 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
                 if (user.email) context.email = user.email;
                 if (ip) context.ip = ip;
                 if (userAgent) context.userAgent = userAgent;
-                context.metadata = { deviceFingerprint, isAnomalous };
+                context.metadata = { deviceFingerprint, isAnomalous, location, isLocationAnomalous };
                 logAuthEvent(createAuthEvent('sign_in', context));
               }
             },
@@ -172,6 +184,7 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
               // Log successful sign-up
               const user = ctx.context?.user;
               const request = ctx.context?.request;
+              const cf = ctx.context?.cf;
               const ip = request?.headers.get('cf-connecting-ip') || undefined;
               const userAgent = request?.headers.get('user-agent') || undefined;
               
@@ -182,12 +195,18 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
                 // First device is never anomalous for new users
                 const isAnomalous = false;
                 
+                // Extract geolocation data
+                const location = cf ? extractGeolocationFromCF(cf) : {};
+                
+                // First location is never anomalous for new users
+                const isLocationAnomalous = false;
+                
                 const context: Parameters<typeof createAuthEvent>[1] = {};
                 if (user.id) context.userId = user.id;
                 if (user.email) context.email = user.email;
                 if (ip) context.ip = ip;
                 if (userAgent) context.userAgent = userAgent;
-                context.metadata = { deviceFingerprint, isAnomalous };
+                context.metadata = { deviceFingerprint, isAnomalous, location, isLocationAnomalous };
                 logAuthEvent(createAuthEvent('sign_up', context));
               }
             },

@@ -49,6 +49,10 @@ export { listSessions, revokeSession as revokeSessionWithAudit, revokeAllSession
 // Device fingerprinting for session security
 export { generateDeviceFingerprint, detectAnomalousDevice, logDeviceAnomaly } from './device-fingerprinting.js';
 
+// Geolocation-based anomaly detection for session security
+export { extractGeolocationFromCF, detectLocationAnomaly, logLocationAnomaly } from './geolocation.js';
+export type { GeolocationData } from './geolocation.js';
+
 // Session limits for concurrent session enforcement
 export { enforceSessionLimit } from './session-limits.js';
 

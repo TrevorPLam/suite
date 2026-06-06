@@ -18,7 +18,8 @@ export type AuthEventType =
   | 'other_sessions_revoked'
   | 'user_deleted'
   | 'device_anomaly'
-  | 'session_limit_reached';
+  | 'session_limit_reached'
+  | 'location_anomaly';
 
 export interface AuthEvent {
   type: AuthEventType;
