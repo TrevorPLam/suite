@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, type FormEvent } from 'react';
 import { Button } from '@suite/ui';
 import { type DriveFolder } from '@suite/domain-drive';
 
@@ -26,6 +26,51 @@ export function UploadDialog({
   const [name, setName] = useState('Design brief.pdf');
   const [size, setSize] = useState('1024');
   const [mimeType, setMimeType] = useState('application/pdf');
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+
+  const getFocusableElements = useCallback(() => {
+    if (!dialogRef.current) return [];
+    return dialogRef.current.querySelectorAll(
+      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    triggerRef.current = document.activeElement as HTMLElement;
+    const focusableElements = getFocusableElements();
+    if (focusableElements.length > 0) {
+      (focusableElements[0] as HTMLElement).focus();
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      const focusable = getFocusableElements();
+      const first = focusable[0] as HTMLElement;
+      const last = focusable[focusable.length - 1] as HTMLElement;
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      triggerRef.current?.focus();
+    };
+  }, [open, onClose, getFocusableElements]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,8 +101,10 @@ export function UploadDialog({
         padding: 24,
         zIndex: 1000,
       }}
+      onClick={onClose}
     >
       <article
+        ref={dialogRef}
         style={{
           borderRadius: 20,
           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -66,6 +113,7 @@ export function UploadDialog({
           maxWidth: 400,
           width: '100%',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <h2 id="upload-dialog-title" style={{ margin: 0, fontSize: 24 }}>
           Upload file
