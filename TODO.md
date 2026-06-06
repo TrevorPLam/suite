@@ -686,10 +686,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ## Phase 3 — Wire persistence (one domain per task)
 
-### [ ] DB-004 — Inject Postgres repository into Calendar domain at API boot
+### [x] DB-004 — Inject Postgres repository into Calendar domain at API boot
 
-**Status:** pending  
-**Depends on:** DB-001  
+**Status:** done
+**Depends on:** DB-001
 **Blocks:** AUTH-003
 
 #### Related paths
@@ -733,9 +733,21 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| DB-004-a | `packages/db/src/repositories/calendar.ts` | Add adapter implementing domain `CalendarEventRepository` interface (map schema row to domain event type). Write failing domain-level test if adapter missing. | `pnpm --filter @suite/domain-calendar test:run` |
-| DB-004-b | `apps/calendar/api/src/bootstrap.ts` | Create function `wireRepositories(env)` that sets Postgres repo when DATABASE_URL present. | `pnpm --filter @suite/calendar-api typecheck` |
-| DB-004-c | `apps/calendar/api/src/index.ts` | Import bootstrap at top before route definitions. | `pnpm --filter @suite/calendar-api test:run -- src/index.test.ts` |
+| DB-004-a | `packages/db/src/repositories/calendar.ts` | Add adapter implementing domain `CalendarEventRepository` interface (map schema row to domain event type). Write failing domain-level test if adapter missing. | `pnpm --filter @suite/domain-calendar test:run` ✅ |
+| DB-004-b | `apps/calendar/api/src/bootstrap.ts` | Create function `wireRepositories(env)` that sets Postgres repo when DATABASE_URL present. | `pnpm --filter @suite/calendar-api typecheck` ✅ |
+| DB-004-c | `apps/calendar/api/src/index.ts` | Import bootstrap at top before route definitions. | `pnpm --filter @suite/calendar-api test:run -- src/index.test.ts` ✅ |
+
+#### Implementation notes
+
+- Updated `PostgresCalendarEventRepository` to implement domain `CalendarEventRepository` interface with proper type mapping
+- Added `mapToDomain` and `mapToSchema` functions to convert between DB schema (timestamps as Date) and domain types (timestamps as ISO strings)
+- Replaced `crypto.randomUUID()` with `generateUUID` from `@suite/shared-kernel` for consistency
+- Exported `setCalendarEventRepository` from `@suite/domain-calendar` package
+- Created `apps/calendar/api/src/bootstrap.ts` with `wireRepositories()` function that injects Postgres repo when DATABASE_URL is set
+- Added `@suite/db` dependency to `@suite/calendar-api` package.json
+- Imported and called `wireRepositories()` in `apps/calendar/api/src/index.ts` before route definitions
+- All 20 domain tests pass, all 14 API tests pass, typecheck passes
+- In-memory repository remains as default when DATABASE_URL is unset (local dev without Postgres)
 
 ---
 

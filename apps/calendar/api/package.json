@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@suite/db": "workspace:*",
     "@suite/domain-calendar": "workspace:*",
     "@suite/env-config": "workspace:*",
     "hono": "^4.11.7"

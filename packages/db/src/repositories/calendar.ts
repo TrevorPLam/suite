@@ -1,9 +1,39 @@
-import { eq, and, or, lt, gt } from 'drizzle-orm';
+import { eq, and, lt, gt } from 'drizzle-orm';
 import { getDb } from '../connection.js';
 import { calendarEvents, type CalendarEventSchema, type NewCalendarEventSchema } from '../schema/calendar.js';
-import type { Repository, QueryRepository } from '../index.js';
+import type { Repository } from '../index.js';
+import { generateUUID } from '@suite/shared-kernel';
 
-export type CalendarEventRepository = QueryRepository<CalendarEventSchema>;
+// Domain type (from @suite/domain-calendar)
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  startAt: string;
+  endAt: string;
+};
+
+export interface CalendarEventRepository extends Repository<CalendarEvent> {
+  findOverlapping?(startAt: Date, endAt: Date, excludeId?: string): Promise<CalendarEvent[]>;
+}
+
+// Map DB schema to domain type
+function mapToDomain(schema: CalendarEventSchema): CalendarEvent {
+  return {
+    id: schema.id,
+    title: schema.title,
+    startAt: schema.startAt.toISOString(),
+    endAt: schema.endAt.toISOString(),
+  };
+}
+
+// Map domain type to DB schema (for create/update)
+function mapToSchema(domain: Omit<CalendarEvent, 'id'>): Omit<CalendarEventSchema, 'id'> {
+  return {
+    title: domain.title,
+    startAt: new Date(domain.startAt),
+    endAt: new Date(domain.endAt),
+  };
+}
 
 export class PostgresCalendarEventRepository implements CalendarEventRepository {
   private db: ReturnType<typeof getDb>;
@@ -12,38 +42,45 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
     this.db = db ?? getDb();
   }
 
-  async findById(id: string): Promise<CalendarEventSchema | null> {
+  async findById(id: string): Promise<CalendarEvent | null> {
     const results = await this.db
       .select()
       .from(calendarEvents)
       .where(eq(calendarEvents.id, id))
       .limit(1);
-    return results[0] ?? null;
+    return results[0] ? mapToDomain(results[0]) : null;
   }
 
-  async findAll(): Promise<CalendarEventSchema[]> {
-    return this.db.select().from(calendarEvents);
+  async findAll(): Promise<CalendarEvent[]> {
+    const results = await this.db.select().from(calendarEvents);
+    return results.map(mapToDomain);
   }
 
-  async create(entity: Omit<CalendarEventSchema, 'id'>): Promise<CalendarEventSchema> {
+  async create(entity: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
+    const schemaEntity = mapToSchema(entity);
     const newEntity: NewCalendarEventSchema = {
-      id: crypto.randomUUID(),
-      ...entity,
+      id: generateUUID(),
+      ...schemaEntity,
     };
     const results = await this.db.insert(calendarEvents).values(newEntity).returning();
     if (!results[0]) {
       throw new Error('Failed to create calendar event');
     }
-    return results[0];
+    return mapToDomain(results[0]);
   }
 
-  async update(id: string, entity: Partial<CalendarEventSchema>): Promise<CalendarEventSchema | null> {
+  async update(id: string, entity: Partial<CalendarEvent>): Promise<CalendarEvent | null> {
+    const schemaEntity: Partial<CalendarEventSchema> = {};
+    if (entity.title !== undefined) schemaEntity.title = entity.title;
+    if (entity.startAt !== undefined) schemaEntity.startAt = new Date(entity.startAt);
+    if (entity.endAt !== undefined) schemaEntity.endAt = new Date(entity.endAt);
+
     const results = await this.db
       .update(calendarEvents)
-      .set(entity)
+      .set(schemaEntity)
       .where(eq(calendarEvents.id, id))
       .returning();
-    return results[0] ?? null;
+    return results[0] ? mapToDomain(results[0]) : null;
   }
 
   async delete(id: string): Promise<boolean> {
@@ -54,29 +91,7 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
     return results.length > 0;
   }
 
-  async findWhere(criteria: Partial<CalendarEventSchema>): Promise<CalendarEventSchema[]> {
-    const conditions = Object.entries(criteria).map(([key, value]) => 
-      eq(calendarEvents[key as keyof CalendarEventSchema] as any, value as any)
-    );
-    
-    if (conditions.length === 0) {
-      return this.findAll();
-    }
-
-    // For now, simple implementation - in production would use and() for multiple conditions
-    return this.db.select().from(calendarEvents).where(conditions[0]!);
-  }
-
-  async count(criteria?: Partial<CalendarEventSchema>): Promise<number> {
-    if (!criteria || Object.keys(criteria).length === 0) {
-      const result = await this.db.select({ count: calendarEvents.id }).from(calendarEvents);
-      return result.length;
-    }
-    const results = await this.findWhere(criteria);
-    return results.length;
-  }
-
-  async findOverlapping(startAt: Date, endAt: Date, excludeId?: string): Promise<CalendarEventSchema[]> {
+  async findOverlapping(startAt: Date, endAt: Date, excludeId?: string): Promise<CalendarEvent[]> {
     // Find events that overlap with the given range
     // Overlap condition: (event.start < candidate.end) AND (event.end > candidate.start)
     const conditions = [
@@ -88,9 +103,10 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
       conditions.push(eq(calendarEvents.id, excludeId));
     }
 
-    return this.db
+    const results = await this.db
       .select()
       .from(calendarEvents)
       .where(and(...conditions));
+    return results.map(mapToDomain);
   }
 }

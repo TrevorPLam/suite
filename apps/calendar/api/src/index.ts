@@ -8,6 +8,10 @@ import {
   type CalendarEventRange,
   type CreateCalendarEventInput,
 } from '@suite/domain-calendar';
+import { wireRepositories } from './bootstrap.js';
+
+// Wire repositories (Postgres if DATABASE_URL set, otherwise in-memory)
+wireRepositories();
 
 const app = new Hono();
 

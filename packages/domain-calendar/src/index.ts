@@ -6,6 +6,7 @@ export {
   listCalendarEventsInRange,
   resetCalendarEvents,
   resetCalendarEventsDB,
+  setCalendarEventRepository,
   updateCalendarEvent,
 } from './lib/calendar-events.js';
 
