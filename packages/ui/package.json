@@ -19,7 +19,8 @@
     "lint": "eslint src",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "chromatic": "chromatic"
+    "chromatic": "chromatic",
+    "size": "size-limit"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "catalog:",
@@ -58,11 +59,18 @@
     "chromatic": "^11.0.0",
     "i18next-browser-languagedetector": "^8.0.0",
     "jsdom": "catalog:",
+    "size-limit": "^11.0.0",
     "storybook": "^8.0.0",
     "tailwindcss": "^4.0.0",
     "vite": "^6.0.0",
     "vite-plugin-dts": "^4.0.0",
     "vitest": "catalog:",
     "vitest-axe": "^0.1.0"
-  }
+  },
+  "size-limit": [
+    {
+      "path": "dist/index.js",
+      "limit": "100 KB"
+    }
+  ]
 }

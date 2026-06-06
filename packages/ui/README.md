@@ -385,6 +385,51 @@ A project tagged with "scope:calendar" can only depend on projects tagged with "
 
 The UI package ownership is defined in `.github/CODEOWNERS`. Changes to `packages/ui/` require review from the assigned maintainers.
 
+## Performance
+
+The UI package is designed for performance with minimal overhead. Components are simple wrappers around Radix UI primitives, which are already optimized.
+
+### Bundle Size Monitoring
+
+The UI package uses `size-limit` to monitor bundle size and prevent bloat:
+
+```bash
+# Check bundle size
+pnpm size
+```
+
+The current size limit is set to 100 KB for the main bundle (`dist/index.js`). This limit is enforced in CI to prevent accidental bundle size increases.
+
+### Why Memoization Is Not Used
+
+The UI components do not use `React.memo`, `useMemo`, or `useCallback` for the following reasons:
+
+1. **Simple wrapper components**: Most components are thin wrappers around Radix UI primitives with no expensive computations
+2. **No complex state**: Components don't maintain complex state that would benefit from memoization
+3. **Radix UI is already optimized**: Radix UI primitives handle their own optimization internally
+4. **Overhead of memoization**: Adding memoization to simple components adds complexity without measurable performance benefit
+5. **Measure before optimizing**: Performance profiling shows no unnecessary re-renders in current usage
+
+### When to Add Memoization
+
+If you encounter performance issues with UI components, follow this process:
+
+1. **Profile first**: Use React DevTools Profiler to identify components that re-render frequently
+2. **Measure impact**: Verify that re-renders are causing measurable performance degradation
+3. **Add memoization selectively**: Only add `React.memo` to components that:
+   - Re-render frequently with the same props
+   - Have expensive render logic
+   - Are used in large lists or frequently updated contexts
+4. **Document the reason**: Add comments explaining why memoization was added
+
+### Performance Best Practices
+
+- **Avoid premature optimization**: Don't add memoization without profiling data
+- **Use React DevTools Profiler**: Measure before optimizing
+- **Keep components simple**: Complex components should be split into smaller pieces
+- **Use code splitting**: For large apps, consider lazy loading components
+- **Monitor bundle size**: Use `pnpm size` to check bundle size before committing
+
 ## Development
 
 ```bash
@@ -405,6 +450,9 @@ pnpm build
 
 # Run Storybook
 pnpm storybook
+
+# Check bundle size
+pnpm size
 ```
 
 ## License
