@@ -10,6 +10,10 @@
     "@suite/db": "workspace:*",
     "@suite/shared-kernel": "workspace:*"
   },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "vitest": "catalog:"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest --run",
