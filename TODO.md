@@ -1350,10 +1350,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] CRYPTO-003 — Add domain encryption adapter for Drive metadata
+### [x] CRYPTO-003 — Add domain encryption adapter for Drive metadata
 
-**Status:** pending  
-**Depends on:** CRYPTO-002, DB-006  
+**Status:** done
+**Depends on:** CRYPTO-002, DB-006
 **Blocks:** none
 
 #### Related paths
@@ -1391,8 +1391,20 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| CRYPTO-003-a | `packages/domain-drive/src/index.test.ts` | TDD: create file, assert stored name is not plaintext. | `pnpm --filter @suite/domain-drive test:run -- src/index.test.ts` |
-| CRYPTO-003-b | `packages/domain-drive/src/drive-crypto.ts` | Implement seal/unseal for file and folder names. | `pnpm --filter @suite/domain-drive test:run -- src/index.test.ts` |
+| CRYPTO-003-a | `packages/domain-drive/src/index.test.ts` | TDD: create file, assert stored name is not plaintext. | `pnpm --filter @suite/domain-drive test:run -- src/index.test.ts` ✅ |
+| CRYPTO-003-b | `packages/domain-drive/src/drive-crypto.ts` | Implement seal/unseal for file and folder names. | `pnpm --filter @suite/domain-drive test:run -- src/index.test.ts` ✅ |
+
+#### Implementation notes
+
+- Created `packages/domain-drive/src/drive-crypto.ts` with seal/unseal functions for file and folder names using @suite/crypto
+- Added `KeyProvider` type for dependency injection of encryption keys
+- Encryption is opt-in via `isEncryptionEnabled()` flag (returns false by default)
+- Encrypted file names and folder names at domain boundary
+- Updated domain functions (upload, rename, createFolder, renameFolder, listDriveFiles, listFolders, getDriveFile, searchFiles) to conditionally encrypt/decrypt based on flag
+- Added @suite/crypto dependency to domain-drive package.json
+- Exported encryption functions from domain-drive package index.ts
+- All 48 domain tests pass (including 1 new encryption test), typecheck passes for all packages
+- Encryption is disabled by default; can be enabled by calling `setDriveKeyProvider()` with a real key provider
 
 ---
 

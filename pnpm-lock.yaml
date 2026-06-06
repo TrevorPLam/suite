@@ -383,6 +383,9 @@ importers:
 
   packages/domain-drive:
     dependencies:
+      '@suite/crypto':
+        specifier: workspace:*
+        version: link:../crypto
       '@suite/db':
         specifier: workspace:*
         version: link:../db

@@ -179,6 +179,35 @@ describe('drive - upload', () => {
       code: 'not_found_error',
     });
   });
+
+  it('should encrypt file name when encryption is enabled', async () => {
+    const { setDriveKeyProvider, sealFile, unsealFile } = await import('./drive-crypto.js');
+    
+    // Enable encryption with a test key provider
+    const testKey = await (await import('@suite/crypto')).generateAESKey(false);
+    setDriveKeyProvider(async () => testKey);
+
+    const input: UploadDriveFileInput = {
+      name: 'document.pdf',
+      size: 1024,
+    };
+
+    const file = await uploadDriveFile(input);
+    
+    // The returned file should have plaintext name (decrypted by domain)
+    expect(file.name).toBe('document.pdf');
+    
+    // Seal the file to get encrypted version
+    const encrypted = await sealFile(file);
+    
+    // Encrypted name should not equal plaintext
+    expect(encrypted.encryptedName).toBeDefined();
+    expect(encrypted.encryptedName).not.toEqual(file.name);
+    
+    // Unseal should restore original
+    const decrypted = await unsealFile(encrypted);
+    expect(decrypted.name).toBe(file.name);
+  });
 });
 
 describe('drive - query', () => {

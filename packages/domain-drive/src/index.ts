@@ -1,6 +1,27 @@
 import type { QueryRepository } from '@suite/db';
 import { generateUUID } from '@suite/shared-kernel';
 
+// Re-export encryption functions
+export {
+  setDriveKeyProvider,
+  getDriveKeyProvider,
+  isEncryptionEnabled,
+  sealFile,
+  unsealFile,
+  sealFiles,
+  unsealFiles,
+  sealFolder,
+  unsealFolder,
+  sealFolders,
+  unsealFolders,
+  type EncryptedDriveFile,
+  type EncryptedDriveFolder,
+  type KeyProvider,
+} from './drive-crypto.js';
+
+// Import encryption functions for internal use
+import { sealFile as _sealFile, unsealFile as _unsealFile, sealFolder as _sealFolder, unsealFolder as _unsealFolder, sealFiles as _sealFiles, unsealFiles as _unsealFiles, sealFolders as _sealFolders, unsealFolders as _unsealFolders, isEncryptionEnabled as _isEncryptionEnabled } from './drive-crypto.js';
+
 export type DriveFile = {
   id: string;
   name: string;
@@ -225,12 +246,28 @@ function snapshot(file: DriveFile): DriveFile {
 
 export async function listDriveFiles(): Promise<DriveFile[]> {
   const files = await currentFileRepository.findAll();
-  return files.reverse().map(snapshot);
+  const reversed = files.reverse().map(snapshot);
+  
+  // Decrypt names if encryption is enabled
+  if (_isEncryptionEnabled()) {
+    return await _unsealFiles(reversed as any);
+  }
+  
+  return reversed;
 }
 
 export async function getDriveFile(id: string): Promise<DriveFile | null> {
   const file = await currentFileRepository.findById(id);
-  return file ? snapshot(file) : null;
+  if (!file) return null;
+  
+  const snapped = snapshot(file);
+  
+  // Decrypt name if encryption is enabled
+  if (_isEncryptionEnabled()) {
+    return await _unsealFile(snapped as any);
+  }
+  
+  return snapped;
 }
 
 export function resetDriveFiles(): void {
@@ -357,7 +394,16 @@ export async function uploadDriveFile(input: UploadDriveFileInput): Promise<Driv
   if (input.mimeType !== undefined) {
     createData.mimeType = input.mimeType.toLowerCase();
   }
-  const created = await currentFileRepository.create(createData);
+  
+  // Encrypt name if encryption is enabled
+  let dataToStore = createData;
+  if (_isEncryptionEnabled()) {
+    const encrypted = await _sealFile({ ...createData, id: 'temp' } as DriveFile);
+    const { encryptedName, ...rest } = encrypted;
+    dataToStore = { ...rest, name: encryptedName as any };
+  }
+  
+  const created = await currentFileRepository.create(dataToStore);
 
   return snapshot(created);
 }
@@ -377,10 +423,19 @@ export async function renameDriveFile(input: RenameDriveFileInput): Promise<Driv
     ]);
   }
 
-  const updated = await currentFileRepository.update(input.id, {
-    name,
+  // Encrypt name if encryption is enabled
+  let updateData: Partial<DriveFile> = {
     modifiedAt: getCurrentTimestamp(),
-  });
+  };
+  if (_isEncryptionEnabled()) {
+    const encrypted = await _sealFile({ id: input.id, name, size: 0, createdAt: '', modifiedAt: '' } as DriveFile);
+    const { encryptedName, ...rest } = encrypted;
+    updateData = { ...updateData, name: encryptedName as any };
+  } else {
+    updateData.name = name;
+  }
+
+  const updated = await currentFileRepository.update(input.id, updateData);
 
   return updated ? snapshot(updated) : null;
 }
@@ -421,16 +476,34 @@ export async function createFolder(input: CreateFolderInput): Promise<DriveFolde
   if (input.parentId !== undefined) {
     createData.parentId = input.parentId;
   }
-  const created = await currentFolderRepository.create(createData);
+  
+  // Encrypt name if encryption is enabled
+  let dataToStore = createData;
+  if (_isEncryptionEnabled()) {
+    const encrypted = await _sealFolder({ ...createData, id: 'temp' } as DriveFolder);
+    const { encryptedName, ...rest } = encrypted;
+    dataToStore = { ...rest, name: encryptedName as any };
+  }
+  
+  const created = await currentFolderRepository.create(dataToStore);
 
   return created;
 }
 
 export async function listFolders(parentId?: string): Promise<DriveFolder[]> {
+  let folders: DriveFolder[];
   if (parentId) {
-    return await currentFolderRepository.findWhere({ parentId });
+    folders = await currentFolderRepository.findWhere({ parentId });
+  } else {
+    folders = await currentFolderRepository.findAll();
   }
-  return await currentFolderRepository.findAll();
+  
+  // Decrypt names if encryption is enabled
+  if (_isEncryptionEnabled()) {
+    return await _unsealFolders(folders as any);
+  }
+  
+  return folders;
 }
 
 export async function renameFolder(input: RenameFolderInput): Promise<DriveFolder | null> {
@@ -448,7 +521,17 @@ export async function renameFolder(input: RenameFolderInput): Promise<DriveFolde
     ]);
   }
 
-  const updated = await currentFolderRepository.update(input.id, { name });
+  // Encrypt name if encryption is enabled
+  let updateData: Partial<DriveFolder> = {};
+  if (_isEncryptionEnabled()) {
+    const encrypted = await _sealFolder({ id: input.id, name, createdAt: '' } as DriveFolder);
+    const { encryptedName, ...rest } = encrypted;
+    updateData = { ...rest, name: encryptedName as any };
+  } else {
+    updateData.name = name;
+  }
+
+  const updated = await currentFolderRepository.update(input.id, updateData);
 
   return updated;
 }
@@ -495,9 +578,16 @@ export async function moveFile(input: MoveFileInput): Promise<DriveFile | null> 
 
 export async function searchFiles(input: SearchFilesInput): Promise<DriveFile[]> {
   const allFiles = await currentFileRepository.findAll();
+  
+  // Decrypt names if encryption is enabled before searching
+  let filesToSearch = allFiles;
+  if (_isEncryptionEnabled()) {
+    filesToSearch = await _unsealFiles(allFiles as any);
+  }
+  
   const query = input.query.toLowerCase();
 
-  return allFiles.filter(file => {
+  return filesToSearch.filter(file => {
     // Filter by folder if specified
     if (input.folderId && file.folderId !== input.folderId) {
       return false;
