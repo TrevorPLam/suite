@@ -23,6 +23,23 @@ describe('Environment Configuration', () => {
     expect(env.NODE_ENV).toBe('development');
   });
 
+  it('should validate calendar environment with explicit env object', () => {
+    const customEnv = {
+      DATABASE_URL: 'postgresql://localhost:5432/test',
+      BETTER_AUTH_SECRET: 'dev-secret-change-in-production-32chars',
+      BETTER_AUTH_URL: 'http://localhost:3001',
+      PORT: '3000',
+      NODE_ENV: 'development',
+    };
+
+    const env = validateCalendarEnv(customEnv);
+    expect(env.DATABASE_URL).toBe('postgresql://localhost:5432/test');
+    expect(env.BETTER_AUTH_SECRET).toBe('dev-secret-change-in-production-32chars');
+    expect(env.BETTER_AUTH_URL).toBe('http://localhost:3001');
+    expect(env.PORT).toBe(3000);
+    expect(env.NODE_ENV).toBe('development');
+  });
+
   it('should throw error when DATABASE_URL is not set', () => {
     process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
     process.env.BETTER_AUTH_URL = 'http://localhost:3001';
@@ -68,6 +85,24 @@ describe('Environment Configuration', () => {
     expect(env.NODE_ENV).toBe('production');
   });
 
+  it('should validate tasks environment with explicit env object', () => {
+    const customEnv = {
+      DATABASE_URL: 'postgresql://localhost:5432/test',
+      BETTER_AUTH_SECRET: 'dev-secret-change-in-production-32chars',
+      BETTER_AUTH_URL: 'http://localhost:3002',
+      PORT: '3001',
+      NODE_ENV: 'production',
+      ENCRYPTION_KEY: 'a'.repeat(64),
+    };
+
+    const env = validateTasksEnv(customEnv);
+    expect(env.DATABASE_URL).toBe('postgresql://localhost:5432/test');
+    expect(env.BETTER_AUTH_SECRET).toBe('dev-secret-change-in-production-32chars');
+    expect(env.BETTER_AUTH_URL).toBe('http://localhost:3002');
+    expect(env.PORT).toBe(3001);
+    expect(env.NODE_ENV).toBe('production');
+  });
+
   it('should validate drive environment with valid config', () => {
     process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
     process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
@@ -76,6 +111,23 @@ describe('Environment Configuration', () => {
     process.env.NODE_ENV = 'test';
 
     const env = validateDriveEnv();
+    expect(env.DATABASE_URL).toBe('postgresql://localhost:5432/test');
+    expect(env.BETTER_AUTH_SECRET).toBe('dev-secret-change-in-production-32chars');
+    expect(env.BETTER_AUTH_URL).toBe('http://localhost:3003');
+    expect(env.PORT).toBe(3002);
+    expect(env.NODE_ENV).toBe('test');
+  });
+
+  it('should validate drive environment with explicit env object', () => {
+    const customEnv = {
+      DATABASE_URL: 'postgresql://localhost:5432/test',
+      BETTER_AUTH_SECRET: 'dev-secret-change-in-production-32chars',
+      BETTER_AUTH_URL: 'http://localhost:3003',
+      PORT: '3002',
+      NODE_ENV: 'test',
+    };
+
+    const env = validateDriveEnv(customEnv);
     expect(env.DATABASE_URL).toBe('postgresql://localhost:5432/test');
     expect(env.BETTER_AUTH_SECRET).toBe('dev-secret-change-in-production-32chars');
     expect(env.BETTER_AUTH_URL).toBe('http://localhost:3003');

@@ -1,6 +1,7 @@
 import { setDriveFileRepository, setDriveFolderRepository, setDriveKeyProviderFromEnv, setDriveStorage, isEncryptionEnabled, type StorageAdapter, InMemoryDriveFileRepository, InMemoryDriveFolderRepository } from '@suite/domain-drive';
 import { PostgresDriveFileRepository, PostgresDriveFolderRepository, createDbClient } from '@suite/db';
 import { createCircuitBreaker, type CircuitBreaker } from '@suite/shared-kernel';
+import type { DriveEnv } from '@suite/env-config';
 
 // R2 Storage Adapter for Cloudflare R2
 export class R2StorageAdapter implements StorageAdapter {
@@ -97,13 +98,13 @@ export function getR2Adapter(): R2StorageAdapter | null {
   return r2Adapter;
 }
 
-export async function wireRepositories(userId: string | null, r2Bucket?: R2Bucket): Promise<void> {
+export async function wireRepositories(userId: string | null, env: DriveEnv, r2Bucket?: R2Bucket): Promise<void> {
   try {
     // Set up encryption key provider from environment
     await setDriveKeyProviderFromEnv();
 
     // Require encryption in production
-    if (process.env.NODE_ENV === 'production' && !isEncryptionEnabled()) {
+    if (env.NODE_ENV === 'production' && !isEncryptionEnabled()) {
       throw new Error(
         'ENCRYPTION_KEY must be set in production. Set it via wrangler secret put ENCRYPTION_KEY. ' +
         'Generate a key with: openssl rand -base64 32'
@@ -121,8 +122,8 @@ export async function wireRepositories(userId: string | null, r2Bucket?: R2Bucke
     }
 
     // Use Postgres repositories if DATABASE_URL is set and userId is provided, otherwise use in-memory repositories
-    if (userId && process.env.DATABASE_URL) {
-      const db = createDbClient({ DATABASE_URL: process.env.DATABASE_URL });
+    if (userId && env.DATABASE_URL) {
+      const db = createDbClient({ DATABASE_URL: env.DATABASE_URL });
       // Use default tenant for single-tenant setup (will be updated for multi-tenancy)
       setDriveFileRepository(new PostgresDriveFileRepository(db, userId, 'default'));
       setDriveFolderRepository(new PostgresDriveFolderRepository(db, userId, 'default'));

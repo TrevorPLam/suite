@@ -26,6 +26,6 @@ export const calendarEnvSchema = z.object({
 
 export type CalendarEnv = z.infer<typeof calendarEnvSchema>;
 
-export function validateCalendarEnv(): CalendarEnv {
-  return calendarEnvSchema.parse(process.env);
+export function validateCalendarEnv(env: Record<string, string | undefined> = process.env): CalendarEnv {
+  return calendarEnvSchema.parse(env);
 }

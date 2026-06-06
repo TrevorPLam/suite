@@ -5,6 +5,7 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { timeout } from 'hono/timeout';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
+import { env } from 'hono/adapter';
 import {
   CalendarEventError,
   createCalendarEvent,
@@ -14,24 +15,21 @@ import {
   type CalendarEventRange,
 } from '@suite/domain-calendar';
 import { wireRepositories } from './bootstrap.js';
-import { validateCalendarEnv } from '@suite/env-config';
+import { validateCalendarEnv, type CalendarEnv } from '@suite/env-config';
 import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import { createEventBodySchema, updateEventBodySchema } from './schemas.js';
 import { openApiDoc } from './openapi.js';
 
-// Validate environment variables at startup
-validateCalendarEnv();
-
-// Create usage repository for monitoring
-const usageRepository = new PostgresUsageRepository();
-
 type Env = {
   RATE_LIMIT_KV: KVNamespace;
   AUTH_KV: KVNamespace;
   waitUntil: (promise: Promise<unknown>) => void;
-};
+} & CalendarEnv;
+
+// Create usage repository for monitoring
+const usageRepository = new PostgresUsageRepository();
 
 type Variables = {
   userId: string | null;
@@ -39,6 +37,20 @@ type Variables = {
 };
 
 const app = new Hono<{ Variables: Variables; Bindings: Env }>();
+
+// Validate environment variables using runtime env
+app.use('/api/*', async (c, next) => {
+  const runtimeEnv = env(c);
+  // Extract only string env vars for validation (exclude KVNamespace and other bindings)
+  const stringEnv: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(runtimeEnv)) {
+    if (typeof value === 'string') {
+      stringEnv[key] = value;
+    }
+  }
+  validateCalendarEnv(stringEnv);
+  await next();
+});
 
 // Mount request ID middleware (must be before logger to ensure logs include request ID)
 app.use('/api/*', requestId());
@@ -109,11 +121,13 @@ app.use('/api/*', async (c, next) => {
 });
 
 // Mount CORS middleware
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'];
-app.use('/api/*', cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
+app.use('/api/*', async (c, next) => {
+  const allowedOrigins = c.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'];
+  return cors({
+    origin: (origin) => (allowedOrigins.includes(origin) || !origin ? origin : undefined),
+    credentials: true,
+  })(c, next);
+});
 
 // Mount security headers middleware
 app.use('/api/*', secureHeaders({
@@ -146,8 +160,8 @@ app.use('/api/*', async (c, next) => {
       AUTH_KV: c.env.AUTH_KV,
     },
     waitUntil: c.env.waitUntil,
-    ...(process.env.TRUSTED_ORIGINS && { trustedOrigins: process.env.TRUSTED_ORIGINS }),
-    ...(process.env.BETTER_AUTH_API_KEY && { betterAuthApiKey: process.env.BETTER_AUTH_API_KEY }),
+    ...(c.env.TRUSTED_ORIGINS && { trustedOrigins: c.env.TRUSTED_ORIGINS }),
+    ...(c.env.BETTER_AUTH_API_KEY && { betterAuthApiKey: c.env.BETTER_AUTH_API_KEY }),
   });
   c.set('auth', auth);
   await next();
@@ -173,7 +187,7 @@ app.use('/api/*', async (c, next) => {
 app.use('/api/*', async (c, next) => {
   const userId = c.get('userId') as string | undefined;
   if (userId) {
-    await wireRepositories(userId);
+    await wireRepositories(userId, c.env);
   }
   await next();
 });

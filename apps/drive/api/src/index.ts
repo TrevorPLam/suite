@@ -5,6 +5,7 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { timeout } from 'hono/timeout';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
+import { env } from 'hono/adapter';
 import {
   createFolder,
   deleteDriveFile,
@@ -21,7 +22,7 @@ import {
   DriveError,
 } from '@suite/domain-drive';
 import { wireRepositories, getR2Adapter } from './bootstrap.js';
-import { validateDriveEnv } from '@suite/env-config';
+import { validateDriveEnv, type DriveEnv } from '@suite/env-config';
 import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
@@ -35,18 +36,12 @@ import {
 } from './schemas.js';
 import { openApiDoc } from './openapi.js';
 
-// Validate environment variables at startup
-validateDriveEnv();
-
-// Create usage repository for monitoring (only if DATABASE_URL is set)
-const usageRepository = process.env.DATABASE_URL ? new PostgresUsageRepository() : null;
-
 type Env = {
   R2: R2Bucket;
   RATE_LIMIT_KV: KVNamespace;
   AUTH_KV: KVNamespace;
   waitUntil: (promise: Promise<unknown>) => void;
-};
+} & DriveEnv;
 
 type Variables = {
   userId: string | null;
@@ -55,6 +50,29 @@ type Variables = {
 };
 
 const app = new Hono<{ Variables: Variables; Bindings: Env }>();
+
+// Validate environment variables using runtime env
+app.use('/api/*', async (c, next) => {
+  const runtimeEnv = env(c);
+  // Extract only string env vars for validation (exclude KVNamespace and other bindings)
+  const stringEnv: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(runtimeEnv)) {
+    if (typeof value === 'string') {
+      stringEnv[key] = value;
+    }
+  }
+  validateDriveEnv(stringEnv);
+  await next();
+});
+
+// Create usage repository for monitoring (only if DATABASE_URL is set)
+let usageRepository: PostgresUsageRepository | null = null;
+app.use('/api/*', async (c, next) => {
+  if (!usageRepository && c.env.DATABASE_URL) {
+    usageRepository = new PostgresUsageRepository();
+  }
+  await next();
+});
 
 // Simple in-memory metrics collector
 const metrics = {
@@ -133,11 +151,13 @@ app.use('/api/*', async (c, next) => {
 });
 
 // Mount CORS middleware
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'];
-app.use('/api/*', cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
+app.use('/api/*', async (c, next) => {
+  const allowedOrigins = c.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'];
+  return cors({
+    origin: (origin) => (allowedOrigins.includes(origin) || !origin ? origin : undefined),
+    credentials: true,
+  })(c, next);
+});
 
 // Mount security headers middleware
 app.use('/api/*', secureHeaders({
@@ -170,8 +190,8 @@ app.use('/api/*', async (c, next) => {
       AUTH_KV: c.env.AUTH_KV,
     },
     waitUntil: c.env.waitUntil,
-    ...(process.env.TRUSTED_ORIGINS && { trustedOrigins: process.env.TRUSTED_ORIGINS }),
-    ...(process.env.BETTER_AUTH_API_KEY && { betterAuthApiKey: process.env.BETTER_AUTH_API_KEY }),
+    ...(c.env.TRUSTED_ORIGINS && { trustedOrigins: c.env.TRUSTED_ORIGINS }),
+    ...(c.env.BETTER_AUTH_API_KEY && { betterAuthApiKey: c.env.BETTER_AUTH_API_KEY }),
   });
   c.set('auth', auth);
   await next();
@@ -181,13 +201,16 @@ app.use('/api/*', async (c, next) => {
 mountAuth(app);
 
 // Mount UsageMonitor middleware (blocks at 80% of 1000 requests per hour) - only if DATABASE_URL is set
-if (usageRepository) {
-  app.use('/api/*', UsageMonitor({
-    limit: 1000,
-    periodMs: 3600000, // 1 hour
-    usageRepository,
-  }));
-}
+app.use('/api/*', async (c, next) => {
+  if (usageRepository) {
+    return UsageMonitor({
+      limit: 1000,
+      periodMs: 3600000, // 1 hour
+      usageRepository,
+    })(c, next);
+  }
+  await next();
+});
 
 // Mount rate limiting middleware (60 requests per minute per user)
 app.use('/api/*', async (c, next) => {
@@ -324,7 +347,7 @@ http_error_rate{app="drive"} ${errorRate}
 
 app.get('/api/v1/files', async (c) => {
   // Wire repositories for public endpoint (no auth required)
-  await wireRepositories(null, c.env?.R2 || undefined);
+  await wireRepositories(null, c.env, c.env?.R2);
   const files = await listDriveFiles();
   return c.json({ files });
 });
@@ -670,7 +693,7 @@ app.get('/api/v1/files/:id/download', async (c) => {
 // Folder endpoints
 app.get('/api/v1/folders', async (c) => {
   // Wire repositories for public endpoint (no auth required)
-  await wireRepositories(null, c.env?.R2 || undefined);
+  await wireRepositories(null, c.env, c.env?.R2);
   const parentId = c.req.query('parentId');
   const folders = await listFolders(parentId);
   return c.json({ folders });
@@ -902,7 +925,7 @@ app.post('/api/v1/files/:id/move', requireAuth, requireOrganization, async (c) =
 // Search endpoint
 app.get('/api/v1/files/search', async (c) => {
   // Wire repositories for public endpoint (no auth required)
-  await wireRepositories(null, c.env?.R2 || undefined);
+  await wireRepositories(null, c.env, c.env?.R2);
   const query = c.req.query();
   const result = searchFilesQuerySchema.safeParse(query);
 

@@ -40,6 +40,6 @@ export const driveEnvSchema = z.object({
 
 export type DriveEnv = z.infer<typeof driveEnvSchema>;
 
-export function validateDriveEnv(): DriveEnv {
-  return driveEnvSchema.parse(process.env);
+export function validateDriveEnv(env: Record<string, string | undefined> = process.env): DriveEnv {
+  return driveEnvSchema.parse(env);
 }

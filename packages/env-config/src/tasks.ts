@@ -26,6 +26,6 @@ export const tasksEnvSchema = z.object({
 
 export type TasksEnv = z.infer<typeof tasksEnvSchema>;
 
-export function validateTasksEnv(): TasksEnv {
-  return tasksEnvSchema.parse(process.env);
+export function validateTasksEnv(env: Record<string, string | undefined> = process.env): TasksEnv {
+  return tasksEnvSchema.parse(env);
 }
