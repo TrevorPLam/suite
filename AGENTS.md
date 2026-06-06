@@ -29,7 +29,7 @@ This repository is a greenfield monorepo for a productivity suite. The initial f
 
 8. **Every PR must pass `nx affected -t typecheck,test,lint`.** No exceptions.
 
-9. **E2EE crypto is non‑negotiable.** All user content must be encrypted with AES‑256‑GCM before storage. Use `@suite/crypto`.
+9. **E2EE crypto is non‑negotiable.** All user content must be encrypted with AES‑256‑GCM before storage. Use `@suite/crypto`. Encryption is activated via ENCRYPTION_KEY environment variable. Encryption is disabled by default for development but required for production (bootstrap functions throw if ENCRYPTION_KEY is not set in NODE_ENV=production).
 
 10. **Free tier limits must be monitored.** Each API must implement `UsageMonitor` middleware that blocks requests when limits approach 80%.
 

@@ -1,4 +1,4 @@
-import { setDriveFileRepository, setDriveFolderRepository, setDriveKeyProviderFromEnv, setDriveStorage, type StorageAdapter, InMemoryDriveFileRepository, InMemoryDriveFolderRepository } from '@suite/domain-drive';
+import { setDriveFileRepository, setDriveFolderRepository, setDriveKeyProviderFromEnv, setDriveStorage, isEncryptionEnabled, type StorageAdapter, InMemoryDriveFileRepository, InMemoryDriveFolderRepository } from '@suite/domain-drive';
 import { PostgresDriveFileRepository, PostgresDriveFolderRepository } from '@suite/db';
 import { createCircuitBreaker, type CircuitBreaker } from '@suite/shared-kernel';
 
@@ -124,6 +124,14 @@ export async function wireRepositories(userId: string | null, r2Bucket?: R2Bucke
   try {
     // Set up encryption key provider from environment
     await setDriveKeyProviderFromEnv();
+
+    // Require encryption in production
+    if (process.env.NODE_ENV === 'production' && !isEncryptionEnabled()) {
+      throw new Error(
+        'ENCRYPTION_KEY must be set in production. Set it via wrangler secret put ENCRYPTION_KEY. ' +
+        'Generate a key with: openssl rand -base64 32'
+      );
+    }
 
     // Set up storage adapter
     if (r2Bucket) {

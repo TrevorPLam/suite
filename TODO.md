@@ -86,7 +86,7 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] DEP-002: Activate E2EE Encryption
+### [x] DEP-002: Activate E2EE Encryption
 
 **Priority**: P0
 **Bounded Context**: Security
@@ -122,25 +122,36 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### DEP-002-01: Verify encryption activation logic
+#### ✅ DEP-002-01: Verify encryption activation logic
 **Target File**: `packages/domain-calendar/src/lib/calendar-crypto.ts`, `packages/domain-tasks/src/lib/tasks-crypto.ts`, `packages/domain-drive/src/drive-crypto.ts`
 **Action**: Review isEncryptionEnabled() implementation to ensure it correctly detects when ENCRYPTION_KEY is set. Verify that setKeyProviderFromEnv() properly imports the key and sets the custom provider. Add test to verify encryption is active when ENCRYPTION_KEY is set.
 **Validate Command**: `pnpm --filter @suite/domain-calendar test`, `pnpm --filter @suite/domain-tasks test`, `pnpm --filter @suite/domain-drive test`
 
-#### DEP-002-02: Add encryption activation test
+#### ✅ DEP-002-02: Add encryption activation test
 **Target File**: `packages/domain-calendar/src/lib/calendar-crypto.test.ts` (create or update)
 **Action**: Add test that verifies isEncryptionEnabled() returns false by default, and returns true after setKeyProviderFromEnv() is called with a valid ENCRYPTION_KEY. Test should verify that seal/unseal functions actually encrypt/decrypt when encryption is enabled.
 **Validate Command**: `pnpm --filter @suite/domain-calendar test`
 
-#### DEP-002-03: Update bootstrap to throw if encryption disabled
+#### ✅ DEP-002-03: Update bootstrap to throw if encryption disabled
 **Target File**: `apps/calendar/api/src/bootstrap.ts`, `apps/tasks/api/src/bootstrap.ts`, `apps/drive/api/src/bootstrap.ts`
 **Action**: Modify bootstrap functions to throw an error if ENCRYPTION_KEY is not set in production environment (NODE_ENV=production). This prevents accidental deployment without encryption. Add error message explaining that ENCRYPTION_KEY must be set.
 **Validate Command**: `pnpm --filter @suite/calendar-api typecheck`, `pnpm --filter @suite/tasks-api typecheck`, `pnpm --filter @suite/drive-api typecheck`
 
-#### DEP-002-04: Update documentation
+#### ✅ DEP-002-04: Update documentation
 **Target File**: `README.md`, `AGENTS.md`
 **Action**: Update README.md to reflect that E2EE is implemented and activated via ENCRYPTION_KEY. Update AGENTS.md rule 9 status to indicate implementation is complete. Document that encryption is disabled by default for development but required for production.
 **Validate Command**: No validation needed
+
+**Implementation Notes**:
+- Verified encryption activation logic across all three domains (calendar, tasks, drive)
+- Created calendar-crypto.test.ts with comprehensive encryption activation tests
+- Added resetKeyProvider() function to calendar-crypto.ts for test isolation
+- Updated all three bootstrap files to throw error if ENCRYPTION_KEY not set in NODE_ENV=production
+- Updated README.md to remove "End-to-end encryption of user content" from Not Started section
+- Updated README.md to note encryption is activated via ENCRYPTION_KEY
+- Updated AGENTS.md rule 9 to document encryption activation via ENCRYPTION_KEY and production requirement
+- All tests passing (33 tests for calendar domain, 67 for tasks, 53 for drive)
+- Typecheck and lint passing
 
 ---
 

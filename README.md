@@ -38,14 +38,12 @@ Infrastructure packages are integrated into the runtime:
 
 - **@suite/db** - Drizzle ORM with PostgreSQL schema definitions (PostgresUsageRepository used in APIs)
 - **@suite/auth** - Better Auth integration (mounted on all APIs via mountAuth)
-- **@suite/crypto** - E2EE crypto utilities with AES-256-GCM and blind-index search support
+- **@suite/crypto** - E2EE crypto utilities with AES-256-GCM and blind-index search support (encryption activated via ENCRYPTION_KEY)
 - **@suite/env-config** - Environment validation with Zod schemas (called at API startup)
 - **@suite/ui** - Shared UI component library (Button component used in web apps)
 
 ### Not Started
 
-- PostgreSQL persistence (domains use in-memory repos by default)
-- End-to-end encryption of user content
 - Multi-tenant data isolation
 
 ### Authentication Status

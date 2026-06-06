@@ -78,6 +78,13 @@ export function isEncryptionEnabled(): boolean {
 }
 
 /**
+ * Resets the key provider to default (for testing)
+ */
+export function resetKeyProvider(): void {
+  currentKeyProvider = defaultKeyProvider;
+}
+
+/**
  * Encrypts an event's title before storage
  * @param event - Event with plaintext title
  * @returns Event with encrypted title
