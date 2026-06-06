@@ -1691,21 +1691,11 @@ UI-001 → UI-002
 | LINT-001 | Add ESLint | done |
 | API-001 | Zod schemas for Tasks API | done |
 | UI-001 | Extract Drive upload dialog | done |
-| UI-002 | Extract Drive rename/delete dialogs | pending |
+| UI-002 | Extract Drive rename/delete dialogs | done |
 
 ## Discovered Issues
 
-### DB-007-bug — Fix Tasks repository test type errors
-
-**Status:** pending
-**Priority:** medium
-**Related paths:**
-- `packages/db/src/repositories/tasks.test.ts`
-
-**Description:**
-TypeScript errors in tasks repository test file due to type mismatches with optional fields (priority, tags, dueDate). Test passes `null` for these fields but domain types expect specific types (priority: 'low'|'medium'|'high', tags: string[], dueDate: string | null). Need to update test fixtures to match domain type expectations.
-
-**Error count:** 34 errors in tasks.test.ts
+None
 
 ---
 
