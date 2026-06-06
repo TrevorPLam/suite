@@ -10,6 +10,10 @@ export const tasksEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   ALLOWED_ORIGINS: z.string().optional(),
   TRUSTED_ORIGINS: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
 }).refine((data) => {
   if (data.NODE_ENV === 'production' && !data.ENCRYPTION_KEY) {
     return false;
