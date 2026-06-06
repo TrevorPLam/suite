@@ -347,7 +347,9 @@
 
 ## Task: T043 - Add Mobile Biometric Authentication Support
 
-- [ ] **T043** [PENDING] Add Mobile Biometric Authentication Support
+- [!] **T043** [BLOCKED] Add Mobile Biometric Authentication Support
+
+**Block Reason:** This task requires mobile SDK integration (iOS/Android platform APIs like Face ID, Touch ID) and should be implemented in a separate mobile package. No mobile apps exist in the current workspace. Task should be deferred until mobile applications are created.
 
 **Files:** `packages/auth/src/mobile-biometrics.ts` (create) - likely separate mobile package
 
