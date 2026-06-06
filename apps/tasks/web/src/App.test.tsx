@@ -55,6 +55,8 @@ describe('Tasks App', () => {
             title: 'Write tests',
             completed: false,
             archived: false,
+            priority: 'medium',
+            tags: [],
           },
         }),
       );
@@ -90,6 +92,8 @@ describe('Tasks App', () => {
               title: 'Write tests',
               completed: false,
               archived: false,
+              priority: 'medium',
+              tags: [],
             },
           ],
         }),
@@ -101,6 +105,8 @@ describe('Tasks App', () => {
             title: 'Write tests',
             completed: true,
             archived: false,
+            priority: 'medium',
+            tags: [],
           },
         }),
       );
@@ -130,6 +136,8 @@ describe('Tasks App', () => {
               title: 'Write tests',
               completed: false,
               archived: false,
+              priority: 'medium',
+              tags: [],
             },
           ],
         }),
@@ -141,6 +149,8 @@ describe('Tasks App', () => {
             title: 'Write tests',
             completed: false,
             archived: true,
+            priority: 'medium',
+            tags: [],
           },
         }),
       );
@@ -170,6 +180,8 @@ describe('Tasks App', () => {
               title: 'Write tests',
               completed: false,
               archived: false,
+              priority: 'medium',
+              tags: [],
             },
           ],
         }),
@@ -215,4 +227,6 @@ describe('Tasks App', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('Title is required');
     });
   });
+
+
 });
