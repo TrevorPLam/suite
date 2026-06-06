@@ -54,6 +54,6 @@
       "{workspaceRoot}/vitest.config.ts"
     ]
   },
-  "defaultBase": "master",
+  "defaultBase": "main",
   "analytics": true
 }

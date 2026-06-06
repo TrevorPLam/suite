@@ -1699,9 +1699,9 @@ Discovered during P1-001 QA. apps/drive/web has 2 lint errors:
 
 ---
 
-### [ ] P1-003: Align nx.json defaultBase with CI Branch
+### [x] P1-003: Align nx.json defaultBase with CI Branch
 
-**Status**: Pending  
+**Status**: Complete  
 **Priority**: P1  
 **Bounded Context**: Monorepo
 
@@ -1738,15 +1738,24 @@ Discovered during P1-001 QA. apps/drive/web has 2 lint errors:
 
 **Subtasks**:
 
-#### P1-003-01: Update nx.json defaultBase to main
+#### P1-003-01: Update nx.json defaultBase to main ✅
 **Target File**: `nx.json`
 **Action**: Change defaultBase from "master" to "main"
 **Validate Command**: `nx affected:graph --base=main`
 
-#### P1-003-02: Verify CI uses main branch
+#### P1-003-02: Verify CI uses main branch ✅
 **Target File**: `.github/workflows/ci.yml`
 **Action**: Confirm branches: [main] in on: pull_request and push sections
 **Validate Command**: `gh workflow view ci.yml | grep branches`
+
+**Implementation Notes**:
+- Changed nx.json defaultBase from "master" to "main"
+- Renamed local git branch from "master" to "main"
+- CI workflow already uses "main" branch (no changes needed)
+- Validated with `nx graph --affected --base=main` - command succeeded
+- Typecheck passed successfully
+- Lint and test failures are pre-existing issues in tasks/web (AuthProvider, unused variables) unrelated to this change
+- Nx affected commands now correctly compare against "main" branch
 
 ---
 
