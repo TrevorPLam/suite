@@ -457,16 +457,24 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P1-010: Standardize API Response Format
+### [x] P1-010: Standardize API Response Format
 
-**Status**: Pending  
-**Priority**: P1  
+**Status**: Complete
+**Priority**: P1
 **Bounded Context**: API
+
+**Implementation Notes**:
+- Calendar API already compliant: returns { events }, { event }
+- Tasks API already compliant: returns { tasks }, { task }, { success: true }
+- Drive API updated to wrap responses: { file }, { folder }, { success: true }
+- Updated Drive API tests to expect wrapped response format
+- Pre-existing test failures in Drive API (auth mock, search) are unrelated to response format changes - documented as INF-002
 
 **Related Files**:
 - `apps/calendar/api/src/index.ts`
 - `apps/tasks/api/src/index.ts`
 - `apps/drive/api/src/index.ts`
+- `apps/drive/api/src/index.test.ts`
 
 **Definition of Done**:
 - All list endpoints return { items: [...] }
@@ -502,20 +510,20 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 **Subtasks**:
 
-#### P1-010-01: Standardize calendar API responses
+#### P1-010-01: Standardize calendar API responses ✅
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Update GET /api/events to return { events: [...] }, POST to return { event: ... }, PUT to return { event: ... }
-**Validate Command**: `pnpm --filter @suite/calendar-api test`
+**Validate Command**: `pnpm --filter @suite/calendar-api test` (already compliant)
 
-#### P1-010-02: Standardize tasks API responses
+#### P1-010-02: Standardize tasks API responses ✅
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Update GET /api/tasks to return { tasks: [...] }, POST to return { task: ... }, PUT to return { task: ... }
-**Validate Command**: `pnpm --filter @suite/tasks-api test`
+**Validate Command**: `pnpm --filter @suite/tasks-api test` (already compliant)
 
-#### P1-010-03: Standardize drive API responses
+#### P1-010-03: Standardize drive API responses ✅
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Update GET /api/files to return { files: [...] }, POST to return { file: ... }, PUT to return { file: ... }
-**Validate Command**: `pnpm --filter @suite/drive-api test`
+**Validate Command**: `pnpm --filter @suite/drive-api test` (implemented, tests updated)
 
 ---
 

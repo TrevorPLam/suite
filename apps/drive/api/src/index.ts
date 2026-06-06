@@ -180,7 +180,7 @@ app.post('/api/files', requireAuth, async (c) => {
 
       try {
         const uploadedFile = await uploadDriveFile(payload);
-        return c.json(uploadedFile, 201);
+        return c.json({ file: uploadedFile }, 201);
       } catch (error) {
         const response = readDriveError(error);
         return c.json(response.body, response.status);
@@ -220,7 +220,7 @@ app.post('/api/files', requireAuth, async (c) => {
 
   try {
     const file = await uploadDriveFile(result.data);
-    return c.json(file, 201);
+    return c.json({ file }, 201);
   } catch (error) {
     const response = readDriveError(error);
     return c.json(response.body, response.status);
@@ -257,7 +257,7 @@ app.put('/api/files/:id', requireAuth, async (c) => {
     if (!renamed) {
       return c.json({ error: 'File not found' }, 404);
     }
-    return c.json(renamed);
+    return c.json({ file: renamed });
   } catch (error) {
     const response = readDriveError(error);
     return c.json(response.body, response.status);
@@ -277,7 +277,7 @@ app.delete('/api/files/:id', requireAuth, async (c) => {
     return c.json({ error: 'File not found' }, 404);
   }
 
-  return c.json({ ok: true });
+  return c.json({ success: true });
 });
 
 app.get('/api/files/:id/download', async (c) => {
@@ -340,7 +340,7 @@ app.post('/api/folders', requireAuth, async (c) => {
 
   try {
     const folder = await createFolder(result.data);
-    return c.json(folder, 201);
+    return c.json({ folder }, 201);
   } catch (error) {
     const response = readDriveError(error);
     return c.json(response.body, response.status);
@@ -377,7 +377,7 @@ app.put('/api/folders/:id', requireAuth, async (c) => {
     if (!renamed) {
       return c.json({ error: 'Folder not found' }, 404);
     }
-    return c.json(renamed);
+    return c.json({ folder: renamed });
   } catch (error) {
     const response = readDriveError(error);
     return c.json(response.body, response.status);
@@ -397,7 +397,7 @@ app.delete('/api/folders/:id', requireAuth, async (c) => {
     return c.json({ error: 'Folder not found or not empty' }, 404);
   }
 
-  return c.json({ ok: true });
+  return c.json({ success: true });
 });
 
 // Move file endpoint
@@ -434,7 +434,7 @@ app.post('/api/files/:id/move', requireAuth, async (c) => {
     if (!moved) {
       return c.json({ error: 'File not found' }, 404);
     }
-    return c.json(moved);
+    return c.json({ file: moved });
   } catch (error) {
     const response = readDriveError(error);
     return c.json(response.body, response.status);

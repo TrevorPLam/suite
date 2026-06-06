@@ -91,11 +91,12 @@ describe('drive API - upload file', () => {
 
     expect(res.status).toBe(201);
     const json = await res.json();
-    expect(json).toHaveProperty('id');
-    expect(json.name).toBe('document.pdf');
-    expect(json.size).toBe(1024);
-    expect(json).toHaveProperty('createdAt');
-    expect(json).toHaveProperty('modifiedAt');
+    expect(json).toHaveProperty('file');
+    expect(json.file).toHaveProperty('id');
+    expect(json.file.name).toBe('document.pdf');
+    expect(json.file.size).toBe(1024);
+    expect(json.file).toHaveProperty('createdAt');
+    expect(json.file).toHaveProperty('modifiedAt');
     allowAuth = false;
   });
 
@@ -131,9 +132,10 @@ describe('drive API - upload file', () => {
 
     expect(res.status).toBe(201);
     const json = await res.json();
-    expect(json).toHaveProperty('id');
-    expect(json.name).toBe('document.pdf');
-    expect(json.mimeType).toBe('application/pdf');
+    expect(json).toHaveProperty('file');
+    expect(json.file).toHaveProperty('id');
+    expect(json.file.name).toBe('document.pdf');
+    expect(json.file.mimeType).toBe('application/pdf');
     allowAuth = false;
   });
 
@@ -254,7 +256,7 @@ describe('drive API - rename file', () => {
     });
 
     const createJson = await createRes.json();
-    const fileId = createJson.id;
+    const fileId = createJson.file.id;
 
     const res = await app.request(`/api/files/${fileId}`, {
       method: 'PUT',
@@ -266,9 +268,10 @@ describe('drive API - rename file', () => {
 
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.id).toBe(fileId);
-    expect(json.name).toBe('renamed.pdf');
-    expect(json).toHaveProperty('modifiedAt');
+    expect(json).toHaveProperty('file');
+    expect(json.file.id).toBe(fileId);
+    expect(json.file.name).toBe('renamed.pdf');
+    expect(json.file).toHaveProperty('modifiedAt');
     allowAuth = false;
   });
 
@@ -338,7 +341,7 @@ describe('drive API - delete file', () => {
     });
 
     const createJson = await createRes.json();
-    const fileId = createJson.id;
+    const fileId = createJson.file.id;
 
     const res = await app.request(`/api/files/${fileId}`, {
       method: 'DELETE',
@@ -346,8 +349,8 @@ describe('drive API - delete file', () => {
 
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json).toHaveProperty('ok');
-    expect(json.ok).toBe(true);
+    expect(json).toHaveProperty('success');
+    expect(json.success).toBe(true);
     allowAuth = false;
   });
 
@@ -423,9 +426,10 @@ describe('drive API - create folder', () => {
 
     expect(res.status).toBe(201);
     const json = await res.json();
-    expect(json).toHaveProperty('id');
-    expect(json.name).toBe('Documents');
-    expect(json).toHaveProperty('createdAt');
+    expect(json).toHaveProperty('folder');
+    expect(json.folder).toHaveProperty('id');
+    expect(json.folder.name).toBe('Documents');
+    expect(json.folder).toHaveProperty('createdAt');
     allowAuth = false;
   });
 
@@ -501,7 +505,7 @@ describe('drive API - rename folder', () => {
     });
 
     const createJson = await createRes.json();
-    const folderId = createJson.id;
+    const folderId = createJson.folder.id;
 
     const res = await app.request(`/api/folders/${folderId}`, {
       method: 'PUT',
@@ -513,8 +517,9 @@ describe('drive API - rename folder', () => {
 
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.id).toBe(folderId);
-    expect(json.name).toBe('Renamed');
+    expect(json).toHaveProperty('folder');
+    expect(json.folder.id).toBe(folderId);
+    expect(json.folder.name).toBe('Renamed');
     allowAuth = false;
   });
 
@@ -572,7 +577,7 @@ describe('drive API - delete folder', () => {
     });
 
     const createJson = await createRes.json();
-    const folderId = createJson.id;
+    const folderId = createJson.folder.id;
 
     const res = await app.request(`/api/folders/${folderId}`, {
       method: 'DELETE',
@@ -580,8 +585,8 @@ describe('drive API - delete folder', () => {
 
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json).toHaveProperty('ok');
-    expect(json.ok).toBe(true);
+    expect(json).toHaveProperty('success');
+    expect(json.success).toBe(true);
     allowAuth = false;
   });
 
@@ -626,7 +631,7 @@ describe('drive API - move file', () => {
     });
 
     const createJson = await createRes.json();
-    const fileId = createJson.id;
+    const fileId = createJson.file.id;
 
     const res = await app.request(`/api/files/${fileId}/move`, {
       method: 'POST',
@@ -654,7 +659,7 @@ describe('drive API - move file', () => {
     });
 
     const createJson = await createRes.json();
-    const fileId = createJson.id;
+    const fileId = createJson.file.id;
 
     const res = await app.request(`/api/files/${fileId}/move`, {
       method: 'POST',
@@ -664,7 +669,8 @@ describe('drive API - move file', () => {
 
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.id).toBe(fileId);
+    expect(json).toHaveProperty('file');
+    expect(json.file.id).toBe(fileId);
     allowAuth = false;
   });
 
