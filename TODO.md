@@ -1052,9 +1052,9 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-021: Fix Pre-existing Lint Errors in Tasks Web
+### [x] P2-021: Fix Pre-existing Lint Errors in Tasks Web
 
-**Status**: Pending
+**Status**: Completed
 **Priority**: P2
 **Bounded Context**: Code Quality
 
@@ -1085,17 +1085,27 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Implementation Notes**:
+- Task was already completed. Unused variables/parameters were prefixed with underscores:
+  - App.tsx line 113: `_setSearchTags`
+  - TaskRow.tsx line 48: `_onEditTagsChange`
+- Lint passes with exit code 0 (no errors, only warnings)
+- Typecheck passes with exit code 0
+- Eslint config is configured to ignore underscore-prefixed variables via `argsIgnorePattern: '^_'`
+
 **Subtasks**:
 
 #### P2-021-01: Fix unused setSearchTags in App.tsx
 **Target File**: `apps/tasks/web/src/App.tsx`
 **Action**: Remove unused setSearchTags variable or prefix with underscore if needed
 **Validate Command**: `pnpm --filter @suite/tasks-web lint`
+**Status**: ✅ Complete
 
 #### P2-021-02: Fix unused onEditTagsChange in TaskRow.tsx
 **Target File**: `apps/tasks/web/src/components/TaskRow.tsx`
 **Action**: Remove unused onEditTagsChange parameter or prefix with underscore if needed
 **Validate Command**: `pnpm --filter @suite/tasks-web lint`
+**Status**: ✅ Complete
 
 ---
 
