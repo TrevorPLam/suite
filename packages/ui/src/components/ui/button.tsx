@@ -1,12 +1,38 @@
-import type { ButtonHTMLAttributes, PropsWithChildren } from 'react';
+import * as React from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '../../lib/utils.js';
 
-export function Button({ children, className = '', ...props }: PropsWithChildren<ButtonHTMLAttributes<HTMLButtonElement>>) {
-  return (
-    <button
-      className={`inline-flex items-center justify-center rounded-md bg-[--color-primary] px-4 py-2 text-sm font-medium text-[--color-primary-foreground] transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[--color-primary] ${className}`}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
+const buttonVariants = cva(
+  'inline-flex items-center justify-center rounded-md text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  {
+    variants: {
+      variant: {
+        primary: 'bg-[--color-primary] text-[--color-primary-foreground] hover:opacity-90 focus:ring-[--color-primary]',
+        secondary: 'bg-[--color-secondary] text-[--color-secondary-foreground] hover:opacity-90 focus:ring-[--color-secondary]',
+        danger: 'bg-[--color-destructive] text-[--color-destructive-foreground] hover:opacity-90 focus:ring-[--color-destructive]',
+      },
+    },
+    defaultVariants: {
+      variant: 'primary',
+    },
+  }
+);
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, ...props }, ref) => {
+    return (
+      <button
+        className={cn(buttonVariants({ variant }), className)}
+        ref={ref}
+        {...props}
+      />
+    );
+  }
+);
+Button.displayName = 'Button';
+
+export { Button, buttonVariants };

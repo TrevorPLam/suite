@@ -1,5 +1,5 @@
-export { Button } from './components/ui/button.js';
-export { Input } from './components/ui/input.js';
+export { Button, buttonVariants } from './components/ui/button.js';
+export { Input, inputVariants } from './components/ui/input.js';
 export {
   Dialog,
   DialogPortal,
@@ -34,4 +34,5 @@ export {
   SelectScrollDownButton,
 } from './components/ui/select.js';
 export { Textarea, textareaVariants } from './components/ui/textarea.js';
+export { Skeleton, skeletonVariants } from './components/ui/skeleton.js';
 export { cn } from './lib/utils.js';
