@@ -4,7 +4,45 @@ import { tasks, type TaskSchema, type NewTaskSchema } from '../schema/tasks.js';
 import type { Repository, QueryRepository } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
 
-export type TaskRepository = QueryRepository<TaskSchema>;
+// Domain type (from @suite/domain-tasks)
+export type TaskItem = {
+  id: string;
+  title: string;
+  completed: boolean;
+  archived: boolean;
+  dueDate: string | null;
+  priority: 'low' | 'medium' | 'high';
+  tags: string[];
+};
+
+export interface TaskRepository extends QueryRepository<TaskItem> {
+  clear?(): void;
+}
+
+// Map DB schema to domain type
+function mapToDomain(schema: TaskSchema): TaskItem {
+  return {
+    id: schema.id,
+    title: schema.title,
+    completed: schema.completed,
+    archived: schema.archived,
+    dueDate: schema.dueDate ? schema.dueDate.toISOString() : null,
+    priority: schema.priority ?? 'medium',
+    tags: schema.tags ?? [],
+  };
+}
+
+// Map domain type to DB schema (for create/update)
+function mapToSchema(domain: Omit<TaskItem, 'id'>): Omit<TaskSchema, 'id'> {
+  return {
+    title: domain.title,
+    completed: domain.completed,
+    archived: domain.archived,
+    dueDate: domain.dueDate ? new Date(domain.dueDate) : null,
+    priority: domain.priority,
+    tags: domain.tags,
+  };
+}
 
 export class PostgresTaskRepository implements TaskRepository {
   private db: ReturnType<typeof getDb>;
@@ -13,38 +51,48 @@ export class PostgresTaskRepository implements TaskRepository {
     this.db = db ?? getDb();
   }
 
-  async findById(id: string): Promise<TaskSchema | null> {
+  async findById(id: string): Promise<TaskItem | null> {
     const results = await this.db
       .select()
       .from(tasks)
       .where(eq(tasks.id, id))
       .limit(1);
-    return results[0] ?? null;
+    return results[0] ? mapToDomain(results[0]) : null;
   }
 
-  async findAll(): Promise<TaskSchema[]> {
-    return this.db.select().from(tasks);
+  async findAll(): Promise<TaskItem[]> {
+    const results = await this.db.select().from(tasks);
+    return results.map(mapToDomain);
   }
 
-  async create(entity: Omit<TaskSchema, 'id'>): Promise<TaskSchema> {
+  async create(entity: Omit<TaskItem, 'id'>): Promise<TaskItem> {
+    const schemaEntity = mapToSchema(entity);
     const newEntity: NewTaskSchema = {
       id: generateUUID(),
-      ...entity,
+      ...schemaEntity,
     };
     const results = await this.db.insert(tasks).values(newEntity).returning();
     if (!results[0]) {
       throw new Error('Failed to create task');
     }
-    return results[0];
+    return mapToDomain(results[0]);
   }
 
-  async update(id: string, entity: Partial<TaskSchema>): Promise<TaskSchema | null> {
+  async update(id: string, entity: Partial<TaskItem>): Promise<TaskItem | null> {
+    const schemaEntity: Partial<TaskSchema> = {};
+    if (entity.title !== undefined) schemaEntity.title = entity.title;
+    if (entity.completed !== undefined) schemaEntity.completed = entity.completed;
+    if (entity.archived !== undefined) schemaEntity.archived = entity.archived;
+    if (entity.dueDate !== undefined) schemaEntity.dueDate = entity.dueDate ? new Date(entity.dueDate) : null;
+    if (entity.priority !== undefined) schemaEntity.priority = entity.priority;
+    if (entity.tags !== undefined) schemaEntity.tags = entity.tags;
+
     const results = await this.db
       .update(tasks)
-      .set(entity)
+      .set(schemaEntity)
       .where(eq(tasks.id, id))
       .returning();
-    return results[0] ?? null;
+    return results[0] ? mapToDomain(results[0]) : null;
   }
 
   async delete(id: string): Promise<boolean> {
@@ -55,7 +103,7 @@ export class PostgresTaskRepository implements TaskRepository {
     return results.length > 0;
   }
 
-  async findWhere(criteria: Partial<TaskSchema>): Promise<TaskSchema[]> {
+  async findWhere(criteria: Partial<TaskItem>): Promise<TaskItem[]> {
     const conditions = Object.entries(criteria).map(([key, value]) => 
       eq(tasks[key as keyof TaskSchema] as any, value as any)
     );
@@ -69,10 +117,11 @@ export class PostgresTaskRepository implements TaskRepository {
       ? conditions[0]! 
       : and(...conditions);
     
-    return this.db.select().from(tasks).where(whereClause);
+    const results = await this.db.select().from(tasks).where(whereClause);
+    return results.map(mapToDomain);
   }
 
-  async count(criteria?: Partial<TaskSchema>): Promise<number> {
+  async count(criteria?: Partial<TaskItem>): Promise<number> {
     if (!criteria || Object.keys(criteria).length === 0) {
       const result = await this.db.select({ count: tasks.id }).from(tasks);
       return result.length;

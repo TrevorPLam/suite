@@ -19,6 +19,10 @@ import {
   type SearchTasksInput,
   type BatchOperationInput,
 } from '@suite/domain-tasks';
+import { wireRepositories } from './bootstrap.js';
+
+// Wire repositories before mounting routes
+wireRepositories();
 
 const app = new Hono();
 
