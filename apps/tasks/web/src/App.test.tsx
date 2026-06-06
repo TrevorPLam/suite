@@ -73,10 +73,16 @@ describe('Tasks App', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/Created Write tests/i)).toBeInTheDocument();
+      expect(screen.getByText('Write tests')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Write tests')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const postCall = fetchMock.mock.calls[1];
+    expect(postCall[0]).toBe('/api/tasks');
+    const postOptions = postCall[1] as RequestInit;
+    expect(postOptions?.method).toBe('POST');
+    const body = JSON.parse(postOptions?.body as string);
+    expect(body.title).toBe('Write tests');
   });
 
   it('toggles task completion', async () => {
