@@ -20,13 +20,6 @@
         "cwd": "apps/tasks/api"
       }
     },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "vitest",
-        "cwd": "apps/tasks/api"
-      }
-    },
     "build": {
       "executor": "nx:run-commands",
       "options": {

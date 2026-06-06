@@ -20,13 +20,6 @@
         "cwd": "apps/calendar/api"
       }
     },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "vitest",
-        "cwd": "apps/calendar/api"
-      }
-    },
     "build": {
       "executor": "nx:run-commands",
       "options": {

@@ -20,13 +20,6 @@
         "cwd": "apps/drive/api"
       }
     },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "vitest",
-        "cwd": "apps/drive/api"
-      }
-    },
     "build": {
       "executor": "nx:run-commands",
       "options": {

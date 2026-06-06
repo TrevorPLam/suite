@@ -20,13 +20,6 @@
         "cwd": "apps/calendar/web"
       }
     },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "vitest",
-        "cwd": "apps/calendar/web"
-      }
-    },
     "build": {
       "executor": "nx:run-commands",
       "options": {

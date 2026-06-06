@@ -1,4 +1,15 @@
 {
+  "plugins": [
+    {
+      "plugin": "@nx/vitest",
+      "options": {
+        "testTargetName": "test",
+        "ciTargetName": "test-ci",
+        "ciGroupName": "Unit Tests (CI)",
+        "testMode": "watch"
+      }
+    }
+  ],
   "targetDefaults": {
     "build": {
       "dependsOn": [
@@ -15,6 +26,12 @@
       ]
     },
     "test": {
+      "inputs": [
+        "default",
+        "^production"
+      ]
+    },
+    "test-ci": {
       "inputs": [
         "default",
         "^production"
