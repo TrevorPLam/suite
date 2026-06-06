@@ -25,6 +25,11 @@ export function getLockId(domain: string): number {
 }
 
 export function getMigrationsFolder(domain: string): string {
+  // Shared migrations are in the root drizzle folder
+  if (domain === 'shared') {
+    return path.join(__dirname, '..', 'drizzle');
+  }
+  // Domain-specific migrations are in subfolders
   return path.join(__dirname, '..', 'drizzle', domain);
 }
 

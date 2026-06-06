@@ -6,8 +6,8 @@ export {
   listCalendarEventsInRange,
   resetCalendarEvents,
   resetCalendarEventsDB,
-  setCalendarEventRepository,
   updateCalendarEvent,
+  type CalendarEventRepository,
 } from './lib/calendar-events.js';
 
 export {

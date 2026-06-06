@@ -19,8 +19,11 @@ import {
   batchComplete,
   batchArchive,
   type SearchTasksInput,
+  type TaskRepository,
+  setTaskKeyProviderFromEnv,
+  isEncryptionEnabled,
 } from '@suite/domain-tasks';
-import { wireRepositories } from './bootstrap.js';
+import { PostgresTaskRepository, createDbClient } from '@suite/db';
 import { validateTasksEnv, type TasksEnv } from '@suite/env-config';
 import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
 import {
@@ -31,7 +34,7 @@ import {
   batchOperationBodySchema,
 } from './schemas.js';
 import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
-import { PostgresUsageRepository, createDbClient } from '@suite/db';
+import { PostgresUsageRepository } from '@suite/db';
 import { openApiDoc } from './openapi.js';
 
 type Env = {
@@ -44,6 +47,7 @@ type Env = {
 type Variables = {
   userId: string | null;
   auth: ReturnType<typeof createAuth>;
+  taskRepo: TaskRepository;
 };
 
 const app = new Hono<{ Variables: Variables; Bindings: Env }>();
@@ -230,13 +234,37 @@ app.use('/api/*', async (c, next) => {
   await rateLimit({ requestsPerMinute: 60, kv })(c, next);
 });
 
-// Middleware to wire repositories with userId from auth context
+// Middleware to create repositories per-request and attach to context
 app.use('/api/*', async (c, next) => {
   const userId = c.get('userId') as string | undefined;
+  
+  // Set up encryption key provider from environment
+  await setTaskKeyProviderFromEnv();
+
+  // Require encryption in production
+  if (c.env.NODE_ENV === 'production' && !isEncryptionEnabled()) {
+    throw new Error(
+      'ENCRYPTION_KEY must be set in production. Set it via wrangler secret put ENCRYPTION_KEY. ' +
+      'Generate a key with: openssl rand -base64 32'
+    );
+  }
+
   if (userId) {
     // Use organizationId from auth context as tenantId, fallback to 'default' for single-tenant
     const organizationId = (c.get('auth') as any)?.session?.organizationId || 'default';
-    await wireRepositories(userId, organizationId, c.env);
+    
+    // Use HYPERDRIVE if available (Workers), otherwise DATABASE_URL (Node.js)
+    const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
+    if (c.env.HYPERDRIVE) {
+      dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
+    } else if (c.env.DATABASE_URL) {
+      dbEnv.DATABASE_URL = c.env.DATABASE_URL;
+    } else {
+      throw new Error('Either HYPERDRIVE or DATABASE_URL must be set');
+    }
+    const db = createDbClient(dbEnv);
+    const repo = new PostgresTaskRepository(db, userId, organizationId);
+    c.set('taskRepo', repo);
   }
   await next();
 });
@@ -366,7 +394,10 @@ http_error_rate{app="tasks"} ${errorRate}
   return c.text(prometheusMetrics);
 });
 
-app.get('/api/v1/tasks', async (c) => c.json({ tasks: await listTasks() }));
+app.get('/api/v1/tasks', async (c) => {
+  const repo = c.get('taskRepo');
+  return c.json({ tasks: await listTasks(repo) });
+});
 
 app.get('/api/v1/tasks/search', async (c) => {
   const query = c.req.query('q');
@@ -415,7 +446,8 @@ app.post('/api/v1/tasks', requireAuth, requireOrganization, async (c) => {
   }
 
   try {
-    return c.json({ task: await createTask(result.data) }, 201);
+    const repo = c.get('taskRepo');
+    return c.json({ task: await createTask(result.data, repo) }, 201);
   } catch (error) {
     const response = readTaskError(error);
 
@@ -424,7 +456,8 @@ app.post('/api/v1/tasks', requireAuth, requireOrganization, async (c) => {
 });
 
 app.get('/api/v1/tasks/:id', async (c) => {
-  const task = await getTask(c.req.param('id').trim());
+  const repo = c.get('taskRepo');
+  const task = await getTask(c.req.param('id').trim(), repo);
 
   if (!task) {
     return c.json(
@@ -493,7 +526,8 @@ app.put('/api/v1/tasks/:id/completion', requireAuth, requireOrganization, async 
   }
 
   try {
-    return c.json({ task: await updateTaskCompletion(id, result.data) });
+    const repo = c.get('taskRepo');
+    return c.json({ task: await updateTaskCompletion(id, result.data, repo) });
   } catch (error) {
     const response = readTaskError(error);
 
@@ -552,7 +586,8 @@ app.put('/api/v1/tasks/:id', requireAuth, requireOrganization, async (c) => {
   }
 
   try {
-    return c.json({ task: await updateTask(id, result.data) });
+    const repo = c.get('taskRepo');
+    return c.json({ task: await updateTask(id, result.data, repo) });
   } catch (error) {
     const response = readTaskError(error);
 
@@ -611,7 +646,8 @@ app.put('/api/v1/tasks/:id/archive', requireAuth, requireOrganization, async (c)
   }
 
   try {
-    return c.json({ task: await archiveTask(id, result.data) });
+    const repo = c.get('taskRepo');
+    return c.json({ task: await archiveTask(id, result.data, repo) });
   } catch (error) {
     const response = readTaskError(error);
 
@@ -637,7 +673,8 @@ app.delete('/api/v1/tasks/:id', requireAuth, requireOrganization, async (c) => {
   }
 
   try {
-    await deleteTask(id);
+    const repo = c.get('taskRepo');
+    await deleteTask(id, repo);
     return c.json({ success: true });
   } catch (error) {
     const response = readTaskError(error);

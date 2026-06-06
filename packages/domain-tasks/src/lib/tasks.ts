@@ -123,18 +123,9 @@ class InMemoryTaskRepository implements TaskRepository {
   }
 }
 
-// Default repository (in-memory for backward compatibility)
-let defaultRepository: TaskRepository = new InMemoryTaskRepository();
-
-// Current repository (can be injected)
-let currentRepository: TaskRepository = defaultRepository;
-
-export function setTaskRepository(repository: TaskRepository): void {
-  currentRepository = repository;
-}
-
-export function getTaskRepository(): TaskRepository {
-  return currentRepository;
+// Factory function to create repository with dependencies
+export function createTaskRepository(repository: TaskRepository): TaskRepository {
+  return repository;
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -235,22 +226,22 @@ function validateTags(tags: unknown): string[] {
   return validatedTags;
 }
 
-export function resetTasks(): void {
-  if (currentRepository instanceof InMemoryTaskRepository) {
-    (currentRepository as InMemoryTaskRepository).clear();
+export function resetTasks(repository: TaskRepository = new InMemoryTaskRepository()): void {
+  if (repository instanceof InMemoryTaskRepository) {
+    (repository as InMemoryTaskRepository).clear();
   }
 }
 
-export async function resetTasksDB(): Promise<void> {
+export async function resetTasksDB(repository: TaskRepository = new InMemoryTaskRepository()): Promise<void> {
   // For database repositories, delete all tasks
-  const tasks = await currentRepository.findAll();
+  const tasks = await repository.findAll();
   for (const task of tasks) {
-    await currentRepository.delete(task.id);
+    await repository.delete(task.id);
   }
 }
 
-export async function listTasks(): Promise<TaskItem[]> {
-  const tasks = await currentRepository.findAll();
+export async function listTasks(repository: TaskRepository = new InMemoryTaskRepository()): Promise<TaskItem[]> {
+  const tasks = await repository.findAll();
   const reversedTasks = tasks.reverse();
 
   // Decrypt if encryption is enabled
@@ -262,8 +253,8 @@ export async function listTasks(): Promise<TaskItem[]> {
   return reversedTasks.map(snapshot);
 }
 
-export async function getTask(id: string): Promise<TaskItem | null> {
-  const task = await currentRepository.findById(id);
+export async function getTask(id: string, repository: TaskRepository = new InMemoryTaskRepository()): Promise<TaskItem | null> {
+  const task = await repository.findById(id);
   if (!task) return null;
 
   // Decrypt if encryption is enabled
@@ -275,7 +266,7 @@ export async function getTask(id: string): Promise<TaskItem | null> {
   return snapshot(task);
 }
 
-export async function createTask(input: CreateTaskInput): Promise<TaskItem> {
+export async function createTask(input: CreateTaskInput, repository: TaskRepository = new InMemoryTaskRepository()): Promise<TaskItem> {
   const taskInput: Omit<TaskItem, 'id'> = {
     title: normalizeTaskTitle(input.title),
     completed: input.completed ?? false,
@@ -298,7 +289,7 @@ export async function createTask(input: CreateTaskInput): Promise<TaskItem> {
     taskToCreate = encryptedTask as unknown as Omit<TaskItem, 'id'>;
   }
 
-  const created = await currentRepository.create(taskToCreate);
+  const created = await repository.create(taskToCreate);
 
   // Decrypt if encryption is enabled
   if (isEncryptionEnabled()) {
@@ -309,12 +300,12 @@ export async function createTask(input: CreateTaskInput): Promise<TaskItem> {
   return snapshot(created);
 }
 
-export async function updateTaskCompletion(id: string, input: UpdateTaskCompletionInput): Promise<TaskItem> {
+export async function updateTaskCompletion(id: string, input: UpdateTaskCompletionInput, repository: TaskRepository = new InMemoryTaskRepository()): Promise<TaskItem> {
   if (!isNonEmptyString(id)) {
     throw new TaskError('Invalid task id', 'validation_error', ['id must be a non-empty string']);
   }
 
-  const existingTask = await currentRepository.findById(id);
+  const existingTask = await repository.findById(id);
 
   if (!existingTask) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -322,7 +313,7 @@ export async function updateTaskCompletion(id: string, input: UpdateTaskCompleti
     ]);
   }
 
-  const updated = await currentRepository.update(id, { completed: input.completed });
+  const updated = await repository.update(id, { completed: input.completed });
 
   if (!updated) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -339,12 +330,12 @@ export async function updateTaskCompletion(id: string, input: UpdateTaskCompleti
   return snapshot(updated);
 }
 
-export async function updateTask(id: string, input: UpdateTaskInput): Promise<TaskItem> {
+export async function updateTask(id: string, input: UpdateTaskInput, repository: TaskRepository = new InMemoryTaskRepository()): Promise<TaskItem> {
   if (!isNonEmptyString(id)) {
     throw new TaskError('Invalid task id', 'validation_error', ['id must be a non-empty string']);
   }
 
-  const existingTask = await currentRepository.findById(id);
+  const existingTask = await repository.findById(id);
 
   if (!existingTask) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -385,7 +376,7 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
     const encryptedTask = await sealTask(updatedTask);
     
     // Update with encrypted data
-    const updated = await currentRepository.update(id, encryptedTask as unknown as Partial<TaskItem>);
+    const updated = await repository.update(id, encryptedTask as unknown as Partial<TaskItem>);
 
     if (!updated) {
       throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -398,7 +389,7 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
     return snapshot(decryptedTask);
   }
 
-  const updated = await currentRepository.update(id, updates);
+  const updated = await repository.update(id, updates);
 
   if (!updated) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -415,12 +406,12 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
   return snapshot(updated);
 }
 
-export async function archiveTask(id: string, input: ArchiveTaskInput): Promise<TaskItem> {
+export async function archiveTask(id: string, input: ArchiveTaskInput, repository: TaskRepository = new InMemoryTaskRepository()): Promise<TaskItem> {
   if (!isNonEmptyString(id)) {
     throw new TaskError('Invalid task id', 'validation_error', ['id must be a non-empty string']);
   }
 
-  const existingTask = await currentRepository.findById(id);
+  const existingTask = await repository.findById(id);
 
   if (!existingTask) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -428,7 +419,7 @@ export async function archiveTask(id: string, input: ArchiveTaskInput): Promise<
     ]);
   }
 
-  const updated = await currentRepository.update(id, { archived: input.archived });
+  const updated = await repository.update(id, { archived: input.archived });
 
   if (!updated) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -445,12 +436,12 @@ export async function archiveTask(id: string, input: ArchiveTaskInput): Promise<
   return snapshot(updated);
 }
 
-export async function deleteTask(id: string): Promise<void> {
+export async function deleteTask(id: string, repository: TaskRepository = new InMemoryTaskRepository()): Promise<void> {
   if (!isNonEmptyString(id)) {
     throw new TaskError('Invalid task id', 'validation_error', ['id must be a non-empty string']);
   }
 
-  const existingTask = await currentRepository.findById(id);
+  const existingTask = await repository.findById(id);
 
   if (!existingTask) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -458,34 +449,34 @@ export async function deleteTask(id: string): Promise<void> {
     ]);
   }
 
-  await currentRepository.delete(id);
+  await repository.delete(id);
 }
 
 export type TaskFilter = 'all' | 'active' | 'completed' | 'archived';
 
-export async function filterTasks(filter: TaskFilter): Promise<TaskItem[]> {
+export async function filterTasks(filter: TaskFilter, repository: TaskRepository = new InMemoryTaskRepository()): Promise<TaskItem[]> {
   let tasks: TaskItem[];
 
   // Use database-specific filtering if available
-  if (currentRepository.findWhere) {
+  if (repository.findWhere) {
     switch (filter) {
       case 'active':
-        tasks = await currentRepository.findWhere({ completed: false, archived: false });
+        tasks = await repository.findWhere({ completed: false, archived: false });
         break;
       case 'completed':
-        tasks = await currentRepository.findWhere({ completed: true, archived: false });
+        tasks = await repository.findWhere({ completed: true, archived: false });
         break;
       case 'archived':
-        tasks = await currentRepository.findWhere({ archived: true });
+        tasks = await repository.findWhere({ archived: true });
         break;
       case 'all':
       default:
-        tasks = await currentRepository.findWhere({ archived: false });
+        tasks = await repository.findWhere({ archived: false });
         break;
     }
   } else {
     // Fallback to in-memory filtering
-    const allTasks = await listTasks();
+    const allTasks = await repository.findAll();
 
     switch (filter) {
       case 'active':

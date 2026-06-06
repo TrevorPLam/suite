@@ -20,12 +20,21 @@ import {
   type UploadDriveFileInput,
   uploadDriveFile,
   DriveError,
+  type DriveFileRepository,
+  type DriveFolderRepository,
+  type StorageAdapter,
+  setDriveKeyProviderFromEnv,
+  isEncryptionEnabled,
+  setDriveStorage,
+  InMemoryDriveFileRepository,
+  InMemoryDriveFolderRepository,
 } from '@suite/domain-drive';
-import { wireRepositories, getR2Adapter } from './bootstrap.js';
+import { PostgresDriveFileRepository, PostgresDriveFolderRepository, createDbClient } from '@suite/db';
+import { R2StorageAdapter } from './bootstrap.js';
 import { validateDriveEnv, type DriveEnv } from '@suite/env-config';
 import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
-import { PostgresUsageRepository, createDbClient } from '@suite/db';
+import { PostgresUsageRepository } from '@suite/db';
 import {
   uploadFileBodySchema,
   renameFileBodySchema,
@@ -48,6 +57,9 @@ type Variables = {
   userId: string | null;
   r2Bucket: R2Bucket | null;
   auth: ReturnType<typeof createAuth>;
+  fileRepo: DriveFileRepository;
+  folderRepo: DriveFolderRepository;
+  storageAdapter: StorageAdapter | null;
 };
 
 const app = new Hono<{ Variables: Variables; Bindings: Env }>();
@@ -242,13 +254,54 @@ app.use('/api/*', async (c, next) => {
   await next();
 });
 
-// Middleware to wire repositories with userId and tenantId from auth context
+// Middleware to create repositories per-request and attach to context
 app.use('/api/*', async (c, next) => {
   const userId = c.get('userId') as string | undefined;
+  const r2Bucket = c.get('r2Bucket');
+  
+  // Set up encryption key provider from environment
+  await setDriveKeyProviderFromEnv();
+
+  // Require encryption in production
+  if (c.env.NODE_ENV === 'production' && !isEncryptionEnabled()) {
+    throw new Error(
+      'ENCRYPTION_KEY must be set in production. Set it via wrangler secret put ENCRYPTION_KEY. ' +
+      'Generate a key with: openssl rand -base64 32'
+    );
+  }
+
+  // Set up storage adapter
+  let storageAdapter: StorageAdapter | null = null;
+  if (r2Bucket) {
+    storageAdapter = new R2StorageAdapter(r2Bucket);
+    setDriveStorage(storageAdapter);
+  }
+  c.set('storageAdapter', storageAdapter);
+
   if (userId) {
     // Use organizationId from auth context as tenantId, fallback to 'default' for single-tenant
     const organizationId = (c.get('auth') as any)?.session?.organizationId || 'default';
-    await wireRepositories(userId, organizationId, c.env, c.get('r2Bucket') || undefined);
+    
+    // Use Postgres repositories if HYPERDRIVE or DATABASE_URL is set, otherwise use in-memory repositories
+    if (c.env.HYPERDRIVE || c.env.DATABASE_URL) {
+      const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
+      if (c.env.HYPERDRIVE) {
+        dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
+      } else if (c.env.DATABASE_URL) {
+        dbEnv.DATABASE_URL = c.env.DATABASE_URL;
+      }
+      const db = createDbClient(dbEnv);
+      const fileRepo = new PostgresDriveFileRepository(db, userId, organizationId);
+      const folderRepo = new PostgresDriveFolderRepository(db, userId, organizationId);
+      c.set('fileRepo', fileRepo);
+      c.set('folderRepo', folderRepo);
+    } else {
+      // Use in-memory repositories for testing or when database is not available
+      const fileRepo = new InMemoryDriveFileRepository();
+      const folderRepo = new InMemoryDriveFolderRepository();
+      c.set('fileRepo', fileRepo);
+      c.set('folderRepo', folderRepo);
+    }
   }
   await next();
 });
@@ -380,9 +433,9 @@ http_error_rate{app="drive"} ${errorRate}
 });
 
 app.get('/api/v1/files', async (c) => {
-  // Wire repositories for public endpoint (no auth required)
-  await wireRepositories(null, 'default', c.env, c.env?.R2);
-  const files = await listDriveFiles();
+  // Use in-memory repositories for public endpoint (no auth required)
+  const fileRepo = new InMemoryDriveFileRepository();
+  const files = await listDriveFiles(fileRepo);
   return c.json({ files });
 });
 
@@ -471,7 +524,10 @@ app.post('/api/v1/files', requireAuth, requireOrganization, timeout(300000, time
       }
 
       try {
-        const uploadedFile = await uploadDriveFile(payload);
+        const fileRepo = c.get('fileRepo');
+        const folderRepo = c.get('folderRepo');
+        const storageAdapter = c.get('storageAdapter');
+        const uploadedFile = await uploadDriveFile(payload, fileRepo, folderRepo, storageAdapter);
         return c.json({ file: uploadedFile }, 201);
       } catch (error) {
         const response = readDriveError(error);
@@ -542,7 +598,10 @@ app.post('/api/v1/files', requireAuth, requireOrganization, timeout(300000, time
   }
 
   try {
-    const file = await uploadDriveFile(result.data);
+    const fileRepo = c.get('fileRepo');
+    const folderRepo = c.get('folderRepo');
+    const storageAdapter = c.get('storageAdapter');
+    const file = await uploadDriveFile(result.data, fileRepo, folderRepo, storageAdapter);
     return c.json({ file }, 201);
   } catch (error) {
     const response = readDriveError(error);
@@ -600,8 +659,9 @@ app.put('/api/v1/files/:id', requireAuth, requireOrganization, async (c) => {
   }
 
   try {
+    const fileRepo = c.get('fileRepo');
     const payload = { id, name: result.data.name };
-    const renamed = await renameDriveFile(payload);
+    const renamed = await renameDriveFile(payload, fileRepo);
     if (!renamed) {
       return c.json(
         {
@@ -637,7 +697,9 @@ app.delete('/api/v1/files/:id', requireAuth, requireOrganization, async (c) => {
     );
   }
 
-  const deleted = await deleteDriveFile(id);
+  const fileRepo = c.get('fileRepo');
+  const storageAdapter = c.get('storageAdapter');
+  const deleted = await deleteDriveFile(id, fileRepo, storageAdapter);
 
   if (!deleted) {
     return c.json(
@@ -671,7 +733,8 @@ app.get('/api/v1/files/:id/download', async (c) => {
     );
   }
 
-  const file = await getDriveFile(id);
+  const fileRepo = c.get('fileRepo');
+  const file = await getDriveFile(id, fileRepo);
 
   if (!file) {
     return c.json(
@@ -686,8 +749,8 @@ app.get('/api/v1/files/:id/download', async (c) => {
     );
   }
 
-  const r2Adapter = getR2Adapter();
-  if (!r2Adapter) {
+  const storageAdapter = c.get('storageAdapter');
+  if (!storageAdapter) {
     return c.json(
       {
         error: {
@@ -701,7 +764,7 @@ app.get('/api/v1/files/:id/download', async (c) => {
   }
 
   const storageKey = `files/${id}`;
-  const stream = await r2Adapter.get(storageKey);
+  const stream = await storageAdapter.get(storageKey);
 
   if (!stream) {
     return c.json(
@@ -726,10 +789,10 @@ app.get('/api/v1/files/:id/download', async (c) => {
 
 // Folder endpoints
 app.get('/api/v1/folders', async (c) => {
-  // Wire repositories for public endpoint (no auth required)
-  await wireRepositories(null, 'default', c.env, c.env?.R2);
+  // Use in-memory repositories for public endpoint (no auth required)
+  const folderRepo = new InMemoryDriveFolderRepository();
   const parentId = c.req.query('parentId');
-  const folders = await listFolders(parentId);
+  const folders = await listFolders(parentId, folderRepo);
   return c.json({ folders });
 });
 
@@ -768,7 +831,8 @@ app.post('/api/v1/folders', requireAuth, requireOrganization, async (c) => {
   }
 
   try {
-    const folder = await createFolder(result.data);
+    const folderRepo = c.get('folderRepo');
+    const folder = await createFolder(result.data, folderRepo);
     return c.json({ folder }, 201);
   } catch (error) {
     const response = readDriveError(error);
@@ -826,8 +890,9 @@ app.put('/api/v1/folders/:id', requireAuth, requireOrganization, async (c) => {
   }
 
   try {
+    const folderRepo = c.get('folderRepo');
     const payload = { id, name: result.data.name };
-    const renamed = await renameFolder(payload);
+    const renamed = await renameFolder(payload, folderRepo);
     if (!renamed) {
       return c.json(
         {
@@ -863,7 +928,9 @@ app.delete('/api/v1/folders/:id', requireAuth, requireOrganization, async (c) =>
     );
   }
 
-  const deleted = await deleteFolder(id);
+  const fileRepo = c.get('fileRepo');
+  const folderRepo = c.get('folderRepo');
+  const deleted = await deleteFolder(id, fileRepo, folderRepo);
 
   if (!deleted) {
     return c.json(
@@ -932,11 +999,13 @@ app.post('/api/v1/files/:id/move', requireAuth, requireOrganization, async (c) =
   }
 
   try {
+    const fileRepo = c.get('fileRepo');
+    const folderRepo = c.get('folderRepo');
     const payload: { id: string; folderId?: string } = { id };
     if (result.data.folderId !== undefined) {
       payload.folderId = result.data.folderId;
     }
-    const moved = await moveFile(payload);
+    const moved = await moveFile(payload, fileRepo, folderRepo);
     if (!moved) {
       return c.json(
         {
@@ -958,8 +1027,8 @@ app.post('/api/v1/files/:id/move', requireAuth, requireOrganization, async (c) =
 
 // Search endpoint
 app.get('/api/v1/files/search', async (c) => {
-  // Wire repositories for public endpoint (no auth required)
-  await wireRepositories(null, 'default', c.env, c.env?.R2);
+  // Use in-memory repositories for public endpoint (no auth required)
+  const fileRepo = new InMemoryDriveFileRepository();
   const query = c.req.query();
   const result = searchFilesQuerySchema.safeParse(query);
 
@@ -977,7 +1046,7 @@ app.get('/api/v1/files/search', async (c) => {
     );
   }
 
-  const results = await searchFiles(result.data);
+  const results = await searchFiles(result.data, fileRepo);
   return c.json({ files: results });
 });
 

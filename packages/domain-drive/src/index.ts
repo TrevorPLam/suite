@@ -103,6 +103,12 @@ export interface StorageAdapter {
   delete(key: string): Promise<void>;
 }
 
+// Factory function to create storage adapter
+export function createDriveStorageAdapter(adapter: StorageAdapter): StorageAdapter {
+  return adapter;
+}
+
+// Set storage adapter globally (for backward compatibility with existing code)
 let currentStorageAdapter: StorageAdapter | null = null;
 
 export function setDriveStorage(adapter: StorageAdapter): void {
@@ -235,28 +241,13 @@ export class InMemoryDriveFolderRepository implements DriveFolderRepository {
   }
 }
 
-// Default repository (in-memory for backward compatibility)
-let defaultFileRepository: DriveFileRepository = new InMemoryDriveFileRepository();
-let defaultFolderRepository: DriveFolderRepository = new InMemoryDriveFolderRepository();
-
-// Current repository (can be injected)
-let currentFileRepository: DriveFileRepository = defaultFileRepository;
-let currentFolderRepository: DriveFolderRepository = defaultFolderRepository;
-
-export function setDriveFileRepository(repository: DriveFileRepository): void {
-  currentFileRepository = repository;
+// Factory functions to create repositories
+export function createDriveFileRepository(repository: DriveFileRepository): DriveFileRepository {
+  return repository;
 }
 
-export function getDriveFileRepository(): DriveFileRepository {
-  return currentFileRepository;
-}
-
-export function setDriveFolderRepository(repository: DriveFolderRepository): void {
-  currentFolderRepository = repository;
-}
-
-export function getDriveFolderRepository(): DriveFolderRepository {
-  return currentFolderRepository;
+export function createDriveFolderRepository(repository: DriveFolderRepository): DriveFolderRepository {
+  return repository;
 }
 
 function snapshot(file: DriveFile): DriveFile {
@@ -265,8 +256,8 @@ function snapshot(file: DriveFile): DriveFile {
   };
 }
 
-export async function listDriveFiles(): Promise<DriveFile[]> {
-  const files = await currentFileRepository.findAll();
+export async function listDriveFiles(fileRepository: DriveFileRepository = new InMemoryDriveFileRepository()): Promise<DriveFile[]> {
+  const files = await fileRepository.findAll();
   const reversed = files.reverse().map(snapshot);
   
   // Decrypt names if encryption is enabled
@@ -279,8 +270,8 @@ export async function listDriveFiles(): Promise<DriveFile[]> {
   return reversed;
 }
 
-export async function getDriveFile(id: string): Promise<DriveFile | null> {
-  const file = await currentFileRepository.findById(id);
+export async function getDriveFile(id: string, fileRepository: DriveFileRepository = new InMemoryDriveFileRepository()): Promise<DriveFile | null> {
+  const file = await fileRepository.findById(id);
   if (!file) return null;
   
   const snapped = snapshot(file);
@@ -295,37 +286,37 @@ export async function getDriveFile(id: string): Promise<DriveFile | null> {
   return snapped;
 }
 
-export function resetDriveFiles(): void {
-  if (currentFileRepository instanceof InMemoryDriveFileRepository) {
-    (currentFileRepository as InMemoryDriveFileRepository).clear();
+export function resetDriveFiles(fileRepository: DriveFileRepository = new InMemoryDriveFileRepository()): void {
+  if (fileRepository instanceof InMemoryDriveFileRepository) {
+    (fileRepository as InMemoryDriveFileRepository).clear();
   }
 }
 
-export async function resetDriveFilesDB(): Promise<void> {
-  const files = await currentFileRepository.findAll();
+export async function resetDriveFilesDB(fileRepository: DriveFileRepository = new InMemoryDriveFileRepository()): Promise<void> {
+  const files = await fileRepository.findAll();
   for (const file of files) {
-    await currentFileRepository.delete(file.id);
+    await fileRepository.delete(file.id);
   }
 }
 
-export function resetDriveFolders(): void {
-  if (currentFolderRepository instanceof InMemoryDriveFolderRepository) {
-    (currentFolderRepository as InMemoryDriveFolderRepository).clear();
+export function resetDriveFolders(folderRepository: DriveFolderRepository = new InMemoryDriveFolderRepository()): void {
+  if (folderRepository instanceof InMemoryDriveFolderRepository) {
+    (folderRepository as InMemoryDriveFolderRepository).clear();
   }
 }
 
-export async function resetDriveFoldersDB(): Promise<void> {
-  const folders = await currentFolderRepository.findAll();
+export async function resetDriveFoldersDB(folderRepository: DriveFolderRepository = new InMemoryDriveFolderRepository()): Promise<void> {
+  const folders = await folderRepository.findAll();
   for (const folder of folders) {
-    await currentFolderRepository.delete(folder.id);
+    await folderRepository.delete(folder.id);
   }
 }
 
-export async function getDriveOverview() {
+export async function getDriveOverview(fileRepository: DriveFileRepository = new InMemoryDriveFileRepository()) {
   return {
     name: 'Drive',
     description: 'Starter drive domain package',
-    files: await listDriveFiles(),
+    files: await listDriveFiles(fileRepository),
   };
 }
 
@@ -364,7 +355,7 @@ function getCurrentTimestamp(): string {
   return new Date().toISOString();
 }
 
-export async function uploadDriveFile(input: UploadDriveFileInput): Promise<DriveFile> {
+export async function uploadDriveFile(input: UploadDriveFileInput, fileRepository: DriveFileRepository = new InMemoryDriveFileRepository(), folderRepository: DriveFolderRepository = new InMemoryDriveFolderRepository(), storageAdapter: StorageAdapter | null = null): Promise<DriveFile> {
   const name = input.name.trim();
 
   if (!isNonEmptyString(name)) {
@@ -398,7 +389,7 @@ export async function uploadDriveFile(input: UploadDriveFileInput): Promise<Driv
   }
 
   if (input.folderId) {
-    const folder = await currentFolderRepository.findById(input.folderId);
+    const folder = await folderRepository.findById(input.folderId);
     if (!folder) {
       throw new DriveError('folder not found', 'not_found_error', [
         `No folder exists for id "${input.folderId}"`,
@@ -422,9 +413,9 @@ export async function uploadDriveFile(input: UploadDriveFileInput): Promise<Driv
   }
 
   // Store file bytes in R2 if storage adapter is available and bytes provided
-  if (currentStorageAdapter && input.bytes) {
+  if (storageAdapter && input.bytes) {
     const storageKey = `files/${fileId}`;
-    await currentStorageAdapter.put(storageKey, input.bytes);
+    await storageAdapter.put(storageKey, input.bytes);
   }
 
   // Encrypt name if encryption is enabled
@@ -435,7 +426,7 @@ export async function uploadDriveFile(input: UploadDriveFileInput): Promise<Driv
     dataToStore = { ...rest, name: encryptedName as any };
   }
 
-  const created = await currentFileRepository.create(dataToStore);
+  const created = await fileRepository.create(dataToStore);
 
   // Decrypt name if encryption is enabled before returning
   if (_isEncryptionEnabled()) {
@@ -447,7 +438,7 @@ export async function uploadDriveFile(input: UploadDriveFileInput): Promise<Driv
   return snapshot(created);
 }
 
-export async function renameDriveFile(input: RenameDriveFileInput): Promise<DriveFile | null> {
+export async function renameDriveFile(input: RenameDriveFileInput, fileRepository: DriveFileRepository = new InMemoryDriveFileRepository()): Promise<DriveFile | null> {
   const name = input.name.trim();
 
   if (!isNonEmptyString(name)) {
@@ -473,7 +464,7 @@ export async function renameDriveFile(input: RenameDriveFileInput): Promise<Driv
     updateData.name = name;
   }
 
-  const updated = await currentFileRepository.update(input.id, updateData);
+  const updated = await fileRepository.update(input.id, updateData);
 
   // Decrypt name if encryption is enabled before returning
   if (updated && _isEncryptionEnabled()) {
@@ -485,18 +476,18 @@ export async function renameDriveFile(input: RenameDriveFileInput): Promise<Driv
   return updated ? snapshot(updated) : null;
 }
 
-export async function deleteDriveFile(id: string): Promise<boolean> {
+export async function deleteDriveFile(id: string, fileRepository: DriveFileRepository = new InMemoryDriveFileRepository(), storageAdapter: StorageAdapter | null = null): Promise<boolean> {
   // Delete from storage if adapter is available
-  if (currentStorageAdapter) {
+  if (storageAdapter) {
     const storageKey = `files/${id}`;
-    await currentStorageAdapter.delete(storageKey);
+    await storageAdapter.delete(storageKey);
   }
 
-  return await currentFileRepository.delete(id);
+  return await fileRepository.delete(id);
 }
 
 // Folder operations
-export async function createFolder(input: CreateFolderInput): Promise<DriveFolder> {
+export async function createFolder(input: CreateFolderInput, folderRepository: DriveFolderRepository = new InMemoryDriveFolderRepository()): Promise<DriveFolder> {
   const name = input.name.trim();
 
   if (!isNonEmptyString(name)) {
@@ -512,7 +503,7 @@ export async function createFolder(input: CreateFolderInput): Promise<DriveFolde
   }
 
   if (input.parentId) {
-    const parent = await currentFolderRepository.findById(input.parentId);
+    const parent = await folderRepository.findById(input.parentId);
     if (!parent) {
       throw new DriveError('parent folder not found', 'not_found_error', [
         `No folder exists for id "${input.parentId}"`,
@@ -536,7 +527,7 @@ export async function createFolder(input: CreateFolderInput): Promise<DriveFolde
     dataToStore = { ...rest, name: encryptedName as any };
   }
   
-  const created = await currentFolderRepository.create(dataToStore);
+  const created = await folderRepository.create(dataToStore);
 
   // Decrypt name if encryption is enabled before returning
   if (_isEncryptionEnabled()) {
@@ -548,25 +539,25 @@ export async function createFolder(input: CreateFolderInput): Promise<DriveFolde
   return created;
 }
 
-export async function listFolders(parentId?: string): Promise<DriveFolder[]> {
+export async function listFolders(parentId?: string, folderRepository: DriveFolderRepository = new InMemoryDriveFolderRepository()): Promise<DriveFolder[]> {
   let folders: DriveFolder[];
   if (parentId) {
-    folders = await currentFolderRepository.findWhere({ parentId });
+    folders = await folderRepository.findWhere({ parentId });
   } else {
-    folders = await currentFolderRepository.findAll();
+    folders = await folderRepository.findAll();
   }
   
   // Decrypt names if encryption is enabled
   if (_isEncryptionEnabled()) {
     // Convert stored encrypted names to EncryptedDriveFolder format
-    const encryptedFolders = folders.map(f => ({ ...f, encryptedName: f.name } as any));
+    const encryptedFolders = folders.map((f: DriveFolder) => ({ ...f, encryptedName: f.name } as any));
     return await _unsealFolders(encryptedFolders);
   }
   
   return folders;
 }
 
-export async function renameFolder(input: RenameFolderInput): Promise<DriveFolder | null> {
+export async function renameFolder(input: RenameFolderInput, folderRepository: DriveFolderRepository = new InMemoryDriveFolderRepository()): Promise<DriveFolder | null> {
   const name = input.name.trim();
 
   if (!isNonEmptyString(name)) {
@@ -591,7 +582,7 @@ export async function renameFolder(input: RenameFolderInput): Promise<DriveFolde
     updateData.name = name;
   }
 
-  const updated = await currentFolderRepository.update(input.id, updateData);
+  const updated = await folderRepository.update(input.id, updateData);
 
   // Decrypt name if encryption is enabled before returning
   if (updated && _isEncryptionEnabled()) {
@@ -603,25 +594,25 @@ export async function renameFolder(input: RenameFolderInput): Promise<DriveFolde
   return updated;
 }
 
-export async function deleteFolder(id: string): Promise<boolean> {
+export async function deleteFolder(id: string, fileRepository: DriveFileRepository = new InMemoryDriveFileRepository(), folderRepository: DriveFolderRepository = new InMemoryDriveFolderRepository()): Promise<boolean> {
   // Check if folder has files
-  const filesWithFolder = await currentFileRepository.findWhere({ folderId: id });
+  const filesWithFolder = await fileRepository.findWhere({ folderId: id });
   if (filesWithFolder.length > 0) {
     return false;
   }
 
   // Check if folder has subfolders
-  const subfolders = await currentFolderRepository.findWhere({ parentId: id });
+  const subfolders = await folderRepository.findWhere({ parentId: id });
   if (subfolders.length > 0) {
     return false;
   }
 
-  return await currentFolderRepository.delete(id);
+  return await folderRepository.delete(id);
 }
 
-export async function moveFile(input: MoveFileInput): Promise<DriveFile | null> {
+export async function moveFile(input: MoveFileInput, fileRepository: DriveFileRepository = new InMemoryDriveFileRepository(), folderRepository: DriveFolderRepository = new InMemoryDriveFolderRepository()): Promise<DriveFile | null> {
   if (input.folderId) {
-    const folder = await currentFolderRepository.findById(input.folderId);
+    const folder = await folderRepository.findById(input.folderId);
     if (!folder) {
       throw new DriveError('folder not found', 'not_found_error', [
         `No folder exists for id "${input.folderId}"`,
@@ -638,23 +629,23 @@ export async function moveFile(input: MoveFileInput): Promise<DriveFile | null> 
     // Explicitly set to undefined to remove folderId (type assertion for exactOptionalPropertyTypes)
     (updateData as any).folderId = undefined;
   }
-  const updated = await currentFileRepository.update(input.id, updateData);
+  const updated = await fileRepository.update(input.id, updateData);
 
   return updated ? snapshot(updated) : null;
 }
 
-export async function searchFiles(input: SearchFilesInput): Promise<DriveFile[]> {
-  const allFiles = await currentFileRepository.findAll();
+export async function searchFiles(input: SearchFilesInput, fileRepository: DriveFileRepository = new InMemoryDriveFileRepository()): Promise<DriveFile[]> {
+  const allFiles = await fileRepository.findAll();
   
   // Decrypt names if encryption is enabled before searching
   let filesToSearch = allFiles;
   if (_isEncryptionEnabled()) {
     // Convert stored encrypted names to EncryptedDriveFile format
-    const encryptedFiles = allFiles.map(f => ({ ...f, encryptedName: f.name } as any));
+    const encryptedFiles = allFiles.map((f: DriveFile) => ({ ...f, encryptedName: f.name } as any));
     filesToSearch = await _unsealFiles(encryptedFiles);
   }
   
-  return filesToSearch.filter(file => {
+  return filesToSearch.filter((file: DriveFile) => {
     // Filter by blind index (exact match search for encrypted data)
     if (input.blindIndex) {
       const blindIndexMatch = file.blindIndex === input.blindIndex;

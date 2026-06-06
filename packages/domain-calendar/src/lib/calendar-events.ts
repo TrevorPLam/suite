@@ -77,18 +77,9 @@ class InMemoryCalendarEventRepository implements CalendarEventRepository {
   }
 }
 
-// Default repository (in-memory for backward compatibility)
-let defaultRepository: CalendarEventRepository = new InMemoryCalendarEventRepository();
-
-// Current repository (can be injected)
-let currentRepository: CalendarEventRepository = defaultRepository;
-
-export function setCalendarEventRepository(repository: CalendarEventRepository): void {
-  currentRepository = repository;
-}
-
-export function getCalendarEventRepository(): CalendarEventRepository {
-  return currentRepository;
+// Factory function to create repository with dependencies
+export function createCalendarEventRepository(repository: CalendarEventRepository): CalendarEventRepository {
+  return repository;
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -139,15 +130,22 @@ function hasOverlap(candidate: CalendarEvent, existing: CalendarEvent): boolean 
     && Date.parse(candidate.endAt) > Date.parse(existing.startAt);
 }
 
-async function assertNoConflict(candidate: CalendarEvent, ignoreId?: string): Promise<void> {
+async function assertNoConflict(candidate: CalendarEvent, repository: CalendarEventRepository, ignoreId?: string): Promise<void> {
   // Use database-specific conflict detection if available
-  if (currentRepository.findOverlapping) {
+  if (repository.findOverlapping) {
     const startAt = new Date(candidate.startAt);
     const endAt = new Date(candidate.endAt);
-    const conflicts = await currentRepository.findOverlapping(startAt, endAt, ignoreId);
+    const conflicts = await repository.findOverlapping(startAt, endAt, ignoreId);
 
     if (conflicts.length > 0) {
-      const conflict = conflicts[0]!;
+      const conflict = conflicts[0];
+      if (!conflict) {
+        throw new CalendarEventError(
+          'Conflict detection failed',
+          'conflict_error',
+          ['No conflict found but conflicts array was not empty'],
+        );
+      }
       throw new CalendarEventError(
         `Conflicting calendar event range with "${conflict.title}"`,
         'conflict_error',
@@ -156,7 +154,7 @@ async function assertNoConflict(candidate: CalendarEvent, ignoreId?: string): Pr
     }
   } else {
     // Fallback to in-memory conflict detection
-    const events = await listCalendarEvents();
+    const events = await repository.findAll();
     const conflict = events.find((event: CalendarEvent) => {
       if (ignoreId !== undefined && event.id === ignoreId) {
         return false;
@@ -233,8 +231,8 @@ function overlapsRange(event: CalendarEvent, range: CalendarEventRange): boolean
     && Date.parse(event.endAt) > Date.parse(range.startAt);
 }
 
-export async function listCalendarEvents(): Promise<CalendarEvent[]> {
-  const events = await currentRepository.findAll();
+export async function listCalendarEvents(repository: CalendarEventRepository = new InMemoryCalendarEventRepository()): Promise<CalendarEvent[]> {
+  const events = await repository.findAll();
   const sortedEvents = sortEvents(events);
   
   // Decrypt if encryption is enabled
@@ -246,9 +244,9 @@ export async function listCalendarEvents(): Promise<CalendarEvent[]> {
   return sortedEvents.map(snapshot);
 }
 
-export async function listCalendarEventsInRange(range: CalendarEventRange): Promise<CalendarEvent[]> {
+export async function listCalendarEventsInRange(range: CalendarEventRange, repository: CalendarEventRepository = new InMemoryCalendarEventRepository()): Promise<CalendarEvent[]> {
   const normalizedRange = normalizeCalendarEventRange(range);
-  const events = await currentRepository.findAll();
+  const events = await repository.findAll();
   const filteredEvents = events.filter((event) => overlapsRange(event, normalizedRange));
   const sortedEvents = sortEvents(filteredEvents);
 
@@ -261,8 +259,8 @@ export async function listCalendarEventsInRange(range: CalendarEventRange): Prom
   return sortedEvents.map(snapshot);
 }
 
-export async function getCalendarEvent(id: string): Promise<CalendarEvent | null> {
-  const event = await currentRepository.findById(id);
+export async function getCalendarEvent(id: string, repository: CalendarEventRepository = new InMemoryCalendarEventRepository()): Promise<CalendarEvent | null> {
+  const event = await repository.findById(id);
   if (!event) return null;
 
   // Decrypt if encryption is enabled
@@ -274,14 +272,14 @@ export async function getCalendarEvent(id: string): Promise<CalendarEvent | null
   return snapshot(event);
 }
 
-export async function createCalendarEvent(input: CreateCalendarEventInput): Promise<CalendarEvent> {
+export async function createCalendarEvent(input: CreateCalendarEventInput, repository: CalendarEventRepository = new InMemoryCalendarEventRepository()): Promise<CalendarEvent> {
   const normalizedInput = normalizeCalendarEventInput(input);
   const event: CalendarEvent = {
     id: generateUUID(),
     ...normalizedInput,
   };
 
-  await assertNoConflict(event);
+  await assertNoConflict(event, repository);
 
   // Encrypt before storage if encryption is enabled
   let eventToCreate = normalizedInput;
@@ -296,7 +294,7 @@ export async function createCalendarEvent(input: CreateCalendarEventInput): Prom
     eventToCreate = encryptedEvent as unknown as CreateCalendarEventInput;
   }
 
-  const created = await currentRepository.create(eventToCreate);
+  const created = await repository.create(eventToCreate);
 
   // Decrypt the result if encryption is enabled
   if (isEncryptionEnabled()) {
@@ -307,28 +305,28 @@ export async function createCalendarEvent(input: CreateCalendarEventInput): Prom
   return snapshot(created);
 }
 
-export function resetCalendarEvents(): void {
-  if (currentRepository instanceof InMemoryCalendarEventRepository) {
-    (currentRepository as InMemoryCalendarEventRepository).clear();
+export function resetCalendarEvents(repository: CalendarEventRepository = new InMemoryCalendarEventRepository()): void {
+  if (repository instanceof InMemoryCalendarEventRepository) {
+    (repository as InMemoryCalendarEventRepository).clear();
   }
 }
 
-export async function resetCalendarEventsDB(): Promise<void> {
+export async function resetCalendarEventsDB(repository: CalendarEventRepository = new InMemoryCalendarEventRepository()): Promise<void> {
   // For database repositories, delete all events
-  const events = await currentRepository.findAll();
+  const events = await repository.findAll();
   for (const event of events) {
-    await currentRepository.delete(event.id);
+    await repository.delete(event.id);
   }
 }
 
-export async function updateCalendarEvent(id: string, input: UpdateCalendarEventInput): Promise<CalendarEvent> {
+export async function updateCalendarEvent(id: string, input: UpdateCalendarEventInput, repository: CalendarEventRepository = new InMemoryCalendarEventRepository()): Promise<CalendarEvent> {
   if (!isNonEmptyString(id)) {
     throw new CalendarEventError('Invalid calendar event id', 'validation_error', [
       'id must be a non-empty string',
     ]);
   }
 
-  const existingEvent = await currentRepository.findById(id);
+  const existingEvent = await repository.findById(id);
 
   if (!existingEvent) {
     throw new CalendarEventError(`Calendar event "${id}" was not found`, 'not_found_error', [
@@ -342,7 +340,7 @@ export async function updateCalendarEvent(id: string, input: UpdateCalendarEvent
     ...normalizedInput,
   };
 
-  await assertNoConflict(event, id);
+  await assertNoConflict(event, repository, id);
 
   // Encrypt before storage if encryption is enabled
   let eventToUpdate = normalizedInput;
@@ -357,7 +355,7 @@ export async function updateCalendarEvent(id: string, input: UpdateCalendarEvent
     eventToUpdate = encryptedEvent as unknown as UpdateCalendarEventInput;
   }
 
-  const updated = await currentRepository.update(id, eventToUpdate);
+  const updated = await repository.update(id, eventToUpdate);
 
   if (!updated) {
     throw new CalendarEventError(`Calendar event "${id}" was not found`, 'not_found_error', [

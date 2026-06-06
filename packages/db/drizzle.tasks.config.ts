@@ -8,7 +8,7 @@ export default {
     url: process.env.DATABASE_URL!,
   },
   schemaFilter: ['tasks'],
-  tablesFilter: ['tasks_*'],
+  tablesFilter: ['tasks'],
   migrations: {
     table: '__drizzle_migrations_tasks',
     schema: 'drizzle',
