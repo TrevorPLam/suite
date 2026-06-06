@@ -339,6 +339,18 @@ export function App() {
     setErrorDetails([]);
     setStatus('');
 
+    // Optimistic update: modify task in state immediately
+    const optimisticTask: TaskItem = {
+      ...task,
+      title: editTitle,
+      priority: editPriority,
+      tags: editTags,
+      ...(editDueDate && { dueDate: editDueDate }),
+    };
+
+    const previousTasks = [...tasks];
+    upsertTask(optimisticTask);
+
     try {
       const response = await fetch(`${API_BASE}/api/tasks/${task.id}`, {
         method: 'PUT',
@@ -349,6 +361,8 @@ export function App() {
       const payload: unknown = await response.json();
 
       if (!response.ok) {
+        // Revert optimistic update on error
+        setTasks(previousTasks);
         setError(extractErrorMessage(payload, 'Unable to update task'));
         setErrorDetails(extractErrorDetails(payload));
         return;
@@ -357,10 +371,13 @@ export function App() {
       const savedTask = isTaskResponse(payload) ? payload.task : isTaskItem(payload) ? payload : null;
 
       if (!savedTask) {
+        // Revert optimistic update on error
+        setTasks(previousTasks);
         setError('The server returned an unexpected task shape');
         return;
       }
 
+      // Replace optimistic task with server response
       upsertTask(savedTask);
       setEditingTaskId(null);
       setEditTitle('');
@@ -370,6 +387,8 @@ export function App() {
       setEditTagInput('');
       setStatus(`Updated ${savedTask.title}`);
     } catch (editError) {
+      // Revert optimistic update on error
+      setTasks(previousTasks);
       setError(editError instanceof Error ? editError.message : 'Unable to update task');
     } finally {
       setSubmitting(false);
@@ -423,6 +442,10 @@ export function App() {
     setErrorDetails([]);
     setStatus('');
 
+    // Optimistic update: remove task from state immediately
+    const previousTasks = [...tasks];
+    removeTask(task.id);
+
     try {
       const response = await fetch(`${API_BASE}/api/tasks/${task.id}`, {
         method: 'DELETE',
@@ -431,14 +454,17 @@ export function App() {
       const payload: unknown = await response.json();
 
       if (!response.ok) {
+        // Revert optimistic update on error
+        setTasks(previousTasks);
         setError(extractErrorMessage(payload, 'Unable to delete task'));
         setErrorDetails(extractErrorDetails(payload));
         return;
       }
 
-      removeTask(task.id);
       setStatus(`Deleted ${task.title}`);
     } catch (deleteError) {
+      // Revert optimistic update on error
+      setTasks(previousTasks);
       setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete task');
     } finally {
       setSubmitting(false);
@@ -506,6 +532,21 @@ export function App() {
     setStatus('');
     setSubmitting(true);
 
+    // Optimistic update: create temporary task
+    const tempId = `temp-${Date.now()}`;
+    const optimisticTask: TaskItem = {
+      id: tempId,
+      title,
+      completed,
+      priority,
+      tags,
+      archived: false,
+      ...(dueDate && { dueDate }),
+    };
+
+    const previousTasks = [...tasks];
+    upsertTask(optimisticTask);
+
     try {
       const response = await fetch(`${API_BASE}/api/tasks`, {
         method: 'POST',
@@ -516,6 +557,8 @@ export function App() {
       const payload: unknown = await response.json();
 
       if (!response.ok) {
+        // Revert optimistic update on error
+        setTasks(previousTasks);
         setError(extractErrorMessage(payload, 'Unable to create task'));
         setErrorDetails(extractErrorDetails(payload));
         return;
@@ -524,10 +567,13 @@ export function App() {
       const savedTask = isTaskResponse(payload) ? payload.task : isTaskItem(payload) ? payload : null;
 
       if (!savedTask) {
+        // Revert optimistic update on error
+        setTasks(previousTasks);
         setError('The server returned an unexpected task shape');
         return;
       }
 
+      // Replace optimistic task with server response
       upsertTask(savedTask);
       setTitle('Draft spec');
       setCompleted(false);
@@ -537,6 +583,8 @@ export function App() {
       setTagInput('');
       setStatus(`Created ${savedTask.title}`);
     } catch (submitError) {
+      // Revert optimistic update on error
+      setTasks(previousTasks);
       setError(submitError instanceof Error ? submitError.message : 'Unable to create task');
     } finally {
       setSubmitting(false);

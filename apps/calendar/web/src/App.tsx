@@ -198,6 +198,26 @@ export function App() {
     const endpoint = editingEventId ? `${API_BASE}/api/events/${editingEventId}` : `${API_BASE}/api/events`;
     const method = editingEventId ? 'PUT' : 'POST';
 
+    // Optimistic update: create temporary event with generated ID
+    const tempId = editingEventId || `temp-${Date.now()}`;
+    const optimisticEvent: CalendarEvent = {
+      id: tempId,
+      title,
+      startAt,
+      endAt,
+    };
+
+    const previousEvents = [...events];
+    setEvents((currentEvents) => {
+      const nextEvents = currentEvents.filter((currentEvent) => currentEvent.id !== tempId);
+
+      if (eventOverlapsRange(optimisticEvent, selectedRange)) {
+        nextEvents.push(optimisticEvent);
+      }
+
+      return sortEvents(nextEvents);
+    });
+
     try {
       const response = await fetch(endpoint, {
         method,
@@ -208,6 +228,8 @@ export function App() {
       const payload: unknown = await response.json();
 
       if (!response.ok) {
+        // Revert optimistic update on error
+        setEvents(previousEvents);
         setError(extractErrorMessage(payload, editingEventId ? 'Unable to update event' : 'Unable to create event'));
         setErrorDetails(extractErrorDetails(payload));
         return;
@@ -220,12 +242,15 @@ export function App() {
           : null;
 
       if (!savedEvent) {
+        // Revert optimistic update on error
+        setEvents(previousEvents);
         setError('The server returned an unexpected event shape');
         return;
       }
 
+      // Replace optimistic event with server response
       setEvents((currentEvents) => {
-        const nextEvents = currentEvents.filter((currentEvent) => currentEvent.id !== savedEvent.id);
+        const nextEvents = currentEvents.filter((currentEvent) => currentEvent.id !== tempId);
 
         if (eventOverlapsRange(savedEvent, selectedRange)) {
           nextEvents.push(savedEvent);
@@ -240,6 +265,8 @@ export function App() {
 
       setStatus(editingEventId ? `Updated ${savedEvent.title}` : `Created ${savedEvent.title}`);
     } catch (submitError) {
+      // Revert optimistic update on error
+      setEvents(previousEvents);
       setError(submitError instanceof Error ? submitError.message : 'Unable to save event');
     } finally {
       setSubmitting(false);

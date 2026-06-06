@@ -237,6 +237,25 @@ export function App() {
     setStatus('');
     setSubmitting(true);
 
+    // Optimistic update: add temporary file to state
+    const tempId = `temp-${Date.now()}`;
+    const optimisticFile: DriveFile = {
+      id: tempId,
+      name: data.name,
+      size: data.size,
+      createdAt: new Date().toISOString(),
+      modifiedAt: new Date().toISOString(),
+    };
+    if (data.folderId !== undefined) {
+      (optimisticFile as any).folderId = data.folderId;
+    }
+    if (data.mimeType !== undefined) {
+      (optimisticFile as any).mimeType = data.mimeType;
+    }
+
+    const previousFiles = [...files];
+    setFiles((currentFiles) => [optimisticFile, ...currentFiles.filter((file) => file.id !== tempId)]);
+
     try {
       const body: Record<string, unknown> = { name: data.name, size: data.size };
       if (data.mimeType) {
@@ -255,6 +274,8 @@ export function App() {
       const payload: unknown = await response.json();
 
       if (!response.ok) {
+        // Revert optimistic update on error
+        setFiles(previousFiles);
         setUploadError(extractErrorMessage(payload, 'Unable to upload file'));
         setUploadErrorDetails(extractErrorDetails(payload));
         return;
@@ -282,15 +303,20 @@ export function App() {
             (savedFile as any).mimeType = candidate.mimeType;
           };
 
-          setFiles((currentFiles) => [savedFile, ...currentFiles.filter((file) => file.id !== savedFile.id)]);
+          // Replace optimistic file with server response
+          setFiles((currentFiles) => [savedFile, ...currentFiles.filter((file) => file.id !== tempId)]);
           setUploadDialogOpen(false);
           setStatus(`Uploaded ${savedFile.name}`);
           return;
         }
       }
 
+      // Revert optimistic update on error
+      setFiles(previousFiles);
       setUploadError('The server returned an unexpected file shape');
     } catch (submitError) {
+      // Revert optimistic update on error
+      setFiles(previousFiles);
       setUploadError(submitError instanceof Error ? submitError.message : 'Unable to upload file');
     } finally {
       setSubmitting(false);
@@ -366,6 +392,10 @@ export function App() {
     setDeleting(file);
     setDeleteError('');
 
+    // Optimistic update: remove file from state immediately
+    const previousFiles = [...files];
+    setFiles((currentFiles) => currentFiles.filter((f) => f.id !== file.id));
+
     try {
       const response = await fetch(`${API_BASE}/api/files/${file.id}`, {
         method: 'DELETE',
@@ -374,17 +404,20 @@ export function App() {
       const payload: unknown = await response.json();
 
       if (!response.ok) {
+        // Revert optimistic update on error
+        setFiles(previousFiles);
         setDeleteError(extractErrorMessage(payload, 'Unable to delete file'));
         return;
       }
 
-      setFiles((currentFiles) => currentFiles.filter((f) => f.id !== file.id));
       setDeleting(null);
       setStatus(`Deleted ${file.name}`);
     } catch (deleteErrorCatch) {
+      // Revert optimistic update on error
+      setFiles(previousFiles);
       setDeleteError(deleteErrorCatch instanceof Error ? deleteErrorCatch.message : 'Unable to delete file');
     }
-  }, [extractErrorMessage]);
+  }, [extractErrorMessage, files]);
 
   const handleFolderClick = useCallback((folderId: string | undefined) => {
     setCurrentFolderId(folderId);
