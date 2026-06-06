@@ -145,9 +145,9 @@ export * from './migrations'
 
 ---
 
-### [ ] ENV-01: Implement environment configuration with Zod validation
+### [x] ENV-01: Implement environment configuration with Zod validation
 
-**Status**: Not started  
+**Status**: Complete  
 **Related Files**: packages/env-config/src/index.ts, packages/env-config/package.json
 
 **Definition of Done**:
@@ -206,35 +206,44 @@ export type { CalendarEnv, TasksEnv, DriveEnv } from './types'
 
 **Subtasks**:
 
-#### ENV-01.1: Install Zod dependency
+#### ✅ ENV-01.1: Install Zod dependency
 **Target**: packages/env-config/package.json
 **Action**: Add zod to dependencies.
 **Validate**: `pnpm --filter @suite/env-config install`
 
-#### ENV-01.2: Create calendar environment schema
+#### ✅ ENV-01.2: Create calendar environment schema
 **Target**: packages/env-config/src/calendar.ts
 **Action**: Define Zod schema for calendar app (DATABASE_URL, PORT, NODE_ENV).
 **Validate**: `pnpm --filter @suite/env-config typecheck`
 
-#### ENV-01.3: Create tasks environment schema
+#### ✅ ENV-01.3: Create tasks environment schema
 **Target**: packages/env-config/src/tasks.ts
 **Action**: Define Zod schema for tasks app (DATABASE_URL, PORT, NODE_ENV).
 **Validate**: `pnpm --filter @suite/env-config typecheck`
 
-#### ENV-01.4: Create drive environment schema
+#### ✅ ENV-01.4: Create drive environment schema
 **Target**: packages/env-config/src/drive.ts
 **Action**: Define Zod schema for drive app (DATABASE_URL, PORT, NODE_ENV).
 **Validate**: `pnpm --filter @suite/env-config typecheck`
 
-#### ENV-01.5: Implement validateEnv function
+#### ✅ ENV-01.5: Implement validateEnv function
 **Target**: packages/env-config/src/index.ts
 **Action**: Create generic validateEnv function that takes schema and returns typed env object.
 **Validate**: `pnpm --filter @suite/env-config typecheck`
 
-#### ENV-01.6: Add tests for environment validation
+#### ✅ ENV-01.6: Add tests for environment validation
 **Target**: packages/env-config/src/index.test.ts
 **Action**: Test valid and invalid environment configurations, error messages.
 **Validate**: `pnpm --filter @suite/env-config test`
+
+**Implementation Notes**:
+- Zod was already installed (v3.24.0)
+- Added @types/node for process.env TypeScript support
+- Created separate schema files for each app (calendar.ts, tasks.ts, drive.ts)
+- Each schema includes DATABASE_URL (URL validation), PORT (number validation 1-65535), NODE_ENV (enum)
+- Exported validation functions and types from index.ts
+- Added vitest configuration for the package
+- All 8 tests passing covering valid configs, missing vars, invalid formats, and out-of-range values
 
 ---
 
