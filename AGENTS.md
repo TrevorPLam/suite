@@ -41,6 +41,17 @@ This repository is a greenfield monorepo for a productivity suite. The initial f
 - `pnpm typecheck`
 - `pnpm graph`
 
+## Further Reading (Updated Paths)
+- Domain-specific rules: `packages/domain-<name>/AGENTS.md`
+- Full plan: `docs/00-vision/00-vision-and-principles.md`
+- Schema reference: `docs/03-data/24-database-schema-reference.md` (mandatory read for all domain work)
+- Error codes: `docs/04-backend/26-error-handling-taxonomy.md`
+- Testing guide: `docs/02-monorepo/25-testing-strategy.md`
+- Compliance records: `docs/07-business/18-compliance-gdpr-cra.md`
+- Incident response: `docs/07-business/33-incident-response.md`
+- Developer setup: `docs/08-execution/36-developer-onboarding.md`
+- App guides: `docs/10-apps/`
+
 ## Notes
 - Keep the structure simple until the first packages are stable.
 - Add app-specific instructions in nested `AGENTS.md` files as the repo grows.
