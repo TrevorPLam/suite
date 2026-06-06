@@ -214,7 +214,9 @@ app.use('/api/*', async (c, next) => {
 app.use('/api/*', async (c, next) => {
   const userId = c.get('userId') as string | undefined;
   if (userId) {
-    await wireRepositories(userId, c.env);
+    // Use organizationId from auth context as tenantId, fallback to 'default' for single-tenant
+    const organizationId = (c.get('auth') as any)?.session?.organizationId || 'default';
+    await wireRepositories(userId, organizationId, c.env);
   }
   await next();
 });

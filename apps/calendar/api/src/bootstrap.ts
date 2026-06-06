@@ -2,7 +2,7 @@ import { setCalendarEventRepository, setCalendarKeyProviderFromEnv, isEncryption
 import { PostgresCalendarEventRepository, createDbClient } from '@suite/db';
 import type { CalendarEnv } from '@suite/env-config';
 
-export async function wireRepositories(userId: string, env: CalendarEnv & { HYPERDRIVE?: { connectionString: string } }): Promise<void> {
+export async function wireRepositories(userId: string, tenantId: string, env: CalendarEnv & { HYPERDRIVE?: { connectionString: string } }): Promise<void> {
   // Set up encryption key provider from environment
   await setCalendarKeyProviderFromEnv();
 
@@ -24,6 +24,5 @@ export async function wireRepositories(userId: string, env: CalendarEnv & { HYPE
     throw new Error('Either HYPERDRIVE or DATABASE_URL must be set');
   }
   const db = createDbClient(dbEnv);
-  // Use default tenant for single-tenant setup (will be updated for multi-tenancy)
-  setCalendarEventRepository(new PostgresCalendarEventRepository(db, userId, 'default'));
+  setCalendarEventRepository(new PostgresCalendarEventRepository(db, userId, tenantId));
 }

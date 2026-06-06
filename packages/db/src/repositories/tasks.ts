@@ -55,14 +55,21 @@ export class PostgresTaskRepository implements TaskRepository {
   private db: ReturnType<Database['getDrizzleDb']>;
   private userId: string;
   private tenantId: string;
+  private database: Database;
 
   constructor(db: Database, userId: string, tenantId: string) {
+    this.database = db;
     this.db = db.getDrizzleDb();
     this.userId = userId;
     this.tenantId = tenantId;
   }
 
+  private async setContext(): Promise<void> {
+    await this.database.setTenantContext(this.tenantId, this.userId);
+  }
+
   async findById(id: string, tx?: TransactionScope): Promise<TaskItem | null> {
+    await this.setContext();
     const db = tx ?? this.db;
     const results = await db
       .select()
@@ -73,6 +80,7 @@ export class PostgresTaskRepository implements TaskRepository {
   }
 
   async findAll(tx?: TransactionScope): Promise<TaskItem[]> {
+    await this.setContext();
     const db = tx ?? this.db;
     const results = await db
       .select()
@@ -82,6 +90,7 @@ export class PostgresTaskRepository implements TaskRepository {
   }
 
   async create(entity: Omit<TaskItem, 'id'>, tx?: TransactionScope): Promise<TaskItem> {
+    await this.setContext();
     const db = tx ?? this.db;
     const schemaEntity = mapToSchema(entity, this.tenantId);
     const newEntity: NewTaskSchema = {
@@ -104,6 +113,7 @@ export class PostgresTaskRepository implements TaskRepository {
   }
 
   async update(id: string, entity: Partial<TaskItem>, tx?: TransactionScope): Promise<TaskItem | null> {
+    await this.setContext();
     const db = tx ?? this.db;
     const schemaEntity: Partial<TaskSchema> = {};
     if (entity.title !== undefined) schemaEntity.title = entity.title;
@@ -122,6 +132,7 @@ export class PostgresTaskRepository implements TaskRepository {
   }
 
   async delete(id: string, tx?: TransactionScope): Promise<boolean> {
+    await this.setContext();
     const db = tx ?? this.db;
     const results = await db
       .delete(tasks)
@@ -131,6 +142,7 @@ export class PostgresTaskRepository implements TaskRepository {
   }
 
   async findWhere(criteria: Partial<TaskItem>, options?: import('../index.js').QueryOptions, tx?: TransactionScope): Promise<TaskItem[]> {
+    await this.setContext();
     const db = tx ?? this.db;
     const conditions = [eq(tasks.userId, this.userId)];
     Object.entries(criteria).forEach(([key, value]) => 
@@ -147,6 +159,7 @@ export class PostgresTaskRepository implements TaskRepository {
   }
 
   async count(criteria?: Partial<TaskItem>, tx?: TransactionScope): Promise<number> {
+    await this.setContext();
     const db = tx ?? this.db;
     if (!criteria || Object.keys(criteria).length === 0) {
       const result = await db.select({ count: tasks.id }).from(tasks).where(eq(tasks.userId, this.userId));

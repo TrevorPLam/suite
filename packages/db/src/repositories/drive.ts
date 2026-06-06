@@ -86,14 +86,21 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
   private db: ReturnType<Database['getDrizzleDb']>;
   private userId: string;
   private tenantId: string;
+  private database: Database;
 
   constructor(db: Database, userId: string, tenantId: string) {
+    this.database = db;
     this.db = db.getDrizzleDb();
     this.userId = userId;
     this.tenantId = tenantId;
   }
 
+  private async setContext(): Promise<void> {
+    await this.database.setTenantContext(this.tenantId, this.userId);
+  }
+
   async findById(id: string, tx?: TransactionScope): Promise<DriveFile | null> {
+    await this.setContext();
     const db = tx ?? this.db;
     const results = await db
       .select()
@@ -104,6 +111,7 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
   }
 
   async findAll(tx?: TransactionScope): Promise<DriveFile[]> {
+    await this.setContext();
     const db = tx ?? this.db;
     const results = await db
       .select()
@@ -113,6 +121,7 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
   }
 
   async create(entity: Omit<DriveFile, 'id'>, tx?: TransactionScope): Promise<DriveFile> {
+    await this.setContext();
     const db = tx ?? this.db;
     const schemaEntity = mapFileToSchema(entity, this.tenantId);
     const newEntity: NewDriveFileSchema = {
@@ -135,6 +144,7 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
   }
 
   async update(id: string, entity: Partial<DriveFile>, tx?: TransactionScope): Promise<DriveFile | null> {
+    await this.setContext();
     const db = tx ?? this.db;
     const schemaEntity: Partial<DriveFileSchema> = {};
     if (entity.name !== undefined) schemaEntity.name = entity.name;
@@ -153,6 +163,7 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
   }
 
   async delete(id: string, tx?: TransactionScope): Promise<boolean> {
+    await this.setContext();
     const db = tx ?? this.db;
     const results = await db
       .delete(driveFiles)
@@ -162,6 +173,7 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
   }
 
   async findWhere(criteria: Partial<DriveFile>, options?: import('../index.js').QueryOptions, tx?: TransactionScope): Promise<DriveFile[]> {
+    await this.setContext();
     const db = tx ?? this.db;
     const conditions = [eq(driveFiles.userId, this.userId)];
     Object.entries(criteria).forEach(([key, value]) => 
@@ -178,6 +190,7 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
   }
 
   async count(criteria?: Partial<DriveFile>, tx?: TransactionScope): Promise<number> {
+    await this.setContext();
     const db = tx ?? this.db;
     if (!criteria || Object.keys(criteria).length === 0) {
       const result = await db.select({ count: driveFiles.id }).from(driveFiles).where(eq(driveFiles.userId, this.userId));
@@ -192,14 +205,21 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
   private db: ReturnType<Database['getDrizzleDb']>;
   private userId: string;
   private tenantId: string;
+  private database: Database;
 
   constructor(db: Database, userId: string, tenantId: string) {
+    this.database = db;
     this.db = db.getDrizzleDb();
     this.userId = userId;
     this.tenantId = tenantId;
   }
 
+  private async setContext(): Promise<void> {
+    await this.database.setTenantContext(this.tenantId, this.userId);
+  }
+
   async findById(id: string, tx?: TransactionScope): Promise<DriveFolder | null> {
+    await this.setContext();
     const db = tx ?? this.db;
     const results = await db
       .select()
@@ -210,6 +230,7 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
   }
 
   async findAll(tx?: TransactionScope): Promise<DriveFolder[]> {
+    await this.setContext();
     const db = tx ?? this.db;
     const results = await db
       .select()
@@ -219,6 +240,7 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
   }
 
   async create(entity: Omit<DriveFolder, 'id'>, tx?: TransactionScope): Promise<DriveFolder> {
+    await this.setContext();
     const db = tx ?? this.db;
     const schemaEntity = mapFolderToSchema(entity, this.tenantId);
     const newEntity: NewDriveFolderSchema = {
@@ -237,6 +259,7 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
   }
 
   async update(id: string, entity: Partial<DriveFolder>, tx?: TransactionScope): Promise<DriveFolder | null> {
+    await this.setContext();
     const db = tx ?? this.db;
     const schemaEntity: Partial<DriveFolderSchema> = {};
     if (entity.name !== undefined) schemaEntity.name = entity.name;
@@ -252,6 +275,7 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
   }
 
   async delete(id: string, tx?: TransactionScope): Promise<boolean> {
+    await this.setContext();
     const db = tx ?? this.db;
     const results = await db
       .delete(driveFolders)
@@ -261,6 +285,7 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
   }
 
   async findWhere(criteria: Partial<DriveFolder>, options?: import('../index.js').QueryOptions, tx?: TransactionScope): Promise<DriveFolder[]> {
+    await this.setContext();
     const db = tx ?? this.db;
     const conditions = [eq(driveFolders.userId, this.userId)];
     Object.entries(criteria).forEach(([key, value]) => 
@@ -277,6 +302,7 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
   }
 
   async count(criteria?: Partial<DriveFolder>, tx?: TransactionScope): Promise<number> {
+    await this.setContext();
     const db = tx ?? this.db;
     if (!criteria || Object.keys(criteria).length === 0) {
       const result = await db.select({ count: driveFolders.id }).from(driveFolders).where(eq(driveFolders.userId, this.userId));

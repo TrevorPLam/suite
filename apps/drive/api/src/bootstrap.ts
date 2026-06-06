@@ -98,7 +98,7 @@ export function getR2Adapter(): R2StorageAdapter | null {
   return r2Adapter;
 }
 
-export async function wireRepositories(userId: string | null, env: DriveEnv & { HYPERDRIVE?: { connectionString: string } }, r2Bucket?: R2Bucket): Promise<void> {
+export async function wireRepositories(userId: string | null, tenantId: string, env: DriveEnv & { HYPERDRIVE?: { connectionString: string } }, r2Bucket?: R2Bucket): Promise<void> {
   try {
     // Set up encryption key provider from environment
     await setDriveKeyProviderFromEnv();
@@ -130,9 +130,8 @@ export async function wireRepositories(userId: string | null, env: DriveEnv & { 
         dbEnv.DATABASE_URL = env.DATABASE_URL;
       }
       const db = createDbClient(dbEnv);
-      // Use default tenant for single-tenant setup (will be updated for multi-tenancy)
-      setDriveFileRepository(new PostgresDriveFileRepository(db, userId, 'default'));
-      setDriveFolderRepository(new PostgresDriveFolderRepository(db, userId, 'default'));
+      setDriveFileRepository(new PostgresDriveFileRepository(db, userId, tenantId));
+      setDriveFolderRepository(new PostgresDriveFolderRepository(db, userId, tenantId));
     } else {
       // Use in-memory repositories for testing or when userId is not available
       setDriveFileRepository(new InMemoryDriveFileRepository());

@@ -115,6 +115,28 @@ export class PostgresDatabase implements Database {
   }
 
   /**
+   * Set RLS context for the current database session
+   * 
+   * Uses SET LOCAL to set PostgreSQL session variables that RLS policies
+   * reference for tenant and user isolation. SET LOCAL is transaction-scoped
+   * and automatically resets at transaction end, preventing context leaks.
+   */
+  async setTenantContext(tenantId: string, userId: string): Promise<void> {
+    if (this.isClosed) {
+      throw new Error('Database connection is closed');
+    }
+
+    try {
+      // Set tenant context for RLS policies
+      await this.pool`SET LOCAL app.current_tenant_id = ${tenantId}`;
+      // Set user context for RLS policies
+      await this.pool`SET LOCAL app.current_user_id = ${userId}`;
+    } catch (error) {
+      throw new Error(`Failed to set tenant context: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
    * Setup graceful shutdown handlers
    * Only runs in Node.js environments (not Cloudflare Workers)
    */

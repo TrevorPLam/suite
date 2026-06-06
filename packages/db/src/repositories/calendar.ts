@@ -39,14 +39,21 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
   private db: ReturnType<Database['getDrizzleDb']>;
   private userId: string;
   private tenantId: string;
+  private database: Database;
 
   constructor(db: Database, userId: string, tenantId: string) {
+    this.database = db;
     this.db = db.getDrizzleDb();
     this.userId = userId;
     this.tenantId = tenantId;
   }
 
+  private async setContext(): Promise<void> {
+    await this.database.setTenantContext(this.tenantId, this.userId);
+  }
+
   async findById(id: string, tx?: TransactionScope): Promise<CalendarEvent | null> {
+    await this.setContext();
     const db = tx ?? this.db;
     const results = await db
       .select()
@@ -57,6 +64,7 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
   }
 
   async findAll(tx?: TransactionScope): Promise<CalendarEvent[]> {
+    await this.setContext();
     const db = tx ?? this.db;
     const results = await db
       .select()
@@ -66,6 +74,7 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
   }
 
   async create(entity: Omit<CalendarEvent, 'id'>, tx?: TransactionScope): Promise<CalendarEvent> {
+    await this.setContext();
     const db = tx ?? this.db;
     const schemaEntity = mapToSchema(entity, this.tenantId);
     const newEntity: NewCalendarEventSchema = {
@@ -84,6 +93,7 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
   }
 
   async update(id: string, entity: Partial<CalendarEvent>, tx?: TransactionScope): Promise<CalendarEvent | null> {
+    await this.setContext();
     const db = tx ?? this.db;
     const schemaEntity: Partial<CalendarEventSchema> = {};
     if (entity.title !== undefined) schemaEntity.title = entity.title;
@@ -99,6 +109,7 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
   }
 
   async delete(id: string, tx?: TransactionScope): Promise<boolean> {
+    await this.setContext();
     const db = tx ?? this.db;
     const results = await db
       .delete(calendarEvents)
@@ -108,6 +119,7 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
   }
 
   async findOverlapping(startAt: Date, endAt: Date, excludeId?: string, tx?: TransactionScope): Promise<CalendarEvent[]> {
+    await this.setContext();
     const db = tx ?? this.db;
     // Find events that overlap with the given range
     // Overlap condition: (event.start < candidate.end) AND (event.end > candidate.start)

@@ -2,7 +2,7 @@ import { setTaskRepository, setTaskKeyProviderFromEnv, isEncryptionEnabled } fro
 import { PostgresTaskRepository, createDbClient } from '@suite/db';
 import type { TasksEnv } from '@suite/env-config';
 
-export async function wireRepositories(userId: string, env: TasksEnv & { HYPERDRIVE?: { connectionString: string } }): Promise<void> {
+export async function wireRepositories(userId: string, tenantId: string, env: TasksEnv & { HYPERDRIVE?: { connectionString: string } }): Promise<void> {
   // Set up encryption key provider from environment
   await setTaskKeyProviderFromEnv();
 
@@ -24,6 +24,5 @@ export async function wireRepositories(userId: string, env: TasksEnv & { HYPERDR
     throw new Error('Either HYPERDRIVE or DATABASE_URL must be set');
   }
   const db = createDbClient(dbEnv);
-  // Use default tenant for single-tenant setup (will be updated for multi-tenancy)
-  setTaskRepository(new PostgresTaskRepository(db, userId, 'default'));
+  setTaskRepository(new PostgresTaskRepository(db, userId, tenantId));
 }

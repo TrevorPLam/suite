@@ -80,6 +80,18 @@ export interface Database {
    * that uses Drizzle ORM directly. New code should prefer query() and transaction().
    */
   getDrizzleDb(): ReturnType<typeof import('drizzle-orm/postgres-js').drizzle>;
+
+  /**
+   * Set RLS context for the current database session
+   * 
+   * This sets PostgreSQL session variables that Row Level Security (RLS) policies
+   * use to enforce tenant and user isolation. Must be called before queries that
+   * depend on RLS policies.
+   * 
+   * @param tenantId - The tenant/organization ID for multi-tenancy
+   * @param userId - The user ID for user-level isolation
+   */
+  setTenantContext(tenantId: string, userId: string): Promise<void>;
 }
 
 /**

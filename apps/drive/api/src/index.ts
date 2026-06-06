@@ -370,7 +370,7 @@ http_error_rate{app="drive"} ${errorRate}
 
 app.get('/api/v1/files', async (c) => {
   // Wire repositories for public endpoint (no auth required)
-  await wireRepositories(null, c.env, c.env?.R2);
+  await wireRepositories(null, 'default', c.env, c.env?.R2);
   const files = await listDriveFiles();
   return c.json({ files });
 });
@@ -716,7 +716,7 @@ app.get('/api/v1/files/:id/download', async (c) => {
 // Folder endpoints
 app.get('/api/v1/folders', async (c) => {
   // Wire repositories for public endpoint (no auth required)
-  await wireRepositories(null, c.env, c.env?.R2);
+  await wireRepositories(null, 'default', c.env, c.env?.R2);
   const parentId = c.req.query('parentId');
   const folders = await listFolders(parentId);
   return c.json({ folders });
@@ -948,7 +948,7 @@ app.post('/api/v1/files/:id/move', requireAuth, requireOrganization, async (c) =
 // Search endpoint
 app.get('/api/v1/files/search', async (c) => {
   // Wire repositories for public endpoint (no auth required)
-  await wireRepositories(null, c.env, c.env?.R2);
+  await wireRepositories(null, 'default', c.env, c.env?.R2);
   const query = c.req.query();
   const result = searchFilesQuerySchema.safeParse(query);
 
