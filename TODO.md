@@ -721,7 +721,9 @@ T008 -> T061 -> T062 -> T063 -> T064
 
 ## Task: T046 - Implement PostgreSQL Schema Separation
 
-- [ ] **T046** [PENDING] Implement PostgreSQL Schema Separation
+- [!] **T046** [BLOCKED] Implement PostgreSQL Schema Separation
+
+**Block Reason:** T046 depends on T010, but T010 task definition is missing from TODO.md. T010 needs to be defined and completed before T046 can proceed.
 
 **Files:** `packages/db/drizzle.calendar.config.ts`, `packages/db/drizzle.drive.config.ts`, `packages/db/drizzle.tasks.config.ts`, `packages/db/src/schema/calendar/index.ts`, `packages/db/src/schema/drive/index.ts`, `packages/db/src/schema/tasks/index.ts`, `packages/db/src/schema/users.ts`, `packages/db/drizzle/*.sql`
 
