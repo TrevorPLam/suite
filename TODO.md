@@ -1072,7 +1072,7 @@ beforeEach(async () => {
 
 ## TEST-011: Improve React Testing Library Patterns
 
-Status: [ ]
+Status: [x]
 
 **Related Files**:
 - `apps/calendar/web/src/App.test.tsx`
@@ -1126,53 +1126,71 @@ await user.click(screen.getByRole('button', { name: 'Submit' }))
 **Target File**: `apps/calendar/web/src/App.test.tsx`
 **Action**: Import userEvent from @testing-library/user-event. Replace all fireEvent calls with userEvent calls.
 **Validation**: Run `pnpm test apps/calendar/web` and verify tests pass.
+**Status**: ✅ Complete - Already using userEvent, no changes needed
 
 #### TEST-011-02: Remove implementation assertions in calendar tests
 **Target File**: `apps/calendar/web/src/App.test.tsx`
 **Action**: Remove assertions testing internal state, props, or implementation details. Keep only user-visible behavior assertions.
 **Validation**: Run `pnpm test apps/calendar/web` and verify tests pass.
+**Status**: ✅ Complete - Already focused on user-visible behavior, no changes needed
 
 #### TEST-011-03: Improve test names in calendar tests
 **Target File**: `apps/calendar/web/src/App.test.tsx`
 **Action**: Rename tests to describe behavior (e.g., "shows error when required field missing" instead of "validates form").
 **Validation**: Run `pnpm test apps/calendar/web` and verify tests pass.
+**Status**: ✅ Complete - Test names already describe behavior, no changes needed
 
 #### TEST-011-04: Replace fireEvent with userEvent in drive tests
 **Target File**: `apps/drive/web/src/App.test.tsx`
 **Action**: Import userEvent from @testing-library/user-event. Replace all fireEvent calls with userEvent calls.
 **Validation**: Run `pnpm test apps/drive/web` and verify tests pass.
+**Status**: ✅ Complete - Replaced fireEvent.click with userEvent.click (line 150)
 
 #### TEST-011-05: Remove implementation assertions in drive tests
 **Target File**: `apps/drive/web/src/App.test.tsx`
 **Action**: Remove assertions testing internal state, props, or implementation details. Keep only user-visible behavior assertions.
 **Validation**: Run `pnpm test apps/drive/web` and verify tests pass.
+**Status**: ✅ Complete - Already focused on user-visible behavior, no changes needed
 
 #### TEST-011-06: Improve test names in drive tests
 **Target File**: `apps/drive/web/src/App.test.tsx`
 **Action**: Rename tests to describe behavior (e.g., "shows upload dialog when button clicked" instead of "opens dialog").
 **Validation**: Run `pnpm test apps/drive/web` and verify tests pass.
+**Status**: ✅ Complete - Improved 2 test names to describe behavior
 
 #### TEST-011-07: Replace fireEvent with userEvent in tasks tests
 **Target File**: `apps/tasks/web/src/App.test.tsx`
 **Action**: Import userEvent from @testing-library/user-event. Replace all fireEvent calls with userEvent calls.
 **Validation**: Run `pnpm test apps/tasks/web` and verify tests pass.
+**Status**: ✅ Complete - Already using userEvent, no changes needed
 
 #### TEST-011-08: Remove implementation assertions in tasks tests
 **Target File**: `apps/tasks/web/src/App.test.tsx`
 **Action**: Remove assertions testing internal state, props, or implementation details. Keep only user-visible behavior assertions.
 **Validation**: Run `pnpm test apps/tasks/web` and verify tests pass.
+**Status**: ✅ Complete - Removed fetchMock implementation assertions (lines 104-113)
 
 #### TEST-011-09: Improve test names in tasks tests
 **Target File**: `apps/tasks/web/src/App.test.tsx`
 **Action**: Rename tests to describe behavior (e.g., "marks task complete when checkbox clicked" instead of "toggles completion").
 **Validation**: Run `pnpm test apps/tasks/web` and verify tests pass.
+**Status**: ✅ Complete - Improved 1 test name to describe behavior
 
 #### TEST-011-10: Improve UI component tests
 **Target File**: `packages/ui/src/index.test.tsx`
 **Action**: Replace fireEvent with userEvent. Remove implementation assertions. Improve test names to describe behavior.
 **Validation**: Run `pnpm test packages/ui` and verify tests pass.
+**Status**: ✅ Complete - Replaced container.querySelector with role-based queries, improved all test names to describe behavior
 
 ---
+
+**Implementation Notes**:
+- calendar/web: Already following best practices (userEvent, role queries, behavior-focused names) - no changes needed
+- drive/web: Replaced 1 fireEvent.click with userEvent.click, improved 2 test names to describe behavior
+- tasks/web: Removed fetchMock implementation assertions (lines 104-113), improved 1 test name to describe behavior
+- packages/ui: Replaced all container.querySelector calls with role-based queries (getByRole, getByPlaceholderText, getByText), improved all test names to describe behavior
+- Typecheck passed, lint passed (pre-existing warnings unrelated to this change), tests passed
+- All tests now follow React Testing Library best practices: userEvent for interactions, role-based queries, behavior-focused test names
 
 ## TEST-012: Add Cross-Browser Playwright Tests
 
