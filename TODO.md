@@ -564,10 +564,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] DB-003 — Add drive_folders schema and extend drive_files
+### [x] DB-003 — Add drive_folders schema and extend drive_files
 
-**Status:** pending  
-**Depends on:** DB-001  
+**Status:** done
+**Depends on:** DB-001
 **Blocks:** DB-006
 
 #### Related paths
@@ -610,9 +610,19 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| DB-003-a | `packages/db/src/schema/drive.ts` | Add `driveFolders` table and extend `driveFiles` with `folderId`, `mimeType`. | `pnpm --filter @suite/db typecheck` |
-| DB-003-b | `packages/db/` | Generate migration. | `pnpm --filter @suite/db run db:generate` |
-| DB-003-c | `packages/db/src/repositories/drive.ts` | Add `PostgresDriveFolderRepository` or extend existing class with folder methods matching domain interface. | `pnpm --filter @suite/db typecheck` |
+| DB-003-a | `packages/db/src/schema/drive.ts` | Add `driveFolders` table and extend `driveFiles` with `folderId`, `mimeType`. | `pnpm --filter @suite/db typecheck` ✅ |
+| DB-003-b | `packages/db/` | Generate migration. | `pnpm --filter @suite/db run db:generate` ✅ |
+| DB-003-c | `packages/db/src/repositories/drive.ts` | Add `PostgresDriveFolderRepository` or extend existing class with folder methods matching domain interface. | `pnpm --filter @suite/db typecheck` ✅ |
+
+#### Implementation notes
+
+- Added `driveFolders` table with id, name, parentId (nullable), createdAt columns
+- Extended `driveFiles` table with folderId, mimeType, createdAt, modifiedAt columns
+- Generated migration 0003_square_vivisector.sql with new table and columns
+- Added `PostgresDriveFolderRepository` class implementing `DriveFolderRepository` interface
+- Replaced crypto.randomUUID() with generateUUID from @suite/shared-kernel in both repositories
+- Repository methods (create/update/find) automatically handle new columns via Drizzle ORM
+- Typecheck passes; @suite/db has no test:run script yet (deferred to DB-007)
 
 ---
 
