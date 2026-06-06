@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { resetDriveFiles, resetDriveFolders, setDriveFileRepository, setDriveFolderRepository, InMemoryDriveFileRepository, InMemoryDriveFolderRepository } from '@suite/domain-drive';
+import { resetDriveFiles, resetDriveFolders } from '@suite/domain-drive';
 
 // Type definitions for API responses
 interface FileResponse {
@@ -78,12 +78,6 @@ vi.mock('@suite/auth', async () => {
 });
 
 import app from './index.js';
-
-// Wire in-memory repositories before all tests
-beforeEach(() => {
-  setDriveFileRepository(new InMemoryDriveFileRepository());
-  setDriveFolderRepository(new InMemoryDriveFolderRepository());
-});
 
 describe('drive API - health', () => {
   it('should return health check', async () => {

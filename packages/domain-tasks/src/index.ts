@@ -13,8 +13,6 @@ export {
   batchArchive,
   resetTasks,
   resetTasksDB,
-  setTaskRepository,
-  getTaskRepository,
 } from './lib/tasks.js';
 
 export {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import fc from 'fast-check';
 import {
   createTask,
@@ -14,8 +14,6 @@ import {
   batchArchive,
   resetTasks,
   resetTasksDB,
-  setTaskRepository,
-  getTaskRepository,
   TaskError,
   type CreateTaskInput,
   type UpdateTaskCompletionInput,
@@ -24,6 +22,7 @@ import {
   type SearchTasksInput,
   type BatchOperationInput,
   type TaskItem,
+  InMemoryTaskRepository,
 } from './tasks.js';
 import { sealTask, unsealTask, setTaskKeyProvider, resetKeyProvider } from './tasks-crypto.js';
 import { generateAESKey } from '@suite/crypto';
@@ -95,8 +94,10 @@ describe('tasks - create', () => {
 });
 
 describe('tasks - update completion', () => {
+  let repository: InMemoryTaskRepository;
+
   beforeEach(() => {
-    resetTasks();
+    repository = new InMemoryTaskRepository();
   });
 
   it('should update task completion status', async () => {
@@ -104,13 +105,13 @@ describe('tasks - update completion', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(createInput);
+    const task = await createTask(createInput, repository);
 
     const updateInput: UpdateTaskCompletionInput = {
       completed: true,
     };
 
-    const updated = await updateTaskCompletion(task.id, updateInput);
+    const updated = await updateTaskCompletion(task.id, updateInput, repository);
 
     expect(updated.id).toBe(task.id);
     expect(updated.completed).toBe(true);
@@ -122,7 +123,7 @@ describe('tasks - update completion', () => {
       completed: true,
     };
 
-    await expect(updateTaskCompletion('', updateInput)).rejects.toThrow(TaskError);
+    await expect(updateTaskCompletion('', updateInput, repository)).rejects.toThrow(TaskError);
   });
 
   it('should reject update for non-existent task', async () => {
@@ -130,13 +131,15 @@ describe('tasks - update completion', () => {
       completed: true,
     };
 
-    await expect(updateTaskCompletion('non-existent-id', updateInput)).rejects.toThrow(TaskError);
+    await expect(updateTaskCompletion('non-existent-id', updateInput, repository)).rejects.toThrow(TaskError);
   });
 });
 
 describe('tasks - update', () => {
+  let repository: InMemoryTaskRepository;
+
   beforeEach(() => {
-    resetTasks();
+    repository = new InMemoryTaskRepository();
   });
 
   it('should update task title', async () => {
@@ -144,13 +147,13 @@ describe('tasks - update', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(createInput);
+    const task = await createTask(createInput, repository);
 
     const updateInput: UpdateTaskInput = {
       title: 'Buy milk and eggs',
     };
 
-    const updated = await updateTask(task.id, updateInput);
+    const updated = await updateTask(task.id, updateInput, repository);
 
     expect(updated.id).toBe(task.id);
     expect(updated.title).toBe('Buy milk and eggs');
@@ -163,13 +166,13 @@ describe('tasks - update', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(createInput);
+    const task = await createTask(createInput, repository);
 
     const updateInput: UpdateTaskInput = {
       title: '  Buy milk and eggs  ',
     };
 
-    const updated = await updateTask(task.id, updateInput);
+    const updated = await updateTask(task.id, updateInput, repository);
 
     expect(updated.title).toBe('Buy milk and eggs');
   });
@@ -179,7 +182,7 @@ describe('tasks - update', () => {
       title: 'Buy milk',
     };
 
-    await expect(updateTask('', updateInput)).rejects.toThrow(TaskError);
+    await expect(updateTask('', updateInput, repository)).rejects.toThrow(TaskError);
   });
 
   it('should reject update for non-existent task', async () => {
@@ -187,7 +190,7 @@ describe('tasks - update', () => {
       title: 'Buy milk',
     };
 
-    await expect(updateTask('non-existent-id', updateInput)).rejects.toThrow(TaskError);
+    await expect(updateTask('non-existent-id', updateInput, repository)).rejects.toThrow(TaskError);
   });
 
   it('should reject update with empty title', async () => {
@@ -195,19 +198,21 @@ describe('tasks - update', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(createInput);
+    const task = await createTask(createInput, repository);
 
     const updateInput: UpdateTaskInput = {
       title: '',
     };
 
-    await expect(updateTask(task.id, updateInput)).rejects.toThrow(TaskError);
+    await expect(updateTask(task.id, updateInput, repository)).rejects.toThrow(TaskError);
   });
 });
 
 describe('tasks - archive', () => {
+  let repository: InMemoryTaskRepository;
+
   beforeEach(() => {
-    resetTasks();
+    repository = new InMemoryTaskRepository();
   });
 
   it('should archive a task', async () => {
@@ -215,13 +220,13 @@ describe('tasks - archive', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(createInput);
+    const task = await createTask(createInput, repository);
 
     const archiveInput: ArchiveTaskInput = {
       archived: true,
     };
 
-    const archived = await archiveTask(task.id, archiveInput);
+    const archived = await archiveTask(task.id, archiveInput, repository);
 
     expect(archived.id).toBe(task.id);
     expect(archived.archived).toBe(true);
@@ -232,19 +237,19 @@ describe('tasks - archive', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(createInput);
+    const task = await createTask(createInput, repository);
 
     const archiveInput: ArchiveTaskInput = {
       archived: true,
     };
 
-    await archiveTask(task.id, archiveInput);
+    await archiveTask(task.id, archiveInput, repository);
 
     const unarchiveInput: ArchiveTaskInput = {
       archived: false,
     };
 
-    const unarchived = await archiveTask(task.id, unarchiveInput);
+    const unarchived = await archiveTask(task.id, unarchiveInput, repository);
 
     expect(unarchived.archived).toBe(false);
   });
@@ -254,7 +259,7 @@ describe('tasks - archive', () => {
       archived: true,
     };
 
-    await expect(archiveTask('', archiveInput)).rejects.toThrow(TaskError);
+    await expect(archiveTask('', archiveInput, repository)).rejects.toThrow(TaskError);
   });
 
   it('should reject archive for non-existent task', async () => {
@@ -262,13 +267,15 @@ describe('tasks - archive', () => {
       archived: true,
     };
 
-    await expect(archiveTask('non-existent-id', archiveInput)).rejects.toThrow(TaskError);
+    await expect(archiveTask('non-existent-id', archiveInput, repository)).rejects.toThrow(TaskError);
   });
 });
 
 describe('tasks - delete', () => {
+  let repository: InMemoryTaskRepository;
+
   beforeEach(() => {
-    resetTasks();
+    repository = new InMemoryTaskRepository();
   });
 
   it('should delete a task', async () => {
@@ -276,26 +283,28 @@ describe('tasks - delete', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(createInput);
+    const task = await createTask(createInput, repository);
 
-    await deleteTask(task.id);
+    await deleteTask(task.id, repository);
 
-    const found = await getTask(task.id);
+    const found = await getTask(task.id, repository);
     expect(found).toBeNull();
   });
 
   it('should reject delete with empty id', async () => {
-    await expect(deleteTask('')).rejects.toThrow(TaskError);
+    await expect(deleteTask('', repository)).rejects.toThrow(TaskError);
   });
 
   it('should reject delete for non-existent task', async () => {
-    await expect(deleteTask('non-existent-id')).rejects.toThrow(TaskError);
+    await expect(deleteTask('non-existent-id', repository)).rejects.toThrow(TaskError);
   });
 });
 
 describe('tasks - query', () => {
+  let repository: InMemoryTaskRepository;
+
   beforeEach(() => {
-    resetTasks();
+    repository = new InMemoryTaskRepository();
   });
 
   it('should list all tasks in reverse creation order', async () => {
@@ -307,10 +316,10 @@ describe('tasks - query', () => {
       title: 'Second task',
     };
 
-    const firstTask = await createTask(firstInput);
-    const secondTask = await createTask(secondInput);
+    const firstTask = await createTask(firstInput, repository);
+    const secondTask = await createTask(secondInput, repository);
 
-    const tasks = await listTasks();
+    const tasks = await listTasks(repository);
 
     expect(tasks).toHaveLength(2);
     expect(tasks[0]?.id).toBe(secondTask.id);
@@ -322,8 +331,8 @@ describe('tasks - query', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(input);
-    const found = await getTask(task.id);
+    const task = await createTask(input, repository);
+    const found = await getTask(task.id, repository);
 
     expect(found).not.toBeNull();
     expect(found?.id).toBe(task.id);
@@ -331,7 +340,7 @@ describe('tasks - query', () => {
   });
 
   it('should return null for non-existent task', async () => {
-    const found = await getTask('non-existent-id');
+    const found = await getTask('non-existent-id', repository);
     expect(found).toBeNull();
   });
 
@@ -344,12 +353,12 @@ describe('tasks - query', () => {
       title: 'Second task',
     };
 
-    const firstTask = await createTask(firstInput);
-    const secondTask = await createTask(secondInput);
+    const firstTask = await createTask(firstInput, repository);
+    const secondTask = await createTask(secondInput, repository);
 
-    await archiveTask(firstTask.id, { archived: true });
+    await archiveTask(firstTask.id, { archived: true }, repository);
 
-    const tasks = await filterTasks('all');
+    const tasks = await filterTasks('all', repository);
 
     expect(tasks).toHaveLength(1);
     expect(tasks[0]?.id).toBe(secondTask.id);
@@ -369,13 +378,13 @@ describe('tasks - query', () => {
       title: 'Third task',
     };
 
-    const firstTask = await createTask(firstInput);
-    await createTask(secondInput);
-    const thirdTask = await createTask(thirdInput);
+    const firstTask = await createTask(firstInput, repository);
+    await createTask(secondInput, repository);
+    const thirdTask = await createTask(thirdInput, repository);
 
-    await archiveTask(thirdTask.id, { archived: true });
+    await archiveTask(thirdTask.id, { archived: true }, repository);
 
-    const tasks = await filterTasks('active');
+    const tasks = await filterTasks('active', repository);
 
     expect(tasks).toHaveLength(1);
     expect(tasks[0]?.id).toBe(firstTask.id);
@@ -391,12 +400,12 @@ describe('tasks - query', () => {
       title: 'Second task',
     };
 
-    const firstTask = await createTask(firstInput);
-    const secondTask = await createTask(secondInput);
+    const firstTask = await createTask(firstInput, repository);
+    const secondTask = await createTask(secondInput, repository);
 
-    await archiveTask(secondTask.id, { archived: true });
+    await archiveTask(secondTask.id, { archived: true }, repository);
 
-    const tasks = await filterTasks('completed');
+    const tasks = await filterTasks('completed', repository);
 
     expect(tasks).toHaveLength(1);
     expect(tasks[0]?.id).toBe(firstTask.id);
@@ -411,12 +420,12 @@ describe('tasks - query', () => {
       title: 'Second task',
     };
 
-    const firstTask = await createTask(firstInput);
-    await createTask(secondInput);
+    const firstTask = await createTask(firstInput, repository);
+    await createTask(secondInput, repository);
 
-    await archiveTask(firstTask.id, { archived: true });
+    await archiveTask(firstTask.id, { archived: true }, repository);
 
-    const tasks = await filterTasks('archived');
+    const tasks = await filterTasks('archived', repository);
 
     expect(tasks).toHaveLength(1);
     expect(tasks[0]?.id).toBe(firstTask.id);
@@ -424,8 +433,10 @@ describe('tasks - query', () => {
 });
 
 describe('tasks - due dates', () => {
+  let repository: InMemoryTaskRepository;
+
   beforeEach(() => {
-    resetTasks();
+    repository = new InMemoryTaskRepository();
   });
 
   it('should create a task with a due date', async () => {
@@ -434,7 +445,7 @@ describe('tasks - due dates', () => {
       dueDate: '2026-06-15T00:00:00Z',
     };
 
-    const task = await createTask(input);
+    const task = await createTask(input, repository);
 
     expect(task.dueDate).toBe('2026-06-15T00:00:00Z');
   });
@@ -444,7 +455,7 @@ describe('tasks - due dates', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(input);
+    const task = await createTask(input, repository);
 
     expect(task.dueDate).toBeNull();
   });
@@ -454,13 +465,13 @@ describe('tasks - due dates', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(createInput);
+    const task = await createTask(createInput, repository);
 
     const updateInput: UpdateTaskInput = {
       dueDate: '2026-06-15T00:00:00Z',
     };
 
-    const updated = await updateTask(task.id, updateInput);
+    const updated = await updateTask(task.id, updateInput, repository);
 
     expect(updated.dueDate).toBe('2026-06-15T00:00:00Z');
   });
@@ -471,13 +482,13 @@ describe('tasks - due dates', () => {
       dueDate: '2026-06-15T00:00:00Z',
     };
 
-    const task = await createTask(createInput);
+    const task = await createTask(createInput, repository);
 
     const updateInput: UpdateTaskInput = {
       dueDate: '',
     };
 
-    const updated = await updateTask(task.id, updateInput);
+    const updated = await updateTask(task.id, updateInput, repository);
 
     expect(updated.dueDate).toBeNull();
   });
@@ -488,7 +499,7 @@ describe('tasks - due dates', () => {
       dueDate: 'invalid-date',
     };
 
-    await expect(createTask(input)).rejects.toThrow(TaskError);
+    await expect(createTask(input, repository)).rejects.toThrow(TaskError);
   });
 
   it('should reject non-string due date', async () => {
@@ -497,13 +508,15 @@ describe('tasks - due dates', () => {
       dueDate: 123 as any,
     };
 
-    await expect(createTask(input)).rejects.toThrow(TaskError);
+    await expect(createTask(input, repository)).rejects.toThrow(TaskError);
   });
 });
 
 describe('tasks - priorities', () => {
+  let repository: InMemoryTaskRepository;
+
   beforeEach(() => {
-    resetTasks();
+    repository = new InMemoryTaskRepository();
   });
 
   it('should create a task with high priority', async () => {
@@ -512,7 +525,7 @@ describe('tasks - priorities', () => {
       priority: 'high',
     };
 
-    const task = await createTask(input);
+    const task = await createTask(input, repository);
 
     expect(task.priority).toBe('high');
   });
@@ -522,7 +535,7 @@ describe('tasks - priorities', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(input);
+    const task = await createTask(input, repository);
 
     expect(task.priority).toBe('medium');
   });
@@ -533,7 +546,7 @@ describe('tasks - priorities', () => {
       priority: 'low',
     };
 
-    const task = await createTask(input);
+    const task = await createTask(input, repository);
 
     expect(task.priority).toBe('low');
   });
@@ -543,13 +556,13 @@ describe('tasks - priorities', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(createInput);
+    const task = await createTask(createInput, repository);
 
     const updateInput: UpdateTaskInput = {
       priority: 'high',
     };
 
-    const updated = await updateTask(task.id, updateInput);
+    const updated = await updateTask(task.id, updateInput, repository);
 
     expect(updated.priority).toBe('high');
   });
@@ -560,7 +573,7 @@ describe('tasks - priorities', () => {
       priority: 'urgent' as any,
     };
 
-    await expect(createTask(input)).rejects.toThrow(TaskError);
+    await expect(createTask(input, repository)).rejects.toThrow(TaskError);
   });
 
   it('should reject non-string priority', async () => {
@@ -569,13 +582,15 @@ describe('tasks - priorities', () => {
       priority: 1 as any,
     };
 
-    await expect(createTask(input)).rejects.toThrow(TaskError);
+    await expect(createTask(input, repository)).rejects.toThrow(TaskError);
   });
 });
 
 describe('tasks - tags', () => {
+  let repository: InMemoryTaskRepository;
+
   beforeEach(() => {
-    resetTasks();
+    repository = new InMemoryTaskRepository();
   });
 
   it('should create a task with tags', async () => {
@@ -584,7 +599,7 @@ describe('tasks - tags', () => {
       tags: ['shopping', 'home'],
     };
 
-    const task = await createTask(input);
+    const task = await createTask(input, repository);
 
     expect(task.tags).toEqual(['shopping', 'home']);
   });
@@ -594,7 +609,7 @@ describe('tasks - tags', () => {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(input);
+    const task = await createTask(input, repository);
 
     expect(task.tags).toEqual([]);
   });
@@ -605,7 +620,7 @@ describe('tasks - tags', () => {
       tags: ['  shopping  ', '  home  '],
     };
 
-    const task = await createTask(input);
+    const task = await createTask(input, repository);
 
     expect(task.tags).toEqual(['shopping', 'home']);
   });
@@ -616,13 +631,13 @@ describe('tasks - tags', () => {
       tags: ['shopping'],
     };
 
-    const task = await createTask(createInput);
+    const task = await createTask(createInput, repository);
 
     const updateInput: UpdateTaskInput = {
       tags: ['shopping', 'urgent'],
     };
 
-    const updated = await updateTask(task.id, updateInput);
+    const updated = await updateTask(task.id, updateInput, repository);
 
     expect(updated.tags).toEqual(['shopping', 'urgent']);
   });
@@ -633,7 +648,7 @@ describe('tasks - tags', () => {
       tags: 'shopping' as any,
     };
 
-    await expect(createTask(input)).rejects.toThrow(TaskError);
+    await expect(createTask(input, repository)).rejects.toThrow(TaskError);
   });
 
   it('should reject non-string tag', async () => {
@@ -642,7 +657,7 @@ describe('tasks - tags', () => {
       tags: [123] as any,
     };
 
-    await expect(createTask(input)).rejects.toThrow(TaskError);
+    await expect(createTask(input, repository)).rejects.toThrow(TaskError);
   });
 
   it('should reject empty tag string', async () => {
@@ -651,116 +666,120 @@ describe('tasks - tags', () => {
       tags: [''],
     };
 
-    await expect(createTask(input)).rejects.toThrow(TaskError);
+    await expect(createTask(input, repository)).rejects.toThrow(TaskError);
   });
 });
 
 describe('tasks - search', () => {
+  let repository: InMemoryTaskRepository;
+
   beforeEach(() => {
-    resetTasks();
+    repository = new InMemoryTaskRepository();
   });
 
   it('should search tasks by query', async () => {
-    await createTask({ title: 'Buy groceries' });
-    await createTask({ title: 'Pay bills' });
-    await createTask({ title: 'Walk the dog' });
+    await createTask({ title: 'Buy groceries' }, repository);
+    await createTask({ title: 'Pay bills' }, repository);
+    await createTask({ title: 'Walk the dog' }, repository);
 
     const input: SearchTasksInput = {
       query: 'buy',
     };
 
-    const results = await searchTasks(input);
+    const results = await searchTasks(input, repository);
 
     expect(results).toHaveLength(1);
     expect(results[0]?.title).toBe('Buy groceries');
   });
 
   it('should search tasks case-insensitively', async () => {
-    await createTask({ title: 'Buy groceries' });
-    await createTask({ title: 'Pay bills' });
+    await createTask({ title: 'Buy groceries' }, repository);
+    await createTask({ title: 'Pay bills' }, repository);
 
     const input: SearchTasksInput = {
       query: 'BUY',
     };
 
-    const results = await searchTasks(input);
+    const results = await searchTasks(input, repository);
 
     expect(results).toHaveLength(1);
     expect(results[0]?.title).toBe('Buy groceries');
   });
 
   it('should search tasks by tags', async () => {
-    await createTask({ title: 'Buy groceries', tags: ['shopping', 'home'] });
-    await createTask({ title: 'Pay bills', tags: ['finance'] });
-    await createTask({ title: 'Walk the dog', tags: ['home'] });
+    await createTask({ title: 'Buy groceries', tags: ['shopping', 'home'] }, repository);
+    await createTask({ title: 'Pay bills', tags: ['finance'] }, repository);
+    await createTask({ title: 'Walk the dog', tags: ['home'] }, repository);
 
     const input: SearchTasksInput = {
       tags: ['shopping'],
     };
 
-    const results = await searchTasks(input);
+    const results = await searchTasks(input, repository);
 
     expect(results).toHaveLength(1);
     expect(results[0]?.title).toBe('Buy groceries');
   });
 
   it('should search tasks by multiple tags (AND logic)', async () => {
-    await createTask({ title: 'Buy groceries', tags: ['shopping', 'home'] });
-    await createTask({ title: 'Pay bills', tags: ['finance'] });
-    await createTask({ title: 'Walk the dog', tags: ['home'] });
+    await createTask({ title: 'Buy groceries', tags: ['shopping', 'home'] }, repository);
+    await createTask({ title: 'Pay bills', tags: ['finance'] }, repository);
+    await createTask({ title: 'Walk the dog', tags: ['home'] }, repository);
 
     const input: SearchTasksInput = {
       tags: ['shopping', 'home'],
     };
 
-    const results = await searchTasks(input);
+    const results = await searchTasks(input, repository);
 
     expect(results).toHaveLength(1);
     expect(results[0]?.title).toBe('Buy groceries');
   });
 
   it('should search tasks by query and tags', async () => {
-    await createTask({ title: 'Buy groceries', tags: ['shopping'] });
-    await createTask({ title: 'Buy milk', tags: ['shopping'] });
-    await createTask({ title: 'Pay bills', tags: ['finance'] });
+    await createTask({ title: 'Buy groceries', tags: ['shopping'] }, repository);
+    await createTask({ title: 'Buy milk', tags: ['shopping'] }, repository);
+    await createTask({ title: 'Pay bills', tags: ['finance'] }, repository);
 
     const input: SearchTasksInput = {
       query: 'buy',
       tags: ['shopping'],
     };
 
-    const results = await searchTasks(input);
+    const results = await searchTasks(input, repository);
 
     expect(results).toHaveLength(2);
   });
 
   it('should return all tasks when no filters provided', async () => {
-    await createTask({ title: 'Buy groceries' });
-    await createTask({ title: 'Pay bills' });
+    await createTask({ title: 'Buy groceries' }, repository);
+    await createTask({ title: 'Pay bills' }, repository);
 
     const input: SearchTasksInput = {};
 
-    const results = await searchTasks(input);
+    const results = await searchTasks(input, repository);
 
     expect(results).toHaveLength(2);
   });
 });
 
 describe('tasks - batch operations', () => {
+  let repository: InMemoryTaskRepository;
+
   beforeEach(() => {
-    resetTasks();
+    repository = new InMemoryTaskRepository();
   });
 
   it('should batch complete multiple tasks', async () => {
-    const task1 = await createTask({ title: 'First task' });
-    const task2 = await createTask({ title: 'Second task' });
-    const _task3 = await createTask({ title: 'Third task' });
+    const task1 = await createTask({ title: 'First task' }, repository);
+    const task2 = await createTask({ title: 'Second task' }, repository);
+    const _task3 = await createTask({ title: 'Third task' }, repository);
 
     const input: BatchOperationInput = {
       taskIds: [task1.id, task2.id],
     };
 
-    const results = await batchComplete(input);
+    const results = await batchComplete(input, repository);
 
     expect(results).toHaveLength(2);
     expect(results[0]?.completed).toBe(true);
@@ -768,15 +787,15 @@ describe('tasks - batch operations', () => {
   });
 
   it('should batch archive multiple tasks', async () => {
-    const task1 = await createTask({ title: 'First task' });
-    const task2 = await createTask({ title: 'Second task' });
-    const _task3 = await createTask({ title: 'Third task' });
+    const task1 = await createTask({ title: 'First task' }, repository);
+    const task2 = await createTask({ title: 'Second task' }, repository);
+    const _task3 = await createTask({ title: 'Third task' }, repository);
 
     const input: BatchOperationInput = {
       taskIds: [task1.id, task2.id],
     };
 
-    const results = await batchArchive(input);
+    const results = await batchArchive(input, repository);
 
     expect(results).toHaveLength(2);
     expect(results[0]?.archived).toBe(true);
@@ -784,14 +803,14 @@ describe('tasks - batch operations', () => {
   });
 
   it('should handle partial failures in batch complete', async () => {
-    const task1 = await createTask({ title: 'First task' });
-    const task2 = await createTask({ title: 'Second task' });
+    const task1 = await createTask({ title: 'First task' }, repository);
+    const task2 = await createTask({ title: 'Second task' }, repository);
 
     const input: BatchOperationInput = {
       taskIds: [task1.id, 'non-existent-id', task2.id],
     };
 
-    const results = await batchComplete(input);
+    const results = await batchComplete(input, repository);
 
     // Should complete the valid tasks and skip the invalid one
     expect(results.length).toBeGreaterThanOrEqual(1);
@@ -882,112 +901,128 @@ describe('tasks - encryption', () => {
     const testKey = await generateAESKey(false);
     setTaskKeyProvider(async () => testKey);
 
+    const repository = new InMemoryTaskRepository();
     const input: CreateTaskInput = {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(input);
+    const task = await createTask(input, repository);
     expect(task.title).toBe('Buy groceries');
+    resetKeyProvider();
   });
 
   it('should list tasks with encryption enabled', async () => {
     const testKey = await generateAESKey(false);
     setTaskKeyProvider(async () => testKey);
 
+    const repository = new InMemoryTaskRepository();
     const input: CreateTaskInput = {
       title: 'Buy groceries',
     };
 
-    await createTask(input);
-    const tasks = await listTasks();
+    await createTask(input, repository);
+    const tasks = await listTasks(repository);
 
     expect(tasks).toHaveLength(1);
     expect(tasks[0]?.title).toBe('Buy groceries');
+    resetKeyProvider();
   });
 
   it('should get task by id with encryption enabled', async () => {
     const testKey = await generateAESKey(false);
     setTaskKeyProvider(async () => testKey);
 
+    const repository = new InMemoryTaskRepository();
     const input: CreateTaskInput = {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(input);
-    const found = await getTask(task.id);
+    const task = await createTask(input, repository);
+    const found = await getTask(task.id, repository);
 
     expect(found).not.toBeNull();
     expect(found?.title).toBe('Buy groceries');
+    resetKeyProvider();
   });
 
   it('should update task completion with encryption enabled', async () => {
     const testKey = await generateAESKey(false);
     setTaskKeyProvider(async () => testKey);
 
+    const repository = new InMemoryTaskRepository();
     const input: CreateTaskInput = {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(input);
-    const updated = await updateTaskCompletion(task.id, { completed: true });
+    const task = await createTask(input, repository);
+    const updated = await updateTaskCompletion(task.id, { completed: true }, repository);
 
     expect(updated.completed).toBe(true);
+    resetKeyProvider();
   });
 
   it('should update task with encryption enabled', async () => {
     const testKey = await generateAESKey(false);
     setTaskKeyProvider(async () => testKey);
 
+    const repository = new InMemoryTaskRepository();
     const input: CreateTaskInput = {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(input);
-    const updated = await updateTask(task.id, { title: 'Buy milk' });
+    const task = await createTask(input, repository);
+    const updated = await updateTask(task.id, { title: 'Buy milk' }, repository);
 
     expect(updated.title).toBe('Buy milk');
+    resetKeyProvider();
   });
 
   it('should update task tags with encryption enabled', async () => {
     const testKey = await generateAESKey(false);
     setTaskKeyProvider(async () => testKey);
 
+    const repository = new InMemoryTaskRepository();
     const input: CreateTaskInput = {
       title: 'Buy groceries',
       tags: ['shopping'],
     };
 
-    const task = await createTask(input);
-    const updated = await updateTask(task.id, { tags: ['shopping', 'urgent'] });
+    const task = await createTask(input, repository);
+    const updated = await updateTask(task.id, { tags: ['shopping', 'urgent'] }, repository);
 
     expect(updated.tags).toEqual(['shopping', 'urgent']);
+    resetKeyProvider();
   });
 
   it('should archive task with encryption enabled', async () => {
     const testKey = await generateAESKey(false);
     setTaskKeyProvider(async () => testKey);
 
+    const repository = new InMemoryTaskRepository();
     const input: CreateTaskInput = {
       title: 'Buy groceries',
     };
 
-    const task = await createTask(input);
-    const archived = await archiveTask(task.id, { archived: true });
+    const task = await createTask(input, repository);
+    const archived = await archiveTask(task.id, { archived: true }, repository);
 
     expect(archived.archived).toBe(true);
+    resetKeyProvider();
   });
 
   it('should filter tasks with encryption enabled', async () => {
     const testKey = await generateAESKey(false);
     setTaskKeyProvider(async () => testKey);
 
-    await createTask({ title: 'First task' });
-    await createTask({ title: 'Second task', completed: true });
+    const repository = new InMemoryTaskRepository();
+    await createTask({ title: 'First task' }, repository);
+    await createTask({ title: 'Second task', completed: true }, repository);
 
-    const tasks = await filterTasks('active');
+    const tasks = await filterTasks('active', repository);
 
     expect(tasks).toHaveLength(1);
     expect(tasks[0]?.title).toBe('First task');
+    resetKeyProvider();
   });
 
   it('should reset tasks DB', async () => {
@@ -1004,51 +1039,22 @@ describe('tasks - encryption', () => {
 });
 
 describe('tasks - database-specific filtering', () => {
-  let originalRepository: ReturnType<typeof getTaskRepository>;
-
   beforeEach(() => {
-    resetTasks();
-    originalRepository = getTaskRepository();
-  });
-
-  afterEach(() => {
-    setTaskRepository(originalRepository);
     resetTasks();
   });
 
   it('should use database-specific filtering when available', async () => {
     let findWhereCalled = false;
 
-    const customRepository = {
-      ...originalRepository,
-      async findById(id: string): Promise<TaskItem | null> {
-        return originalRepository.findById(id);
-      },
-      async findAll(): Promise<TaskItem[]> {
-        return originalRepository.findAll();
-      },
-      async create(entity: Omit<TaskItem, 'id'>): Promise<TaskItem> {
-        return originalRepository.create(entity);
-      },
-      async update(id: string, entity: Partial<TaskItem>): Promise<TaskItem | null> {
-        return originalRepository.update(id, entity);
-      },
-      async delete(id: string): Promise<boolean> {
-        return originalRepository.delete(id);
-      },
-      async findWhere(_criteria: Partial<TaskItem>): Promise<TaskItem[]> {
-        findWhereCalled = true;
-        return [];
-      },
-      async count(_criteria?: Partial<TaskItem>): Promise<number> {
-        return 0;
-      },
+    const customRepository = new InMemoryTaskRepository();
+    const originalFindWhere = customRepository.findWhere.bind(customRepository);
+    customRepository.findWhere = async (_criteria: Partial<TaskItem>) => {
+      findWhereCalled = true;
+      return originalFindWhere(_criteria);
     };
 
-    setTaskRepository(customRepository);
-
-    await createTask({ title: 'Test task' });
-    await filterTasks('active');
+    await createTask({ title: 'Test task' }, customRepository);
+    await filterTasks('active', customRepository);
 
     expect(findWhereCalled).toBe(true);
   });
@@ -1168,16 +1174,15 @@ describe('tasks - property-based tests', () => {
         fc.string({ minLength: 1, maxLength: 50 }).filter((s: string) => s.trim().length > 0),
         fc.boolean(),
         async (title: string, archived: boolean) => {
-          resetTasks();
-
+          const repository = new InMemoryTaskRepository();
           const input: CreateTaskInput = {
             title,
           };
 
-          const task = await createTask(input);
-          await archiveTask(task.id, { archived });
+          const task = await createTask(input, repository);
+          await archiveTask(task.id, { archived }, repository);
 
-          const updated = await getTask(task.id);
+          const updated = await getTask(task.id, repository);
           expect(updated?.archived).toBe(archived);
         }
       )
@@ -1211,12 +1216,12 @@ describe('tasks - property-based tests', () => {
         fc.string({ minLength: 1, maxLength: 20 }).filter((s: string) => s.trim().length > 0),
         fc.string({ minLength: 1, maxLength: 20 }).filter((s: string) => s.trim().length > 0),
         async (title: string, query: string) => {
-          resetTasks();
+          const repository = new InMemoryTaskRepository();
           const taskTitle = title.toLowerCase();
 
-          await createTask({ title: taskTitle });
+          await createTask({ title: taskTitle }, repository);
 
-          const results = await searchTasks({ query: query.toLowerCase() });
+          const results = await searchTasks({ query: query.toLowerCase() }, repository);
           if (taskTitle.includes(query.toLowerCase())) {
             expect(results.length).toBeGreaterThan(0);
           }

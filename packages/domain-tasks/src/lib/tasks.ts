@@ -66,7 +66,7 @@ export interface TaskRepository extends QueryRepository<TaskItem> {
 }
 
 // In-memory repository for testing (default)
-class InMemoryTaskRepository implements TaskRepository {
+export class InMemoryTaskRepository implements TaskRepository {
   private tasks = new Map<string, TaskItem>();
 
   async findById(id: string): Promise<TaskItem | null> {
@@ -500,8 +500,8 @@ export async function filterTasks(filter: TaskFilter, repository: TaskRepository
   return tasks.map(snapshot);
 }
 
-export async function searchTasks(input: SearchTasksInput): Promise<TaskItem[]> {
-  const allTasks = await listTasks();
+export async function searchTasks(input: SearchTasksInput, repository: TaskRepository = new InMemoryTaskRepository()): Promise<TaskItem[]> {
+  const allTasks = await listTasks(repository);
   
   return allTasks.filter((task) => {
     // Filter by blind index (exact match search for encrypted data)
@@ -535,12 +535,12 @@ export async function searchTasks(input: SearchTasksInput): Promise<TaskItem[]> 
   });
 }
 
-export async function batchComplete(input: BatchOperationInput): Promise<TaskItem[]> {
+export async function batchComplete(input: BatchOperationInput, repository: TaskRepository = new InMemoryTaskRepository()): Promise<TaskItem[]> {
   const results: TaskItem[] = [];
   
   for (const taskId of input.taskIds) {
     try {
-      const updated = await updateTaskCompletion(taskId, { completed: true });
+      const updated = await updateTaskCompletion(taskId, { completed: true }, repository);
       results.push(updated);
     } catch (_error) {
       // Continue with other tasks even if one fails
@@ -551,12 +551,12 @@ export async function batchComplete(input: BatchOperationInput): Promise<TaskIte
   return results;
 }
 
-export async function batchArchive(input: BatchOperationInput): Promise<TaskItem[]> {
+export async function batchArchive(input: BatchOperationInput, repository: TaskRepository = new InMemoryTaskRepository()): Promise<TaskItem[]> {
   const results: TaskItem[] = [];
   
   for (const taskId of input.taskIds) {
     try {
-      const updated = await archiveTask(taskId, { archived: true });
+      const updated = await archiveTask(taskId, { archived: true }, repository);
       results.push(updated);
     } catch (_error) {
       // Continue with other tasks even if one fails
