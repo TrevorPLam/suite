@@ -10,6 +10,9 @@
       }
     }
   ],
+  "implicitDependencies": {
+    "packages/ui": ["*"]
+  },
   "targetDefaults": {
     "build": {
       "dependsOn": [

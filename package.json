@@ -21,6 +21,8 @@
     "ci:coverage": "pnpm test:coverage"
   },
   "devDependencies": {
+    "@nx/devkit": "catalog:",
+    "@nx/eslint-plugin": "catalog:",
     "@nx/vitest": "catalog:",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",

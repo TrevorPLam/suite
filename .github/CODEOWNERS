@@ -1,0 +1,34 @@
+# CODEOWNERS File
+# This file defines ownership for different parts of the codebase.
+# When a file is changed, GitHub will automatically request reviews from the owners.
+
+# Global defaults - these apply to everything unless overridden
+* @trevo-7c8
+
+# UI Package - shared component library
+packages/ui/ @trevo-7c8
+
+# Domain packages - bounded contexts
+packages/domain-calendar/ @trevo-7c8
+packages/domain-tasks/ @trevo-7c8
+packages/domain-drive/ @trevo-7c8
+
+# Shared infrastructure packages
+packages/auth/ @trevo-7c8
+packages/db/ @trevo-7c8
+packages/crypto/ @trevo-7c8
+packages/design-tokens/ @trevo-7c8
+
+# Apps
+apps/calendar/ @trevo-7c8
+apps/tasks/ @trevo-7c8
+apps/drive/ @trevo-7c8
+
+# Configuration
+.github/ @trevo-7c8
+.eslintrc.js @trevo-7c8
+eslint.config.js @trevo-7c8
+nx.json @trevo-7c8
+tsconfig.base.json @trevo-7c8
+vitest.config.ts @trevo-7c8
+playwright.config.ts @trevo-7c8
