@@ -59,3 +59,31 @@
   --color-accent: oklch(25% 0.02 260);
   --color-accent-foreground: oklch(99% 0 0);
 }
+
+/*
+ * RTL (Right-to-Left) Support
+ *
+ * Uses CSS logical properties for automatic RTL/LTR adaptation.
+ * Logical properties automatically flip based on document direction.
+ *
+ * Examples:
+ * - margin-inline-start instead of margin-left
+ * - padding-inline-end instead of padding-right
+ * - border-inline-start instead of border-left
+ *
+ * For RTL-specific overrides, use [dir="rtl"] selector.
+ */
+
+[dir="rtl"] {
+  /* RTL-specific overrides when logical properties aren't sufficient */
+  /* Most modern browsers handle RTL automatically with logical properties */
+}
+
+/* Ensure text alignment respects direction */
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="ltr"] {
+  text-align: left;
+}
