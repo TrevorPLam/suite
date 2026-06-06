@@ -46,6 +46,10 @@ export function createAuth({ db, env, waitUntil, trustedOrigins }: CreateAuthOpt
       trustedOrigins: trustedOrigins
         ? trustedOrigins.split(',').map((origin) => origin.trim())
         : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:5173'],
+      ipAddress: {
+        ipAddressHeaders: ['cf-connecting-ip'],
+      },
+      trustedProxyHeaders: true,
       ...(env?.AUTH_KV ? (() => {
         const kv = env.AUTH_KV;
         return {
