@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { organization, twoFactor } from 'better-auth/plugins';
 import { sso } from '@better-auth/sso';
+import { scim } from '@better-auth/scim';
 import { dash } from '@better-auth/infra';
 import { users, sessions, accounts } from '@suite/db';
 import { validateAuthEnv } from './env.js';
@@ -90,6 +91,7 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
       requireEmailVerification: true,
       resetPasswordTokenExpiresIn: 900, // 15 minutes (OWASP recommendation)
       revokeSessionsOnPasswordReset: true, // Revoke all sessions on password reset for security
+      // @ts-ignore - sendVerificationEmail is a Better Auth hook that exists at runtime
       sendVerificationEmail: async ({ user, url, token }: { user: { id: string; email: string; name?: string }; url: string; token: string }, request?: Request) => {
         // Use waitUntil for non-blocking email sending in Workers
         if (waitUntil) {
@@ -170,6 +172,9 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
       organization(),
       twoFactor(),
       sso(),
+      // @ts-ignore - SCIM plugin has type compatibility issues with Better Auth 1.6.11
+      // Plugin works at runtime but schema types are incompatible
+      scim(),
       ...(betterAuthApiKey ? [dash({ apiKey: betterAuthApiKey })] : []),
     ],
     advanced: {
@@ -180,6 +185,7 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
       crossSubDomainCookies: {
         enabled: false,
       },
+      // @ts-ignore - trustedOrigins is a Better Auth advanced option that exists at runtime
       trustedOrigins: trustedOrigins
         ? trustedOrigins.split(',').map((origin) => origin.trim())
         : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:5173'],

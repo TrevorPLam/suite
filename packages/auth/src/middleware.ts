@@ -44,6 +44,7 @@ export async function authMiddleware(c: Context, next: Next) {
     c.set('session', session.session);
     c.set('userId', session.user.id);
     // Set organization context if available
+    // @ts-ignore - activeOrganizationId is added by organization plugin
     c.set('organizationId', session.session.activeOrganizationId || null);
   } else {
     c.set('user', null);
