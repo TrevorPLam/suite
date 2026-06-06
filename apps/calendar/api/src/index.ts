@@ -124,7 +124,7 @@ async function readRequestBody(c: { req: { json: () => Promise<unknown> } }) {
 
 app.get('/api/health', (c) => c.json({ ok: true, app: 'calendar' }));
 
-app.get('/api/events', (c) => {
+app.get('/api/events', async (c) => {
   const range = readEventRange(c.req.query());
 
   if (range === null) {
@@ -141,10 +141,12 @@ app.get('/api/events', (c) => {
       );
     }
 
-    return c.json({ events: listCalendarEvents() });
+    const events = await listCalendarEvents();
+    return c.json({ events });
   }
 
-  return c.json({ events: listCalendarEventsInRange(range) });
+  const events = await listCalendarEventsInRange(range);
+  return c.json({ events });
 });
 
 app.post('/api/events', async (c) => {
@@ -167,7 +169,8 @@ app.post('/api/events', async (c) => {
   }
 
   try {
-    return c.json({ event: createCalendarEvent(payload) }, 201);
+    const event = await createCalendarEvent(payload);
+    return c.json({ event }, 201);
   } catch (error) {
     const response = readCalendarError(error);
 
@@ -207,7 +210,8 @@ app.put('/api/events/:id', async (c) => {
   }
 
   try {
-    return c.json({ event: updateCalendarEvent(id, payload) });
+    const event = await updateCalendarEvent(id, payload);
+    return c.json({ event });
   } catch (error) {
     const response = readCalendarError(error);
 

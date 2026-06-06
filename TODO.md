@@ -2288,10 +2288,10 @@ pnpm update drizzle-orm esbuild vite --latest
 
 ---
 
-### [ ] TEST-01: Fix calendar API unhandled rejections
+### [x] TEST-01: Fix calendar API unhandled rejections
 
-**Status**: Pending
-**Related Files**: apps/calendar/api/src/index.test.ts
+**Status**: Complete
+**Related Files**: apps/calendar/api/src/index.test.ts, apps/calendar/api/src/index.ts
 
 **Definition of Done**:
 - All calendar API tests pass
@@ -2336,15 +2336,29 @@ test('should detect conflict', async () => {
 
 **Subtasks**:
 
-#### TEST-01.1: Investigate unhandled rejections
+#### ✅ TEST-01.1: Investigate unhandled rejections
 **Target**: apps/calendar/api/src/index.test.ts
 **Action**: Review conflict detection and update event tests for async issues.
 **Validate**: Manual review
 
-#### TEST-01.2: Fix test async handling
+#### ✅ TEST-01.2: Fix test async handling
 **Target**: apps/calendar/api/src/index.test.ts
 **Action**: Update tests to properly await async operations and handle errors.
 **Validate**: `pnpm --filter @suite/calendar-api test`
+
+**Implementation Notes**:
+- Root cause: API endpoints called async domain functions without await, causing unhandled promise rejections
+- Fixed apps/calendar/api/src/index.ts:
+  - Made GET /api/events async and awaited listCalendarEvents() and listCalendarEventsInRange()
+  - Awaited createCalendarEvent() in POST /api/events endpoint
+  - Awaited updateCalendarEvent() in PUT /api/events/:id endpoint
+- Fixed apps/calendar/api/src/index.test.ts:
+  - Made beforeEach callbacks async in all test suites (list events, create event, update event)
+  - This ensures proper async handling even though resetCalendarEvents() is synchronous
+- All 14 tests passing with no unhandled rejections
+- Typecheck passing for all packages
+- Lint passing (not configured yet)
+- No changes to domain logic or API contracts
 
 ---
 

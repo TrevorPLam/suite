@@ -12,7 +12,7 @@ describe('calendar API - health', () => {
 });
 
 describe('calendar API - list events', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetCalendarEvents();
   });
 
@@ -48,7 +48,7 @@ describe('calendar API - list events', () => {
 });
 
 describe('calendar API - create event', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetCalendarEvents();
   });
 
@@ -143,7 +143,7 @@ describe('calendar API - create event', () => {
 });
 
 describe('calendar API - update event', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetCalendarEvents();
   });
 
