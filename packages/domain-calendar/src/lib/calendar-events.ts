@@ -1,5 +1,6 @@
 import type { Repository } from '@suite/db';
 import { generateUUID } from '@suite/shared-kernel';
+import { sealEvent, unsealEvent, sealEvents, unsealEvents, setCalendarKeyProvider, isEncryptionEnabled, type EncryptedCalendarEvent } from './calendar-crypto.js';
 
 export type CalendarEvent = {
   id: string;
@@ -234,21 +235,43 @@ function overlapsRange(event: CalendarEvent, range: CalendarEventRange): boolean
 
 export async function listCalendarEvents(): Promise<CalendarEvent[]> {
   const events = await currentRepository.findAll();
-  return sortEvents(events).map(snapshot);
+  const sortedEvents = sortEvents(events);
+  
+  // Decrypt if encryption is enabled
+  if (isEncryptionEnabled()) {
+    const decryptedEvents = await unsealEvents(sortedEvents as unknown as EncryptedCalendarEvent[]);
+    return decryptedEvents.map(snapshot);
+  }
+  
+  return sortedEvents.map(snapshot);
 }
 
 export async function listCalendarEventsInRange(range: CalendarEventRange): Promise<CalendarEvent[]> {
   const normalizedRange = normalizeCalendarEventRange(range);
   const events = await currentRepository.findAll();
+  const filteredEvents = events.filter((event) => overlapsRange(event, normalizedRange));
+  const sortedEvents = sortEvents(filteredEvents);
 
-  return sortEvents(
-    events.filter((event) => overlapsRange(event, normalizedRange)),
-  ).map(snapshot);
+  // Decrypt if encryption is enabled
+  if (isEncryptionEnabled()) {
+    const decryptedEvents = await unsealEvents(sortedEvents as unknown as EncryptedCalendarEvent[]);
+    return decryptedEvents.map(snapshot);
+  }
+
+  return sortedEvents.map(snapshot);
 }
 
 export async function getCalendarEvent(id: string): Promise<CalendarEvent | null> {
   const event = await currentRepository.findById(id);
-  return event ? snapshot(event) : null;
+  if (!event) return null;
+
+  // Decrypt if encryption is enabled
+  if (isEncryptionEnabled()) {
+    const decryptedEvent = await unsealEvent(event as unknown as EncryptedCalendarEvent);
+    return snapshot(decryptedEvent);
+  }
+
+  return snapshot(event);
 }
 
 export async function createCalendarEvent(input: CreateCalendarEventInput): Promise<CalendarEvent> {
@@ -259,7 +282,27 @@ export async function createCalendarEvent(input: CreateCalendarEventInput): Prom
   };
 
   await assertNoConflict(event);
-  const created = await currentRepository.create(normalizedInput);
+
+  // Encrypt before storage if encryption is enabled
+  let eventToCreate = normalizedInput;
+  if (isEncryptionEnabled()) {
+    const eventWithId: CalendarEvent = {
+      id: generateUUID(),
+      ...normalizedInput,
+    };
+    const encryptedEvent = await sealEvent(eventWithId);
+    // EncryptedEvent has encryptedTitle instead of title, but repository expects title
+    // We need to pass the encrypted event as unknown to satisfy the type system
+    eventToCreate = encryptedEvent as unknown as CreateCalendarEventInput;
+  }
+
+  const created = await currentRepository.create(eventToCreate);
+
+  // Decrypt the result if encryption is enabled
+  if (isEncryptionEnabled()) {
+    const decryptedEvent = await unsealEvent(created as unknown as EncryptedCalendarEvent);
+    return snapshot(decryptedEvent);
+  }
 
   return snapshot(created);
 }
@@ -300,12 +343,32 @@ export async function updateCalendarEvent(id: string, input: UpdateCalendarEvent
   };
 
   await assertNoConflict(event, id);
-  const updated = await currentRepository.update(id, normalizedInput);
+
+  // Encrypt before storage if encryption is enabled
+  let eventToUpdate = normalizedInput;
+  if (isEncryptionEnabled()) {
+    const eventWithId: CalendarEvent = {
+      id,
+      ...normalizedInput,
+    };
+    const encryptedEvent = await sealEvent(eventWithId);
+    // EncryptedEvent has encryptedTitle instead of title, but repository expects title
+    // We need to pass the encrypted event as unknown to satisfy the type system
+    eventToUpdate = encryptedEvent as unknown as UpdateCalendarEventInput;
+  }
+
+  const updated = await currentRepository.update(id, eventToUpdate);
 
   if (!updated) {
     throw new CalendarEventError(`Calendar event "${id}" was not found`, 'not_found_error', [
       `No event exists for id "${id}"`,
     ]);
+  }
+
+  // Decrypt the result if encryption is enabled
+  if (isEncryptionEnabled()) {
+    const decryptedEvent = await unsealEvent(updated as unknown as EncryptedCalendarEvent);
+    return snapshot(decryptedEvent);
   }
 
   return snapshot(updated);

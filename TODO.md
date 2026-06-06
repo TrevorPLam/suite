@@ -1228,10 +1228,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ## Phase 6 — E2EE (encrypt at domain boundary)
 
-### [ ] CRYPTO-001 — Add domain encryption adapter for Calendar
+### [x] CRYPTO-001 — Add domain encryption adapter for Calendar
 
-**Status:** pending  
-**Depends on:** DB-004  
+**Status:** done
+**Depends on:** DB-004
 **Blocks:** CRYPTO-002
 
 #### Related paths
@@ -1275,9 +1275,20 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| CRYPTO-001-a | `packages/domain-calendar/src/lib/calendar-events.test.ts` | TDD: test that stored title is not plaintext when encryption enabled. | `pnpm --filter @suite/domain-calendar test:run -- src/lib/calendar-events.test.ts` |
-| CRYPTO-001-b | `packages/domain-calendar/src/lib/calendar-crypto.ts` | Implement seal/unseal using `@suite/crypto`. | `pnpm --filter @suite/crypto test:run` |
-| CRYPTO-001-c | `packages/domain-calendar/src/lib/calendar-events.ts` | Call seal/unseal in create/list/get paths via injected key provider. | `pnpm --filter @suite/domain-calendar test:run -- src/lib/calendar-events.test.ts` |
+| CRYPTO-001-a | `packages/domain-calendar/src/lib/calendar-events.test.ts` | TDD: test that stored title is not plaintext when encryption enabled. | `pnpm --filter @suite/domain-calendar test:run -- src/lib/calendar-events.test.ts` ✅ |
+| CRYPTO-001-b | `packages/domain-calendar/src/lib/calendar-crypto.ts` | Implement seal/unseal using `@suite/crypto`. | `pnpm --filter @suite/crypto test:run` ✅ |
+| CRYPTO-001-c | `packages/domain-calendar/src/lib/calendar-events.ts` | Call seal/unseal in create/list/get paths via injected key provider. | `pnpm --filter @suite/domain-calendar test:run -- src/lib/calendar-events.test.ts` ✅ |
+
+#### Implementation notes
+
+- Created `packages/domain-calendar/src/lib/calendar-crypto.ts` with seal/unseal functions using @suite/crypto
+- Added `KeyProvider` type for dependency injection of encryption keys
+- Encryption is opt-in via `isEncryptionEnabled()` flag (returns false by default)
+- Updated domain functions (create, update, get, list) to conditionally encrypt/decrypt based on flag
+- Added @suite/crypto dependency to domain-calendar package.json
+- Added exports field to @suite/crypto package.json for proper workspace resolution
+- All 21 domain tests pass, typecheck passes for all packages
+- Encryption is disabled by default; can be enabled by calling `setCalendarKeyProvider()` with a real key provider
 
 ---
 

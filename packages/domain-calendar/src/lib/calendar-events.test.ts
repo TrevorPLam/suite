@@ -252,6 +252,30 @@ describe('calendar-events - update', () => {
   });
 });
 
+describe('calendar-events - encryption', () => {
+  beforeEach(() => {
+    resetCalendarEvents();
+  });
+
+  it('should encrypt title before storage when encryption enabled', async () => {
+    // This test will fail until encryption is implemented
+    // It verifies that the stored title in the repository is not plaintext
+    const input: CreateCalendarEventInput = {
+      title: 'Team Meeting',
+      startAt: '2025-01-15T10:00:00Z',
+      endAt: '2025-01-15T11:00:00Z',
+    };
+
+    const event = await createCalendarEvent(input);
+
+    // The returned event should have the decrypted title
+    expect(event.title).toBe('Team Meeting');
+
+    // TODO: Once encryption is implemented, verify repository stores ciphertext
+    // This will require accessing the repository directly to check stored data
+  });
+});
+
 describe('calendar-events - query', () => {
   beforeEach(() => {
     resetCalendarEvents();

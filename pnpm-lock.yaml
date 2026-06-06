@@ -364,6 +364,9 @@ importers:
 
   packages/domain-calendar:
     dependencies:
+      '@suite/crypto':
+        specifier: workspace:*
+        version: link:../crypto
       '@suite/db':
         specifier: workspace:*
         version: link:../db
