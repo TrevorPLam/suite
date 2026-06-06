@@ -538,10 +538,10 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-013: Add Graceful Shutdown
+### [!] P2-013: Add Graceful Shutdown
 
-**Status**: Pending  
-**Priority**: P2  
+**Status**: Blocked
+**Priority**: P2
 **Bounded Context**: API
 
 **Related Files**:
@@ -581,6 +581,8 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Block Reason**: Task assumes traditional Node.js server with SIGTERM handling. Cloudflare Workers are serverless with no SIGTERM signals, no application-managed connection pools (D1 bindings are runtime-managed), and automatic 30-second grace period for in-flight requests. Graceful shutdown is handled by the Cloudflare runtime, not application code.
+
 **Subtasks**:
 
 #### P2-013-01: Add graceful shutdown to calendar API
@@ -600,10 +602,10 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-014: Add OpenAPI/Swagger Documentation
+### [x] P2-014: Add OpenAPI/Swagger Documentation
 
-**Status**: Pending  
-**Priority**: P2  
+**Status**: Completed
+**Priority**: P2
 **Bounded Context**: API Documentation
 
 **Related Files**:
@@ -643,37 +645,54 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Implementation Notes**:
+- Installed @hono/swagger-ui dependency in all three APIs
+- Created OpenAPI spec documents for calendar, tasks, and drive APIs
+- Added /api/openapi.json endpoint to serve OpenAPI spec
+- Added /api/docs endpoint to serve Swagger UI
+- All endpoints documented with request/response schemas
+- Authentication documented using BearerAuth scheme
+- Typecheck passes for calendar-api and tasks-api
+- Lint passes for all three APIs with 0 errors (only warnings)
+- Pre-existing typecheck errors in drive-api test file (unrelated to this task)
+
 **Subtasks**:
 
 #### P2-014-01: Generate OpenAPI spec for calendar API
 **Target File**: `apps/calendar/api/src/openapi.ts`
 **Action**: Create OpenAPI spec document for all calendar endpoints with schemas
 **Validate Command**: `pnpm --filter @suite/calendar-api typecheck`
+**Status**: ✅ Complete
 
 #### P2-014-02: Serve Swagger UI for calendar API
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Add GET /api/docs that serves Swagger UI with OpenAPI spec
 **Validate Command**: `curl http://localhost:3001/api/docs`
+**Status**: ✅ Complete
 
 #### P2-014-03: Generate OpenAPI spec for tasks API
 **Target File**: `apps/tasks/api/src/openapi.ts`
 **Action**: Create OpenAPI spec document for all tasks endpoints with schemas
 **Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
+**Status**: ✅ Complete
 
 #### P2-014-04: Serve Swagger UI for tasks API
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Add GET /api/docs that serves Swagger UI with OpenAPI spec
 **Validate Command**: `curl http://localhost:3002/api/docs`
+**Status**: ✅ Complete
 
 #### P2-014-05: Generate OpenAPI spec for drive API
 **Target File**: `apps/drive/api/src/openapi.ts`
 **Action**: Create OpenAPI spec document for all drive endpoints with schemas
 **Validate Command**: `pnpm --filter @suite/drive-api typecheck`
+**Status**: ✅ Complete
 
 #### P2-014-06: Serve Swagger UI for drive API
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Add GET /api/docs that serves Swagger UI with OpenAPI spec
 **Validate Command**: `curl http://localhost:3003/api/docs`
+**Status**: ✅ Complete
 
 ---
 

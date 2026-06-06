@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
+import { swaggerUI } from '@hono/swagger-ui';
 import {
   CalendarEventError,
   createCalendarEvent,
@@ -15,6 +16,7 @@ import { mountAuth, requireAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import { createEventBodySchema, updateEventBodySchema } from './schemas.js';
+import { openApiDoc } from './openapi.js';
 
 // Validate environment variables at startup
 validateCalendarEnv();
@@ -414,5 +416,11 @@ app.put('/api/v1/events/:id', requireAuth, async (c) => {
     return c.json(response.body, response.status);
   }
 });
+
+// Serve OpenAPI spec
+app.get('/api/openapi.json', (c) => c.json(openApiDoc));
+
+// Serve Swagger UI
+app.get('/api/docs', swaggerUI({ url: '/api/openapi.json' }));
 
 export default app;

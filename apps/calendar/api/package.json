@@ -14,6 +14,8 @@
     "build": "wrangler deploy --dry-run"
   },
   "dependencies": {
+    "@hono/swagger-ui": "catalog:",
+    "@hono/zod-openapi": "catalog:",
     "@suite/auth": "workspace:*",
     "@suite/db": "workspace:*",
     "@suite/domain-calendar": "workspace:*",
@@ -25,7 +27,7 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "typescript": "^5.8.0",
-    "wrangler": "^4.0.0",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "wrangler": "^4.0.0"
   }
 }

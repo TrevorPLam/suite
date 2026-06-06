@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
+import { swaggerUI } from '@hono/swagger-ui';
 import {
   createFolder,
   deleteDriveFile,
@@ -29,6 +30,7 @@ import {
   moveFileBodySchema,
   searchFilesQuerySchema,
 } from './schemas.js';
+import { openApiDoc } from './openapi.js';
 
 // Validate environment variables at startup
 validateDriveEnv();
@@ -832,5 +834,11 @@ app.get('/api/v1/files/search', async (c) => {
   const results = await searchFiles(result.data);
   return c.json({ files: results });
 });
+
+// Serve OpenAPI spec
+app.get('/api/openapi.json', (c) => c.json(openApiDoc));
+
+// Serve Swagger UI
+app.get('/api/docs', swaggerUI({ url: '/api/openapi.json' }));
 
 export default app;

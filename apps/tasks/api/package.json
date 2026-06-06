@@ -14,10 +14,12 @@
     "build": "wrangler deploy --dry-run"
   },
   "dependencies": {
+    "@hono/swagger-ui": "catalog:",
+    "@hono/zod-openapi": "catalog:",
+    "@suite/auth": "workspace:*",
+    "@suite/db": "workspace:*",
     "@suite/domain-tasks": "workspace:*",
     "@suite/env-config": "workspace:*",
-    "@suite/db": "workspace:*",
-    "@suite/auth": "workspace:*",
     "@suite/shared-kernel": "workspace:*",
     "hono": "^4.11.7",
     "zod": "^3.24.0"
@@ -25,7 +27,7 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "typescript": "^5.8.0",
-    "wrangler": "^4.0.0",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "wrangler": "^4.0.0"
   }
 }
