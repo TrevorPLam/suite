@@ -1,0 +1,24 @@
+# Shared Wrangler Configuration Template
+# This file contains common configuration for all Suite APIs.
+# Each app's wrangler.toml should include these base fields.
+
+name = "<app-name>-api"
+main = "src/index.ts"
+compatibility_date = "2026-06-06"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+BETTER_AUTH_URL = ""
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "rate-limit-kv"
+
+[[kv_namespaces]]
+binding = "AUTH_KV"
+id = "auth-kv"
+
+# App-specific overrides:
+# - drive-api: Add [[r2_buckets]] for R2 binding
+# - calendar-api: No additional bindings
+# - tasks-api: No additional bindings
