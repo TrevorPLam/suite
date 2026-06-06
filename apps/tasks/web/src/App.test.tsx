@@ -3,6 +3,16 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 
+vi.mock('./auth-provider', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', email: 'test@example.com' },
+    loading: false,
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+  }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 function mockFetchResponse(value: unknown) {
   return Promise.resolve({
     ok: true,
@@ -35,7 +45,8 @@ describe('Tasks App', () => {
 
     render(<App />);
 
-    expect(screen.getByText('Loading tasks…')).toBeInTheDocument();
+    // Check for skeleton loading state
+    expect(screen.getAllByRole('status', { name: /loading/i }).length).toBeGreaterThan(0);
 
     await waitFor(() => {
       expect(screen.getByText('No tasks in this view.')).toBeInTheDocument();

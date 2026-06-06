@@ -779,9 +779,9 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-009: Fix Tasks Web Tests Missing AuthProvider
+### [x] P2-009: Fix Tasks Web Tests Missing AuthProvider
 
-**Status**: Pending
+**Status**: Complete
 **Priority**: P2
 **Bounded Context**: Testing
 
@@ -789,9 +789,9 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 - `apps/tasks/web/src/App.test.tsx`
 
 **Definition of Done**:
-- Tests wrapped in AuthProvider
-- All Tasks web tests pass
-- Test coverage maintained
+- Tests wrapped in AuthProvider ✅
+- All Tasks web tests pass ✅
+- Test coverage maintained ✅
 
 **Out of Scope**:
 - Refactoring other test files
@@ -824,12 +824,22 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Target File**: `apps/tasks/web/src/App.test.tsx`
 **Action**: Wrap all test renders with AuthProvider or create custom render function
 **Validate Command**: `pnpm --filter @suite/tasks-web test`
+**Status**: ✅ Complete
 
 **Issue Discovered During P2-005**:
 - Tasks web tests fail with "useAuth must be used within AuthProvider"
 - Tests are not wrapped in AuthProvider context
 - This is a pre-existing issue, not caused by virtual scrolling changes
 - Similar issue was fixed for Drive in P1-016, but Tasks was not included
+
+**Implementation Notes**:
+- Mocked auth-provider module using vi.mock to provide fake authenticated user
+- Mock provides user object with id and email, loading: false, and mock signIn/signOut functions
+- AuthProvider mocked as a passthrough component that renders children
+- Updated first test to check for skeleton loading state (aria-label="Loading") instead of text loading message
+- All 6 Tasks web tests now pass: loading state, create task, toggle completion, archive, delete, validation errors
+- Typecheck passes
+- Lint passes with pre-existing warnings (not related to this task)
 
 ---
 
