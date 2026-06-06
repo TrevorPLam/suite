@@ -1379,10 +1379,10 @@ Target File**: `.github/workflows/deploy.yml`
 
 ---
 
-### [ ] SEC-016: Add Production API URL Configuration
+### [x] SEC-016: Add Production API URL Configuration
 
-**Status**: Pending  
-**Priority**: P0  
+**Status**: Complete
+**Priority**: P0
 **Bounded Context**: Web Configuration
 
 **Related Files**:
@@ -1423,20 +1423,29 @@ Target File**: `.github/workflows/deploy.yml`
 
 **Subtasks**:
 
-#### SEC-016-01: Create calendar web .env.production
+#### SEC-016-01: Create calendar web .env.production ✅
 **Target File**: `apps/calendar/web/.env.production`
 **Action**: Create file with VITE_API_URL=https://calendar-api.yourdomain.com
 **Validate Command**: `cat apps/calendar/web/.env.production`
 
-#### SEC-016-02: Create tasks web .env.production
+#### SEC-016-02: Create tasks web .env.production ✅
 **Target File**: `apps/tasks/web/.env.production`
 **Action**: Create file with VITE_API_URL=https://tasks-api.yourdomain.com
 **Validate Command**: `cat apps/tasks/web/.env.production`
 
-#### SEC-016-03: Create drive web .env.production
+#### SEC-016-03: Create drive web .env.production ✅
 **Target File**: `apps/drive/web/.env.production`
 **Action**: Create file with VITE_API_URL=https://drive-api.yourdomain.com
 **Validate Command**: `cat apps/drive/web/.env.production`
+
+**Implementation Notes**:
+- Created .env.production files for calendar, tasks, and drive web apps
+- Each file contains VITE_API_URL with placeholder domain (yourdomain.com)
+- Added inline documentation comments instructing users to update URLs for production
+- Files follow Vite convention for production environment variables
+- Typecheck passed successfully
+- Lint passed with pre-existing warnings (unrelated to this task)
+- Web app tests failed due to pre-existing AuthProvider issue (unrelated to SEC-016)
 
 
 
