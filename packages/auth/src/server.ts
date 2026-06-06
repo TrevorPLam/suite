@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { organization } from 'better-auth/plugins';
+import { dash } from '@better-auth/infra';
 import { users, sessions, accounts } from '@suite/db';
 
 interface KVNamespace {
@@ -18,9 +19,10 @@ interface CreateAuthOptions {
   env?: AuthEnv;
   waitUntil?: (promise: Promise<unknown>) => void;
   trustedOrigins?: string;
+  betterAuthApiKey?: string;
 }
 
-export function createAuth({ db, env, waitUntil, trustedOrigins }: CreateAuthOptions) {
+export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKey }: CreateAuthOptions) {
   const auth = betterAuth({
     database: db ? drizzleAdapter(db, {
       provider: 'pg',
@@ -41,6 +43,7 @@ export function createAuth({ db, env, waitUntil, trustedOrigins }: CreateAuthOpt
     },
     plugins: [
       organization(),
+      ...(betterAuthApiKey ? [dash({ apiKey: betterAuthApiKey })] : []),
     ],
     advanced: {
       cookiePrefix: 'suite',

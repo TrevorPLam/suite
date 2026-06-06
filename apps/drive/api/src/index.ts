@@ -171,6 +171,7 @@ app.use('/api/*', async (c, next) => {
     },
     waitUntil: c.env.waitUntil,
     ...(process.env.TRUSTED_ORIGINS && { trustedOrigins: process.env.TRUSTED_ORIGINS }),
+    ...(process.env.BETTER_AUTH_API_KEY && { betterAuthApiKey: process.env.BETTER_AUTH_API_KEY }),
   });
   c.set('auth', auth);
   await next();
