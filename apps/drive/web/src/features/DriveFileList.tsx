@@ -1,5 +1,5 @@
 import { Button } from '@suite/ui';
-import type { DriveFile } from '@suite/domain-drive';
+import type { DriveFile, DriveFolder } from '@suite/domain-drive';
 
 type DriveFileListProps = {
   files: DriveFile[];
@@ -9,13 +9,20 @@ type DriveFileListProps = {
   onRefresh: () => void;
   onRename: (file: DriveFile) => void;
   onDelete: (file: DriveFile) => void;
+  onMoveFile?: (file: DriveFile, targetFolderId: string | undefined) => void;
+  folders?: DriveFolder[];
+  currentFolderId?: string | undefined;
 };
 
 function formatFileSize(size: number) {
   return `${size.toLocaleString()} bytes`;
 }
 
-export function DriveFileList({ files, loading, error, errorDetails, onRefresh, onRename, onDelete }: DriveFileListProps) {
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleString();
+}
+
+export function DriveFileList({ files, loading, error, errorDetails, onRefresh, onRename, onDelete, onMoveFile, folders = [], currentFolderId }: DriveFileListProps) {
   return (
     <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24 }}>
       <div style={{ display: 'grid', gap: 16 }}>
@@ -112,6 +119,11 @@ export function DriveFileList({ files, loading, error, errorDetails, onRefresh, 
                   <div style={{ display: 'grid', gap: 6 }}>
                     <h3 style={{ margin: 0, fontSize: 18 }}>{file.name}</h3>
                     <p style={{ margin: 0, color: 'rgba(249, 250, 251, 0.68)', fontSize: 14 }}>{formatFileSize(file.size)}</p>
+                    <div style={{ display: 'grid', gap: 2, fontSize: 12, color: 'rgba(249, 250, 251, 0.5)' }}>
+                      <span>Created: {formatDate(file.createdAt)}</span>
+                      <span>Modified: {formatDate(file.modifiedAt)}</span>
+                      {(file as any).mimeType && <span>Type: {(file as any).mimeType}</span>}
+                    </div>
                   </div>
 
                   <span style={{ color: 'rgba(249, 250, 251, 0.5)', fontSize: 12 }}>ID: {file.id}</span>
@@ -126,6 +138,27 @@ export function DriveFileList({ files, loading, error, errorDetails, onRefresh, 
                   >
                     Rename
                   </Button>
+                  {onMoveFile && folders.length > 0 && (
+                    <select
+                      value={(file as any).folderId || ''}
+                      onChange={(e) => onMoveFile(file, e.target.value || undefined)}
+                      style={{
+                        borderRadius: 8,
+                        border: '1px solid rgba(255, 255, 255, 0.14)',
+                        background: '#0a0a0a',
+                        color: 'inherit',
+                        padding: '8px 12px',
+                        fontSize: 14,
+                      }}
+                    >
+                      <option value="">Root</option>
+                      {folders.map((folder) => (
+                        <option key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <Button
                     type="button"
                     onClick={() => onDelete(file)}

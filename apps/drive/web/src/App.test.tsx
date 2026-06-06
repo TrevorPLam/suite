@@ -28,9 +28,9 @@ describe('Drive App', () => {
   });
 
   it('renders loading state then empty state', async () => {
-    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      mockFetchResponse({ files: [] }),
-    );
+    (fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(mockFetchResponse({ files: [] }))
+      .mockResolvedValueOnce(mockFetchResponse({ folders: [] }));
 
     render(<App />);
 
@@ -47,11 +47,14 @@ describe('Drive App', () => {
 
     fetchMock
       .mockResolvedValueOnce(mockFetchResponse({ files: [] }))
+      .mockResolvedValueOnce(mockFetchResponse({ folders: [] }))
       .mockResolvedValueOnce(
         mockFetchResponse({
           id: 'file-1',
           name: 'Design brief.pdf',
           size: 2048,
+          createdAt: '2024-01-01T00:00:00Z',
+          modifiedAt: '2024-01-01T00:00:00Z',
         }),
       );
 
@@ -79,11 +82,13 @@ describe('Drive App', () => {
     const user = userEvent.setup();
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
 
-    fetchMock.mockResolvedValueOnce(
-      mockFetchResponse({
-        files: [{ id: 'file-1', name: 'Old name.pdf', size: 1024 }],
-      }),
-    );
+    fetchMock
+      .mockResolvedValueOnce(
+        mockFetchResponse({
+          files: [{ id: 'file-1', name: 'Old name.pdf', size: 1024, createdAt: '2024-01-01T00:00:00Z', modifiedAt: '2024-01-01T00:00:00Z' }],
+        }),
+      )
+      .mockResolvedValueOnce(mockFetchResponse({ folders: [] }));
 
     render(<App />);
 
@@ -116,9 +121,10 @@ describe('Drive App', () => {
     fetchMock
       .mockResolvedValueOnce(
         mockFetchResponse({
-          files: [{ id: 'file-1', name: 'Old name.pdf', size: 1024 }],
+          files: [{ id: 'file-1', name: 'Old name.pdf', size: 1024, createdAt: '2024-01-01T00:00:00Z', modifiedAt: '2024-01-01T00:00:00Z' }],
         }),
       )
+      .mockResolvedValueOnce(mockFetchResponse({ folders: [] }))
       .mockResolvedValueOnce(mockFetchResponse({ deleted: true }));
 
     render(<App />);
@@ -149,6 +155,7 @@ describe('Drive App', () => {
 
     fetchMock
       .mockResolvedValueOnce(mockFetchResponse({ files: [] }))
+      .mockResolvedValueOnce(mockFetchResponse({ folders: [] }))
       .mockResolvedValueOnce(
         mockFetchError(400, {
           error: 'Name is required',
