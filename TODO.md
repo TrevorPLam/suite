@@ -718,11 +718,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] UI-011: Fix i18n Typecheck Errors
+### [x] UI-011: Fix i18n Typecheck Errors
 
 **Priority**: P1
 **Bounded Context**: UI Package
-**Status**: Not Started
+**Status**: Completed
 
 **Related Files**:
 - `packages/ui/src/i18n/config.ts`
@@ -764,23 +764,31 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### UI-011-01: Fix JSON import in config.ts
+#### ✅ UI-011-01: Fix JSON import in config.ts
 **Assigned To**: AGENT
 **Target File**: `packages/ui/src/i18n/config.ts`
-**Action**: Update JSON import to use 'type: "json"' import attribute: `import en from './en.json' with { type: 'json' };`
+**Action**: Updated JSON import to use 'type: "json"' import attribute: `import en from './en.json' with { type: 'json' };`
 **Validate Command**: `pnpm --filter @suite/ui typecheck`
 
-#### UI-011-02: Fix relative import in index.tsx
+#### ✅ UI-011-02: Fix relative import in index.tsx
 **Assigned To**: AGENT
 **Target File**: `packages/ui/src/i18n/index.tsx`
-**Action**: Update relative import to use explicit file extension: `import i18n, { resources, defaultNS } from './config.js';`
+**Action**: Updated relative import to use explicit file extension: `import i18n, { resources, defaultNS } from './config.js';`
 **Validate Command**: `pnpm --filter @suite/ui typecheck`
 
-#### UI-011-03: Verify typecheck passes
+#### ✅ UI-011-03: Verify typecheck passes
 **Assigned To**: AGENT
 **Target File**: `packages/ui/`
-**Action**: Run typecheck to verify all i18n errors are resolved
+**Action**: Ran typecheck to verify all i18n errors are resolved
 **Validate Command**: `pnpm --filter @suite/ui typecheck`
+
+**Implementation Notes**:
+- Fixed TS1543 error by adding 'type: "json"' import attribute to JSON import in config.ts
+- Fixed TS2835 error by adding explicit .js file extension to relative import in index.tsx
+- Typecheck passes with no errors
+- Lint passes with no errors
+- Tests pass (90 tests passing)
+- No breaking changes to i18n functionality
 
 ---
 

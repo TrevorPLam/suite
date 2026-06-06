@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { I18nextProvider, useTranslation as useTranslationBase } from 'react-i18next';
-import i18n, { resources, defaultNS } from './config';
+import i18n, { resources, defaultNS } from './config.js';
 
 export interface I18nProviderProps {
   children: React.ReactNode;
