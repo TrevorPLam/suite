@@ -16,3 +16,8 @@ vi.mock('better-auth/react', () => ({
     useSession: vi.fn(),
   })),
 }));
+
+// Mock @better-auth/infra to prevent Zod URL validation issues
+vi.mock('@better-auth/infra', () => ({
+  dash: vi.fn(() => ({})),
+}));
