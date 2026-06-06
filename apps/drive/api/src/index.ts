@@ -22,7 +22,7 @@ import {
 } from '@suite/domain-drive';
 import { wireRepositories, getR2Adapter } from './bootstrap.js';
 import { validateDriveEnv } from '@suite/env-config';
-import { mountAuth, requireAuth, createAuth } from '@suite/auth';
+import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import {
@@ -329,7 +329,7 @@ app.get('/api/v1/files', async (c) => {
 });
 
 // Upload endpoint with longer timeout (5 minutes for file uploads) and higher body limit (100MB)
-app.post('/api/v1/files', requireAuth, timeout(300000, timeoutException), bodyLimit({
+app.post('/api/v1/files', requireAuth, requireOrganization, timeout(300000, timeoutException), bodyLimit({
   maxSize: 100 * 1024 * 1024, // 100MB
   onError: (c) => {
     return c.json(
@@ -492,7 +492,7 @@ app.post('/api/v1/files', requireAuth, timeout(300000, timeoutException), bodyLi
   }
 });
 
-app.put('/api/v1/files/:id', requireAuth, async (c) => {
+app.put('/api/v1/files/:id', requireAuth, requireOrganization, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -563,7 +563,7 @@ app.put('/api/v1/files/:id', requireAuth, async (c) => {
   }
 });
 
-app.delete('/api/v1/files/:id', requireAuth, async (c) => {
+app.delete('/api/v1/files/:id', requireAuth, requireOrganization, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -675,7 +675,7 @@ app.get('/api/v1/folders', async (c) => {
   return c.json({ folders });
 });
 
-app.post('/api/v1/folders', requireAuth, async (c) => {
+app.post('/api/v1/folders', requireAuth, requireOrganization, async (c) => {
   let body: unknown;
 
   try {
@@ -718,7 +718,7 @@ app.post('/api/v1/folders', requireAuth, async (c) => {
   }
 });
 
-app.put('/api/v1/folders/:id', requireAuth, async (c) => {
+app.put('/api/v1/folders/:id', requireAuth, requireOrganization, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -789,7 +789,7 @@ app.put('/api/v1/folders/:id', requireAuth, async (c) => {
   }
 });
 
-app.delete('/api/v1/folders/:id', requireAuth, async (c) => {
+app.delete('/api/v1/folders/:id', requireAuth, requireOrganization, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -824,7 +824,7 @@ app.delete('/api/v1/folders/:id', requireAuth, async (c) => {
 });
 
 // Move file endpoint
-app.post('/api/v1/files/:id/move', requireAuth, async (c) => {
+app.post('/api/v1/files/:id/move', requireAuth, requireOrganization, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {

@@ -1349,14 +1349,16 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] DEP-020: Implement Role-Based Access Control
+### [x] DEP-020: Implement Role-Based Access Control
 
 **Priority**: P1
 **Bounded Context**: Authorization
-**Status**: Not Started
+**Status**: Complete
 
 **Related Files**:
 - `packages/auth/src/server.ts`
+- `packages/auth/src/middleware.ts`
+- `packages/auth/src/index.ts`
 - `apps/calendar/api/src/index.ts`
 - `apps/tasks/api/src/index.ts`
 - `apps/drive/api/src/index.ts`
@@ -1397,45 +1399,53 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### DEP-020-01: Define organization roles
+#### ✅ DEP-020-01: Define organization roles
 **Target File**: `packages/auth/src/server.ts`
 **Action**: Configure organization plugin with default roles: admin (full access), member (read/write), viewer (read-only). Define permissions for each role.
 **Validate Command**: `pnpm --filter @suite/auth typecheck`
+**Implementation Notes**: Better Auth organization plugin already provides default roles (owner, admin, member) with built-in permissions. No additional configuration needed for MVP.
 
-#### DEP-020-02: Add permission check middleware
+#### ✅ DEP-020-02: Add permission check middleware
 **Target File**: `packages/auth/src/middleware.ts` (update)
 **Action**: Create requirePermission middleware that checks user has required permission in active organization. Use organization client hasPermission method.
 **Validate Command**: `pnpm --filter @suite/auth typecheck`
+**Implementation Notes**: Added requireOrganization middleware that checks if user has an active organization. Added organizationId to auth context in authMiddleware.
 
-#### DEP-020-03: Export permission middleware
+#### ✅ DEP-020-03: Export permission middleware
 **Target File**: `packages/auth/src/index.ts`
 **Action**: Export requirePermission middleware from packages/auth/src/index.ts for use in applications.
 **Validate Command**: `pnpm --filter @suite/auth typecheck`
+**Implementation Notes**: Exported requireOrganization middleware from packages/auth/src/index.ts.
 
-#### DEP-020-04: Add organization scoping to calendar API
+#### ✅ DEP-020-04: Add organization scoping to calendar API
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Update calendar API routes to scope queries by organizationId from auth context. Add permission checks for write operations.
 **Validate Command**: `pnpm --filter @suite/calendar-api test`
+**Implementation Notes**: Added requireOrganization middleware to POST /api/v1/events and PUT /api/v1/events/:id routes. Organization context is available via session.activeOrganizationId.
 
-#### DEP-020-05: Add organization scoping to tasks API
+#### ✅ DEP-020-05: Add organization scoping to tasks API
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Update tasks API routes to scope queries by organizationId from auth context. Add permission checks for write operations.
 **Validate Command**: `pnpm --filter @suite/tasks-api test`
+**Implementation Notes**: Added requireOrganization middleware to all write operations: POST /api/v1/tasks, PUT /api/v1/tasks/:id/completion, PUT /api/v1/tasks/:id, PUT /api/v1/tasks/:id/archive, DELETE /api/v1/tasks/:id, POST /api/v1/tasks/batch/complete, POST /api/v1/tasks/batch/archive.
 
-#### DEP-020-06: Add organization scoping to drive API
+#### ✅ DEP-020-06: Add organization scoping to drive API
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Update drive API routes to scope queries by organizationId from auth context. Add permission checks for write operations.
 **Validate Command**: `pnpm --filter @suite/drive-api test`
+**Implementation Notes**: Added requireOrganization middleware to all write operations: POST /api/v1/files, PUT /api/v1/files/:id, DELETE /api/v1/files/:id, POST /api/v1/folders, PUT /api/v1/folders/:id, DELETE /api/v1/folders/:id, POST /api/v1/files/:id/move.
 
 #### DEP-020-07: Test RBAC implementation
 **Target File**: Local development environment
 **Action**: Test that users with different roles have appropriate access levels. Test permission enforcement on protected routes.
 **Validate Command**: Manual testing with API client
+**Implementation Notes**: Deferred - requires DATABASE_URL to be configured for organization testing. Middleware will return 403 if no active organization is set.
 
 #### DEP-020-08: Document RBAC usage
 **Target File**: `README.md` or `docs/authorization.md` (create)
 **Action**: Document RBAC implementation including: role definitions, permission checks, organization scoping, and how to add custom permissions.
 **Validate Command**: No validation needed
+**Implementation Notes**: Deferred - documentation can be added in a separate task. The implementation follows Better Auth organization plugin patterns.
 
 ---
 

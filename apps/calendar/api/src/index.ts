@@ -15,7 +15,7 @@ import {
 } from '@suite/domain-calendar';
 import { wireRepositories } from './bootstrap.js';
 import { validateCalendarEnv } from '@suite/env-config';
-import { mountAuth, requireAuth, createAuth } from '@suite/auth';
+import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import { createEventBodySchema, updateEventBodySchema } from './schemas.js';
@@ -386,7 +386,7 @@ app.get('/api/v1/events', async (c) => {
   return c.json({ events });
 });
 
-app.post('/api/v1/events', requireAuth, async (c) => {
+app.post('/api/v1/events', requireAuth, requireOrganization, async (c) => {
   const body = await readRequestBody(c);
 
   if (body === undefined) {
@@ -428,7 +428,7 @@ app.post('/api/v1/events', requireAuth, async (c) => {
   }
 });
 
-app.put('/api/v1/events/:id', requireAuth, async (c) => {
+app.put('/api/v1/events/:id', requireAuth, requireOrganization, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!isNonEmptyString(id)) {

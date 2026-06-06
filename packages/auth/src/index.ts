@@ -25,7 +25,7 @@ export const authPackageName = '@suite/auth';
 
 // Better Auth exports
 export { createAuth, auth, getSession, requireSession } from './server.js';
-export { authMiddleware } from './middleware.js';
+export { authMiddleware, requireOrganization } from './middleware.js';
 export { requireAuth } from './protected.js';
 export { authClient, signIn, signUp, signOut, useSession } from './client.js';
 export { mountAuth } from './mount.js';

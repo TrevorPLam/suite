@@ -21,7 +21,7 @@ import {
 } from '@suite/domain-tasks';
 import { wireRepositories } from './bootstrap.js';
 import { validateTasksEnv } from '@suite/env-config';
-import { mountAuth, requireAuth, createAuth } from '@suite/auth';
+import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
 import {
   createTaskBodySchema,
   taskCompletionBodySchema,
@@ -334,7 +334,7 @@ app.get('/api/v1/tasks/search', async (c) => {
   return c.json({ tasks: results });
 });
 
-app.post('/api/v1/tasks', requireAuth, async (c) => {
+app.post('/api/v1/tasks', requireAuth, requireOrganization, async (c) => {
   let body: unknown;
 
   try {
@@ -391,7 +391,7 @@ app.get('/api/v1/tasks/:id', async (c) => {
   return c.json({ task });
 });
 
-app.put('/api/v1/tasks/:id/completion', requireAuth, async (c) => {
+app.put('/api/v1/tasks/:id/completion', requireAuth, requireOrganization, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!id) {
@@ -450,7 +450,7 @@ app.put('/api/v1/tasks/:id/completion', requireAuth, async (c) => {
   }
 });
 
-app.put('/api/v1/tasks/:id', requireAuth, async (c) => {
+app.put('/api/v1/tasks/:id', requireAuth, requireOrganization, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!id) {
@@ -509,7 +509,7 @@ app.put('/api/v1/tasks/:id', requireAuth, async (c) => {
   }
 });
 
-app.put('/api/v1/tasks/:id/archive', requireAuth, async (c) => {
+app.put('/api/v1/tasks/:id/archive', requireAuth, requireOrganization, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!id) {
@@ -568,7 +568,7 @@ app.put('/api/v1/tasks/:id/archive', requireAuth, async (c) => {
   }
 });
 
-app.delete('/api/v1/tasks/:id', requireAuth, async (c) => {
+app.delete('/api/v1/tasks/:id', requireAuth, requireOrganization, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!id) {
@@ -595,7 +595,7 @@ app.delete('/api/v1/tasks/:id', requireAuth, async (c) => {
   }
 });
 
-app.post('/api/v1/tasks/batch/complete', requireAuth, async (c) => {
+app.post('/api/v1/tasks/batch/complete', requireAuth, requireOrganization, async (c) => {
   let body: unknown;
 
   try {
@@ -639,7 +639,7 @@ app.post('/api/v1/tasks/batch/complete', requireAuth, async (c) => {
   }
 });
 
-app.post('/api/v1/tasks/batch/archive', requireAuth, async (c) => {
+app.post('/api/v1/tasks/batch/archive', requireAuth, requireOrganization, async (c) => {
   let body: unknown;
 
   try {
