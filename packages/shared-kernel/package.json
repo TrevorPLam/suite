@@ -10,5 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests configured yet\"",
     "lint": "eslint src"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
   }
 }

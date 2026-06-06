@@ -16,6 +16,7 @@
     "@suite/db": "workspace:*",
     "@suite/domain-calendar": "workspace:*",
     "@suite/env-config": "workspace:*",
+    "@suite/shared-kernel": "workspace:*",
     "hono": "^4.11.7"
   },
   "devDependencies": {

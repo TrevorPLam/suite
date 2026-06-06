@@ -8,3 +8,5 @@ export interface BaseEntity {
 }
 
 export { generateUUID } from './uuid.js';
+export { UsageMonitor } from './usage-monitor.js';
+export type { UsageMonitorOptions, UsageRepository, UsageRecord } from './usage-monitor.js';

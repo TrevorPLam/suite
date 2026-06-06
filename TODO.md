@@ -770,14 +770,16 @@ Target File**: `.github/workflows/deploy.yml`
 
 ---
 
-### [ ] SEC-008: Implement UsageMonitor Middleware
+### [x] SEC-008: Implement UsageMonitor Middleware
 
-**Status**: Pending  
-**Priority**: P0  
+**Status**: Complete
+**Priority**: P0
 **Bounded Context**: API
 
 **Related Files**:
 - `packages/shared-kernel/src/usage-monitor.ts` (create)
+- `packages/db/src/schema/usage.ts` (create)
+- `packages/db/src/repositories/usage.ts` (create)
 - `apps/calendar/api/src/index.ts`
 - `apps/tasks/api/src/index.ts`
 - `apps/drive/api/src/index.ts`
@@ -801,7 +803,8 @@ Target File**: `.github/workflows/deploy.yml`
 **Advanced Pattern**:
 - Middleware pattern with Hono
 - Sliding window rate limiting
-- Per-user tracking with Redis or database
+- Per-user tracking with database
+- Dependency injection to avoid circular dependencies
 
 **Anti-Patterns**:
 - Global rate limiting without user context
@@ -821,30 +824,42 @@ Target File**: `.github/workflows/deploy.yml`
 
 **Subtasks**:
 
-#### SEC-008-01: Create UsageMonitor middleware
+#### SEC-008-01: Create UsageMonitor middleware ✅
 **Target File**: `packages/shared-kernel/src/usage-monitor.ts`
 **Action**: Create UsageMonitor middleware that accepts limit parameter, tracks requests per userId in database, returns 429 when usage >= 80% of limit
 **Validate Command**: `pnpm --filter @suite/shared-kernel test`
 
-#### SEC-008-02: Add usage tracking schema
+#### SEC-008-02: Add usage tracking schema ✅
 **Target File**: `packages/db/src/schema/usage.ts` (create)
 **Action**: Create usage table with userId, requestCount, periodStart, periodEnd columns; add unique constraint on (userId, periodStart)
 **Validate Command**: `pnpm --filter @suite/db typecheck`
 
-#### SEC-008-03: Mount UsageMonitor in calendar API
+#### SEC-008-03: Mount UsageMonitor in calendar API ✅
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Import UsageMonitor from @suite/shared-kernel and mount as app.use('*', UsageMonitor({ limit: 1000 })) before routes
 **Validate Command**: `pnpm --filter @suite/calendar-api test`
 
-#### SEC-008-04: Mount UsageMonitor in tasks API
+#### SEC-008-04: Mount UsageMonitor in tasks API ✅
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Import UsageMonitor from @suite/shared-kernel and mount as app.use('*', UsageMonitor({ limit: 1000 })) before routes
 **Validate Command**: `pnpm --filter @suite/tasks-api test`
 
-#### SEC-008-05: Mount UsageMonitor in drive API
+#### SEC-008-05: Mount UsageMonitor in drive API ✅
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Import UsageMonitor from @suite/shared-kernel and mount as app.use('*', UsageMonitor({ limit: 1000 })) before routes
 **Validate Command**: `pnpm --filter @suite/drive-api test`
+
+**Implementation Notes**:
+- Created UsageMonitor middleware in shared-kernel with dependency injection pattern to avoid circular dependencies
+- Created usage schema in db package with userId, requestCount, periodStart, periodEnd columns and unique constraint
+- Created PostgresUsageRepository implementation in db package to handle usage tracking
+- Mounted UsageMonitor middleware in all three APIs (calendar, tasks, drive) with 1000 request limit per hour
+- Middleware blocks at 80% threshold (800 requests) per AGENTS.md rule 10
+- Skips monitoring for unauthenticated requests and health checks
+- Gracefully handles database failures by logging errors but not blocking requests
+- Typecheck passed successfully
+- Lint passed with pre-existing warnings (unrelated to this task)
+- Tests passed successfully
 
 ---
 

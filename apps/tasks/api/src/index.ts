@@ -23,9 +23,14 @@ import {
   archiveTaskBodySchema,
   batchOperationBodySchema,
 } from './schemas.js';
+import { UsageMonitor } from '@suite/shared-kernel';
+import { PostgresUsageRepository } from '@suite/db';
 
 // Validate environment variables at startup
 validateTasksEnv();
+
+// Create usage repository for monitoring
+const usageRepository = new PostgresUsageRepository();
 
 type Variables = {
   userId: string | null;
@@ -35,6 +40,13 @@ const app = new Hono<{ Variables: Variables }>();
 
 // Mount Better Auth handler
 mountAuth(app);
+
+// Mount UsageMonitor middleware (blocks at 80% of 1000 requests per hour)
+app.use('/api/*', UsageMonitor({
+  limit: 1000,
+  periodMs: 3600000, // 1 hour
+  usageRepository,
+}));
 
 // Middleware to wire repositories with userId from auth context
 app.use('/api/*', async (c, next) => {

@@ -38,6 +38,7 @@ export * from './schema/calendar.js';
 export * from './schema/tasks.js';
 export * from './schema/drive.js';
 export * from './schema/users.js';
+export * from './schema/usage.js';
 
 // Repository exports
 export * from './repositories/index.js';
