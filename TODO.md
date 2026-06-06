@@ -2,6 +2,16 @@
 
 Machine- and human-readable task registry derived from repository quality assessment (2026-06-06).
 
+## Test Infrastructure Notes
+
+- `pnpm test:run` executes all workspace packages with test:run script:
+  - Infrastructure: auth (1), crypto (26), ui (12), env-config (8)
+  - Domain: calendar (20), tasks (57), drive (47)
+  - APIs: calendar (14), tasks (35), drive (36)
+  - Web: calendar (5), tasks (6), drive (5)
+- Total: 267 tests across 12 packages
+- @suite/db has no tests yet (deferred to DB-007)
+
 ## Conventions
 
 | Field | Values / format |
@@ -76,9 +86,9 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] CI-002 — Add test:run to infrastructure packages
+### [x] CI-002 — Add test:run to infrastructure packages
 
-**Status:** pending  
+**Status:** done  
 **Depends on:** CI-001  
 **Blocks:** CI-003
 
@@ -124,11 +134,56 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| CI-002-a | `packages/auth/package.json` | Add `"test:run": "vitest run"`. | `pnpm --filter @suite/auth test:run` |
-| CI-002-b | `packages/crypto/package.json` | Add `"test:run": "vitest run"`. | `pnpm --filter @suite/crypto test:run` |
-| CI-002-c | `packages/ui/package.json` | Add `"test:run": "vitest run"`. | `pnpm --filter @suite/ui test:run` |
-| CI-002-d | `packages/env-config/package.json` | Add `"test:run": "vitest run"` (add script if missing). | `pnpm --filter @suite/env-config test:run` |
-| CI-002-e | `package.json` | Document in a comment block at top of this TODO only; no package.json change unless `ci:validate` should call all test:run — verify count increased. | `pnpm test:run 2>&1 \| findstr /i "Tests"` |
+| CI-002-a | `packages/auth/package.json` | Add `"test:run": "vitest run"`. | `pnpm --filter @suite/auth test:run` ✅ |
+| CI-002-b | `packages/crypto/package.json` | Add `"test:run": "vitest run"`. | `pnpm --filter @suite/crypto test:run` ✅ |
+| CI-002-c | `packages/ui/package.json` | Add `"test:run": "vitest run"`. | `pnpm --filter @suite/ui test:run` ✅ |
+| CI-002-d | `packages/env-config/package.json` | Add `"test:run": "vitest run"` (add script if missing). | `pnpm --filter @suite/env-config test:run` ✅ |
+| CI-002-e | `package.json` | Document in a comment block at top of this TODO only; no package.json change unless `ci:validate` should call all test:run — verify count increased. | `pnpm test:run 2>&1 \| findstr /i "Tests"` ✅ |
+
+---
+
+### [ ] CI-002-bug — Fix Tasks web TypeScript errors
+
+**Status:** pending  
+**Depends on:** none  
+**Blocks:** CI-003
+
+#### Related paths
+
+- `apps/tasks/web/src/App.test.tsx`
+
+#### Definition of done
+
+- `pnpm --filter @suite/tasks-web typecheck` exits 0.
+- TypeScript errors at lines 81-82 in App.test.tsx are resolved.
+
+#### Out of scope
+
+- Changing test behavior.
+- Refactoring test structure.
+
+#### Rules to follow
+
+- Fix type errors without changing test assertions.
+
+#### Advanced coding pattern
+
+- **Type-safe mocks:** ensure fetchMock calls are properly typed.
+
+#### Anti-patterns
+
+- Using `@ts-ignore` to suppress errors.
+- Removing type checks.
+
+#### Imports / exports
+
+- Test file only.
+
+#### Subtasks
+
+| ID | File | Action | Validate |
+|----|------|--------|----------|
+| CI-002-bug-a | `apps/tasks/web/src/App.test.tsx` | Fix TypeScript errors at lines 81-82 (likely fetchMock type assertions). | `pnpm --filter @suite/tasks-web typecheck` |
 
 ---
 
@@ -1341,8 +1396,9 @@ UI-001 → UI-002
 
 | ID | Title | Status |
 |----|-------|--------|
-| CI-001 | Fix Tasks web coverage flake | pending |
-| CI-002 | Add test:run to infrastructure packages | pending |
+| CI-001 | Fix Tasks web coverage flake | done |
+| CI-002 | Add test:run to infrastructure packages | done |
+| CI-002-bug | Fix Tasks web TypeScript errors | pending |
 | CI-003 | Align CI workflow with AGENTS.md gates | pending |
 | DOC-001 | Restore docs/ or rewrite references | pending |
 | DOC-002 | Correct README current-state claims | pending |

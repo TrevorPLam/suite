@@ -6,6 +6,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest --run",
+    "test:run": "vitest run",
     "lint": "echo \"No lint configured yet\""
   },
   "devDependencies": {
