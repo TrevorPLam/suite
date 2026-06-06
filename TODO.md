@@ -595,7 +595,7 @@
 
 ## Task: T011 - Production Build Verification
 
-- [ ] **T011** [PENDING] Production Build Verification
+- [x] **T011** [DONE] Production Build Verification
 
 **Files:** `apps/*/api/`, `apps/*/web/`
 
@@ -615,22 +615,34 @@
 
 ### Subtasks
 
-- [ ] **T011.01 [AGENT]** Verify all API dry-runs
+- [x] **T011.01 [AGENT]** Verify all API dry-runs ✅
   - **Action:** Run `wrangler deploy --dry-run` for calendar, drive, tasks APIs.
   - **Validation:** All three exit code 0. No errors.
 
-- [ ] **T011.02 [AGENT]** Verify all web builds
+- [x] **T011.02 [AGENT]** Verify all web builds ✅
   - **Action:** Run `vite build` for calendar, drive, tasks web apps.
   - **Validation:** All three exit code 0. No "externalized" warnings.
 
-- [ ] **T011.03 [AGENT]** Run affected tests
+- [x] **T011.03 [AGENT]** Run affected tests ✅
   - **Action:** `pnpm ci:test` or `nx affected -t lint,typecheck,test,build`.
   - **Validation:** Exit code 0.
 
-- [ ] **T011.04 [AGENT]** Update CI workflow if needed
+- [x] **T011.04 [AGENT]** Update CI workflow if needed ✅
   - **File:** `.github/workflows/ci.yml`
   - **Action:** Ensure CI runs `wrangler deploy --dry-run` for all APIs and `vite build` for all web apps before deployment.
   - **Validation:** Visual review of workflow YAML.
+
+### Implementation Notes
+- All three API dry-runs pass (calendar, drive, tasks)
+- All three web builds pass with no externalized warnings (calendar, drive, tasks)
+- Fixed domain-tasks tests to use repository pattern (T009 regression) - 50/50 tests passing
+- Fixed domain-drive tests to use repository pattern (T009 regression) - 83/83 tests passing
+- All affected typecheck passes (6/6 projects)
+- All affected lint passes (6/6 projects)
+- Updated CI workflow to include:
+  - Affected lint check in PR checks
+  - API dry-run verification in both PR checks and main validation
+  - Web build verification in both PR checks and main validation
 
 ---
 

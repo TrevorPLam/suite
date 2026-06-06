@@ -40,6 +40,21 @@ jobs:
       - name: Run affected typecheck
         run: nx affected -t typecheck --base=main~1
 
+      - name: Run affected lint
+        run: nx affected -t lint --base=main~1
+
+      - name: Verify API dry-runs
+        run: |
+          cd apps/calendar/api && npx wrangler deploy --dry-run
+          cd ../drive/api && npx wrangler deploy --dry-run
+          cd ../tasks/api && npx wrangler deploy --dry-run
+
+      - name: Verify web builds
+        run: |
+          cd apps/calendar/web && npx vite build
+          cd ../drive/web && npx vite build
+          cd ../tasks/web && npx vite build
+
   # Main branch validation: Full test suite with coverage
   main-validation:
     if: github.event_name == 'push'
@@ -93,6 +108,21 @@ jobs:
         run: pnpm typecheck
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/suite
+
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Verify API dry-runs
+        run: |
+          cd apps/calendar/api && npx wrangler deploy --dry-run
+          cd ../drive/api && npx wrangler deploy --dry-run
+          cd ../tasks/api && npx wrangler deploy --dry-run
+
+      - name: Verify web builds
+        run: |
+          cd apps/calendar/web && npx vite build
+          cd ../drive/web && npx vite build
+          cd ../tasks/web && npx vite build
 
       - name: Run coverage
         run: pnpm test:coverage
