@@ -1527,10 +1527,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ## Phase 8 — UI modularization (deep modules at presentation layer)
 
-### [ ] UI-001 — Extract Drive upload dialog from App.tsx
+### [x] UI-001 — Extract Drive upload dialog from App.tsx
 
-**Status:** pending  
-**Depends on:** none  
+**Status:** done
+**Depends on:** none
 **Blocks:** UI-002
 
 #### Related paths
@@ -1570,8 +1570,19 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| UI-001-a | `apps/drive/web/src/features/UploadDialog.tsx` | Create component with props: `open`, `onClose`, `onSubmit`, `folders`. Move JSX from App. | `pnpm --filter @suite/drive-web typecheck` |
-| UI-001-b | `apps/drive/web/src/App.tsx` | Replace inline dialog with `<UploadDialog />`. | `pnpm --filter @suite/drive-web test:run -- src/App.test.tsx` |
+| UI-001-a | `apps/drive/web/src/features/UploadDialog.tsx` | Create component with props: `open`, `onClose`, `onSubmit`, `folders`. Move JSX from App. | `pnpm --filter @suite/drive-web typecheck` ✅ |
+| UI-001-b | `apps/drive/web/src/App.tsx` | Replace inline dialog with `<UploadDialog />`. | `pnpm --filter @suite/drive-web test:run -- src/App.test.tsx` ✅ |
+
+#### Implementation notes
+
+- Created `apps/drive/web/src/features/UploadDialog.tsx` with dialog component managing its own form state (name, size, mimeType)
+- Replaced inline upload form in App.tsx with "Upload file" button that opens the dialog
+- Removed form state (name, size, mimeType) from App.tsx; added uploadDialogOpen state
+- Updated handleUploadSubmit to accept data from dialog instead of using local state
+- Dialog closes automatically on successful upload
+- Updated tests to click "Upload file" button first, then interact with form elements within dialog context using `within(dialog)`
+- App.tsx reduced by ~78 lines (form JSX removed, simplified state management)
+- All 5 drive-web tests pass, typecheck passes
 
 ---
 
@@ -1667,7 +1678,7 @@ UI-001 → UI-002
 | CRYPTO-003 | Drive domain encryption | done |
 | LINT-001 | Add ESLint | done |
 | API-001 | Zod schemas for Tasks API | done |
-| UI-001 | Extract Drive upload dialog | pending |
+| UI-001 | Extract Drive upload dialog | done |
 | UI-002 | Extract Drive rename/delete dialogs | pending |
 
 ## Discovered Issues

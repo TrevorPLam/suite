@@ -3,11 +3,9 @@ import { Button } from '@suite/ui';
 import { type DriveFile, type DriveFolder } from '@suite/domain-drive';
 import { DriveFileList } from './features/DriveFileList';
 import { FolderTree } from './features/FolderTree';
+import { UploadDialog } from './features/UploadDialog';
 
 export function App() {
-  const [name, setName] = useState('Design brief.pdf');
-  const [size, setSize] = useState('1024');
-  const [mimeType, setMimeType] = useState('application/pdf');
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [folders, setFolders] = useState<DriveFolder[]>([]);
   const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
@@ -17,6 +15,7 @@ export function App() {
   const [filesErrorDetails, setFilesErrorDetails] = useState<string[]>([]);
   const [foldersError, setFoldersError] = useState('');
   const [status, setStatus] = useState('');
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [uploadErrorDetails, setUploadErrorDetails] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -224,20 +223,19 @@ export function App() {
     return () => clearTimeout(timer);
   }, [searchQuery, currentFolderId, extractErrorMessage]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleUploadSubmit(data: { name: string; size: number; mimeType?: string; folderId?: string }) {
     setUploadError('');
     setUploadErrorDetails([]);
     setStatus('');
     setSubmitting(true);
 
     try {
-      const body: Record<string, unknown> = { name, size: Number(size) };
-      if (mimeType.trim()) {
-        body.mimeType = mimeType.trim();
+      const body: Record<string, unknown> = { name: data.name, size: data.size };
+      if (data.mimeType) {
+        body.mimeType = data.mimeType;
       }
-      if (currentFolderId) {
-        body.folderId = currentFolderId;
+      if (data.folderId) {
+        body.folderId = data.folderId;
       }
 
       const response = await fetch('/api/files', {
@@ -277,9 +275,7 @@ export function App() {
           };
 
           setFiles((currentFiles) => [savedFile, ...currentFiles.filter((file) => file.id !== savedFile.id)]);
-          setName('');
-          setSize('0');
-          setMimeType('');
+          setUploadDialogOpen(false);
           setStatus(`Uploaded ${savedFile.name}`);
           return;
         }
@@ -637,92 +633,18 @@ export function App() {
               error={foldersError}
             />
 
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16, marginTop: 24 }}>
-              <label style={{ display: 'grid', gap: 8 }}>
-                <span>Name</span>
-                <input
-                  value={name}
-                  onChange={(inputEvent) => setName(inputEvent.target.value)}
-                  aria-label="File name"
-                  style={{
-                    borderRadius: 12,
-                    border: '1px solid rgba(255, 255, 255, 0.14)',
-                    background: '#0a0a0a',
-                    color: 'inherit',
-                    padding: '12px 14px',
-                  }}
-                />
-              </label>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 24 }}>
+              <Button type="button" onClick={() => setUploadDialogOpen(true)}>
+                Upload file
+              </Button>
 
-              <label style={{ display: 'grid', gap: 8 }}>
-                <span>Size</span>
-                <input
-                  inputMode="numeric"
-                  value={size}
-                  onChange={(inputEvent) => setSize(inputEvent.target.value)}
-                  aria-label="File size in bytes"
-                  style={{
-                    borderRadius: 12,
-                    border: '1px solid rgba(255, 255, 255, 0.14)',
-                    background: '#0a0a0a',
-                    color: 'inherit',
-                    padding: '12px 14px',
-                  }}
-                />
-              </label>
-
-              <label style={{ display: 'grid', gap: 8 }}>
-                <span>MIME Type (optional)</span>
-                <input
-                  value={mimeType}
-                  onChange={(inputEvent) => setMimeType(inputEvent.target.value)}
-                  aria-label="File MIME type"
-                  placeholder="application/pdf"
-                  style={{
-                    borderRadius: 12,
-                    border: '1px solid rgba(255, 255, 255, 0.14)',
-                    background: '#0a0a0a',
-                    color: 'inherit',
-                    padding: '12px 14px',
-                  }}
-                />
-              </label>
-
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? 'Uploading…' : 'Upload file'}
-                </Button>
-
-                <Button type="button" onClick={loadFiles} className="bg-white/10 text-white">
-                  Reload files
-                </Button>
-              </div>
-            </form>
+              <Button type="button" onClick={loadFiles} className="bg-white/10 text-white">
+                Reload files
+              </Button>
+            </div>
 
             <div aria-live="polite" style={{ marginTop: 20, display: 'grid', gap: 12 }}>
               {status ? <p style={{ margin: 0, color: '#86efac' }}>{status}</p> : null}
-
-              {uploadError ? (
-                <div
-                  role="alert"
-                  style={{
-                    borderRadius: 12,
-                    border: '1px solid rgba(248, 113, 113, 0.35)',
-                    background: 'rgba(127, 29, 29, 0.3)',
-                    padding: 16,
-                    color: '#fecaca',
-                  }}
-                >
-                  <p style={{ margin: 0, fontWeight: 600 }}>{uploadError}</p>
-                  {uploadErrorDetails.length > 0 ? (
-                    <ul style={{ margin: '8px 0 0', paddingInlineStart: 20 }}>
-                      {uploadErrorDetails.map((detail) => (
-                        <li key={detail}>{detail}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
           </article>
 
@@ -1184,6 +1106,17 @@ export function App() {
             </article>
           </div>
         )}
+
+        <UploadDialog
+          open={uploadDialogOpen}
+          onClose={() => setUploadDialogOpen(false)}
+          onSubmit={handleUploadSubmit}
+          folders={folders}
+          currentFolderId={currentFolderId}
+          submitting={submitting}
+          uploadError={uploadError}
+          uploadErrorDetails={uploadErrorDetails}
+        />
       </div>
     </main>
   );

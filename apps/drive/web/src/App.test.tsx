@@ -62,15 +62,19 @@ describe('Drive App', () => {
 
     await waitFor(() => screen.getByText('No files yet'));
 
-    const nameInput = screen.getByLabelText('File name');
+    const uploadButton = screen.getByRole('button', { name: /upload file/i });
+    await user.click(uploadButton);
+
+    const dialog = await screen.findByRole('dialog');
+    const nameInput = within(dialog).getByLabelText('File name');
     await user.clear(nameInput);
     await user.type(nameInput, 'Design brief.pdf');
 
-    const sizeInput = screen.getByLabelText('File size in bytes');
+    const sizeInput = within(dialog).getByLabelText('File size in bytes');
     await user.clear(sizeInput);
     await user.type(sizeInput, '2048');
 
-    const submitButton = screen.getByRole('button', { name: /upload file/i });
+    const submitButton = within(dialog).getByRole('button', { name: /upload file/i });
     await user.click(submitButton);
 
     await waitFor(() => {
@@ -167,10 +171,14 @@ describe('Drive App', () => {
 
     await waitFor(() => screen.getByText('No files yet'));
 
-    const nameInput = screen.getByLabelText('File name');
+    const uploadButton = screen.getByRole('button', { name: /upload file/i });
+    await user.click(uploadButton);
+
+    const dialog = await screen.findByRole('dialog');
+    const nameInput = within(dialog).getByLabelText('File name');
     await user.clear(nameInput);
 
-    const submitButton = screen.getByRole('button', { name: /upload file/i });
+    const submitButton = within(dialog).getByRole('button', { name: /upload file/i });
     await user.click(submitButton);
 
     await waitFor(() => {
