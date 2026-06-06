@@ -4,6 +4,7 @@ import { organization, twoFactor } from 'better-auth/plugins';
 import { dash } from '@better-auth/infra';
 import { users, sessions, accounts } from '@suite/db';
 import { validateAuthEnv } from './env.js';
+import { logAuthEvent, createAuthEvent } from './audit-log.js';
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
@@ -27,6 +28,14 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
   // Validate environment variables
   const validatedEnv = validateAuthEnv(env || process.env);
 
+  // Type alias for Better Auth hook context
+  type HookContext = {
+    context?: {
+      user?: { id?: string; email?: string };
+      request?: { headers: { get(name: string): string | null } };
+    };
+  };
+
   const auth = betterAuth({
     appName: 'Suite',
     secret: validatedEnv.BETTER_AUTH_SECRET,
@@ -42,7 +51,15 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false,
-      onError: (_error) => {
+      onError: (error: unknown) => {
+        // Log failed authentication attempt
+        const err = error as { email?: string; ip?: string; userAgent?: string };
+        const context: Parameters<typeof createAuthEvent>[1] = {};
+        if (err.email !== undefined) context.email = err.email;
+        if (err.ip !== undefined) context.ip = err.ip;
+        if (err.userAgent !== undefined) context.userAgent = err.userAgent;
+        logAuthEvent(createAuthEvent('failed_attempt', context));
+        
         // Account enumeration protection: always return generic error message
         // This prevents attackers from determining if an email exists
         throw new Error('Invalid email or password');
@@ -84,6 +101,73 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
         ipAddressHeaders: ['cf-connecting-ip'],
       },
       trustedProxyHeaders: true,
+      hooks: {
+        after: [
+          {
+            matcher(context: { path: string }) {
+              return context.path === '/sign-in/email';
+            },
+            handler: async (ctx: HookContext) => {
+              // Log successful sign-in
+              const user = ctx.context?.user;
+              const request = ctx.context?.request;
+              const ip = request?.headers.get('cf-connecting-ip') || undefined;
+              const userAgent = request?.headers.get('user-agent') || undefined;
+              
+              if (user) {
+                const context: Parameters<typeof createAuthEvent>[1] = {};
+                if (user.id) context.userId = user.id;
+                if (user.email) context.email = user.email;
+                if (ip) context.ip = ip;
+                if (userAgent) context.userAgent = userAgent;
+                logAuthEvent(createAuthEvent('sign_in', context));
+              }
+            },
+          },
+          {
+            matcher(context: { path: string }) {
+              return context.path === '/sign-up/email';
+            },
+            handler: async (ctx: HookContext) => {
+              // Log successful sign-up
+              const user = ctx.context?.user;
+              const request = ctx.context?.request;
+              const ip = request?.headers.get('cf-connecting-ip') || undefined;
+              const userAgent = request?.headers.get('user-agent') || undefined;
+              
+              if (user) {
+                const context: Parameters<typeof createAuthEvent>[1] = {};
+                if (user.id) context.userId = user.id;
+                if (user.email) context.email = user.email;
+                if (ip) context.ip = ip;
+                if (userAgent) context.userAgent = userAgent;
+                logAuthEvent(createAuthEvent('sign_up', context));
+              }
+            },
+          },
+          {
+            matcher(context: { path: string }) {
+              return context.path === '/sign-out';
+            },
+            handler: async (ctx: HookContext) => {
+              // Log sign-out
+              const user = ctx.context?.user;
+              const request = ctx.context?.request;
+              const ip = request?.headers.get('cf-connecting-ip') || undefined;
+              const userAgent = request?.headers.get('user-agent') || undefined;
+              
+              if (user) {
+                const context: Parameters<typeof createAuthEvent>[1] = {};
+                if (user.id) context.userId = user.id;
+                if (user.email) context.email = user.email;
+                if (ip) context.ip = ip;
+                if (userAgent) context.userAgent = userAgent;
+                logAuthEvent(createAuthEvent('sign_out', context));
+              }
+            },
+          },
+        ],
+      },
       ...(env?.AUTH_KV ? (() => {
         const kv = env.AUTH_KV;
         return {
@@ -116,6 +200,8 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
             },
           },
           rateLimit: {
+            window: validatedEnv.RATE_LIMIT_WINDOW,
+            max: validatedEnv.RATE_LIMIT_MAX,
             customStorage: {
               get: async (key: string) => {
                 try {
@@ -125,11 +211,11 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
                   return null;
                 }
               },
-              set: async (key: string, value: unknown, _ttl: number) => {
+              set: async (key: string, value: unknown, ttl: number) => {
                 try {
-                  // Rate limit uses hardcoded 60-second TTL
+                  // Use the TTL from rate limit configuration
                   await kv.put(key, JSON.stringify(value), {
-                    expirationTtl: 60,
+                    expirationTtl: ttl,
                   });
                 } catch {
                   // Silently fail if KV is unavailable

@@ -40,6 +40,9 @@ export { validatePasswordStrength } from './password-policy.js';
 // Breached credential checking
 export { checkBreachedCredentials } from './breached-credentials.js';
 
+// Session revocation utilities
+export { revokeSession, revokeAllSessions } from './session-revocation.js';
+
 // Organization client is already configured with organizationClient plugin
 // Applications can use authClient.organization.createOrganization, etc.
 
