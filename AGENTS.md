@@ -35,6 +35,8 @@ This repository is a greenfield monorepo for a productivity suite. The initial f
 
 11. **Never use === to compare secrets, tokens, or HMAC outputs.** Always use `constantTimeEqual()` from `@suite/crypto`. CVE-class timing attacks against HMAC token comparisons are a real exploit path. Every secret comparison in Worker auth handlers must use `crypto.subtle.timingSafeEqual`.
 
+**Verification Status (DEP-003):** Better Auth has implemented constant-time secret comparison in some plugins (oidc-provider, mcp) as of recent releases, but core session token verification timing-safety is not explicitly documented. As a safety measure, `constantTimeEqual()` and `constantTimeEqualSync()` are implemented in `@suite/crypto` for use in custom auth handlers and API middleware. The async version uses `crypto.subtle.timingSafeEqual` when available (Cloudflare Workers, modern browsers), with a sync fallback for other environments.
+
 ## Commands
 - `pnpm install`
 - `pnpm dev`

@@ -16,3 +16,6 @@ export { serializeKey, deserializeKey, serializeKeyRaw, deserializeKeyRaw } from
 
 // Blind indexing for encrypted search
 export { generateBlindIndex, deriveIndexKey } from './blind-index.js';
+
+// Constant-time comparison for timing attack prevention
+export { constantTimeEqual, constantTimeEqualSync } from './constant-time.js';

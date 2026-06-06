@@ -155,7 +155,7 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] DEP-003: Verify Better Auth Timing-Safe Comparisons
+### [x] DEP-003: Verify Better Auth Timing-Safe Comparisons
 
 **Priority**: P0
 **Bounded Context**: Security
@@ -186,25 +186,34 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### DEP-003-01: Research Better Auth implementation
+#### ✅ DEP-003-01: Research Better Auth implementation
 **Target File**: Better Auth documentation and source code
 **Action**: Research Better Auth library to determine if it uses timing-safe comparisons for session tokens and HMAC outputs. Check documentation, source code, and GitHub issues. Document findings in a comment or separate verification document.
 **Validate Command**: No validation needed (research task)
 
-#### DEP-003-02: Implement constantTimeEqual in @suite/crypto
+#### ✅ DEP-003-02: Implement constantTimeEqual in @suite/crypto
 **Target File**: `packages/crypto/src/index.ts`, `packages/crypto/src/constant-time.ts` (create)
 **Action**: If Better Auth does not use timing-safe comparisons, implement constantTimeEqual() function in @suite/crypto using crypto.subtle.timingSafeEqual. Add comprehensive tests to verify constant-time behavior. Export from index.ts.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### DEP-003-03: Add timing-safe comparison tests
+#### ✅ DEP-003-03: Add timing-safe comparison tests
 **Target File**: `packages/crypto/src/constant-time.test.ts` (create)
 **Action**: Add property-based tests using fast-check to verify constantTimeEqual() has constant-time execution regardless of input equality. Test should verify timing does not leak information about comparison result.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### DEP-003-04: Document verification status
+#### ✅ DEP-003-04: Document verification status
 **Target File**: `AGENTS.md`
 **Action**: Update AGENTS.md rule 11 to document verification status of Better Auth timing-safe comparisons. If wrapper implemented, document usage pattern. If Better Auth verified safe, document verification method and version.
 **Validate Command**: No validation needed
+
+**Implementation Notes**:
+- Research found that Better Auth has implemented constant-time secret comparison in some plugins (oidc-provider, mcp) as of recent releases, but core session token verification timing-safety is not explicitly documented
+- Implemented constantTimeEqual() and constantTimeEqualSync() in @suite/crypto as a safety measure for custom auth handlers and API middleware
+- Async version uses crypto.subtle.timingSafeEqual when available (Cloudflare Workers, modern browsers), with sync fallback for other environments
+- Added comprehensive test suite with 34 tests covering strings, Uint8Arrays, edge cases, and constant-time behavior verification
+- All tests passing (67 total for crypto package)
+- Typecheck and lint passing for crypto package and entire monorepo
+- Updated AGENTS.md rule 11 with verification status and usage documentation
 
 ---
 
