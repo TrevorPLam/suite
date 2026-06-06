@@ -1,8 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Button } from '@suite/ui';
+import { Button, Input, Skeleton } from '@suite/ui';
 import { TaskRow } from './components/TaskRow';
 import { EmptyState } from './components/EmptyState';
-import { Skeleton } from './components/Skeleton';
 import { useAuth } from './auth-provider';
 
 type TaskItem = {
@@ -605,6 +604,8 @@ export function App() {
   if (authLoading) {
     return (
       <main
+        role="main"
+        aria-label="Tasks loading"
         style={{
           minHeight: '100%',
           background: '#050507',
@@ -624,6 +625,8 @@ export function App() {
   if (!user) {
     return (
       <main
+        role="main"
+        aria-label="Tasks sign in"
         style={{
           minHeight: '100%',
           background: '#050507',
@@ -643,34 +646,22 @@ export function App() {
           <form onSubmit={handleSignIn} style={{ display: 'grid', gap: 16 }}>
             <label style={{ display: 'grid', gap: 8 }}>
               <span>Email</span>
-              <input
+              <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                aria-label="Email address"
                 required
-                style={{
-                  borderRadius: 12,
-                  border: '1px solid rgba(255, 255, 255, 0.14)',
-                  background: '#0a0a0a',
-                  color: 'inherit',
-                  padding: '12px 14px',
-                }}
               />
             </label>
             <label style={{ display: 'grid', gap: 8 }}>
               <span>Password</span>
-              <input
+              <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                aria-label="Password"
                 required
-                style={{
-                  borderRadius: 12,
-                  border: '1px solid rgba(255, 255, 255, 0.14)',
-                  background: '#0a0a0a',
-                  color: 'inherit',
-                  padding: '12px 14px',
-                }}
               />
             </label>
             <Button type="submit">Sign in</Button>
@@ -695,10 +686,10 @@ export function App() {
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: 'system-ui, sans-serif', maxWidth: 960 }}>
+    <main role="main" aria-label="Tasks" style={{ padding: 24, fontFamily: 'system-ui, sans-serif', maxWidth: 960 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ margin: 0 }}>Tasks</h1>
-        <Button type="button" onClick={handleSignOut} className="bg-white/10 text-white">
+        <Button type="button" onClick={handleSignOut} className="bg-white/10 text-white" aria-label="Sign out">
           Sign out
         </Button>
       </div>
@@ -711,15 +702,16 @@ export function App() {
           <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12 }}>
             <label style={{ display: 'grid', gap: 6 }}>
               <span>Title</span>
-              <input value={title} onChange={(event) => setTitle(event.target.value)} />
+              <Input value={title} onChange={(event) => setTitle(event.target.value)} aria-label="Task title" />
             </label>
 
             <label style={{ display: 'grid', gap: 6 }}>
               <span>Due Date</span>
-              <input 
+              <Input 
                 type="datetime-local" 
                 value={dueDate} 
                 onChange={(event) => setDueDate(event.target.value)} 
+                aria-label="Task due date"
               />
             </label>
 
@@ -728,6 +720,7 @@ export function App() {
               <select 
                 value={priority} 
                 onChange={(event) => setPriority(event.target.value as 'low' | 'medium' | 'high')}
+                aria-label="Task priority"
                 style={{ padding: 8, borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.2)', background: 'rgba(0, 0, 0, 0.3)', color: 'white' }}
               >
                 <option value="low">Low</option>
@@ -739,13 +732,13 @@ export function App() {
             <label style={{ display: 'grid', gap: 6 }}>
               <span>Tags</span>
               <div style={{ display: 'flex', gap: 8 }}>
-                <input 
+                <Input 
                   value={tagInput} 
                   onChange={(event) => setTagInput(event.target.value)} 
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                   placeholder="Type and press Enter to add tag"
                 />
-                <Button type="button" onClick={addTag} disabled={submitting} className="bg-white/10 text-white">
+                <Button type="button" onClick={addTag} disabled={submitting} className="bg-white/10 text-white" aria-label="Add tag">
                   Add
                 </Button>
               </div>
@@ -769,6 +762,7 @@ export function App() {
                       <button
                         type="button"
                         onClick={() => removeTag(tag)}
+                        aria-label={`Remove tag ${tag}`}
                         style={{
                           background: 'none',
                           border: 'none',
@@ -787,7 +781,7 @@ export function App() {
             </label>
 
             <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input checked={completed} onChange={(event) => setCompleted(event.target.checked)} type="checkbox" />
+              <input checked={completed} onChange={(event) => setCompleted(event.target.checked)} type="checkbox" aria-label="Mark task as completed" />
               <span>Completed</span>
             </label>
 
@@ -826,17 +820,18 @@ export function App() {
         <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <h2 style={{ margin: 0 }}>Saved tasks</h2>
-            <Button type="button" onClick={() => void loadTasks()} className="bg-white/10 text-white">
+            <Button type="button" onClick={() => void loadTasks()} className="bg-white/10 text-white" aria-label="Reload tasks">
               Reload
             </Button>
           </div>
 
           <div style={{ marginTop: 16, display: 'grid', gap: 12 }}>
-            <input
+            <Input
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search tasks by title..."
+              aria-label="Search tasks"
               style={{
                 padding: 8,
                 borderRadius: 8,
@@ -853,6 +848,7 @@ export function App() {
                   type="button"
                   onClick={() => setFilter(filterOption)}
                   disabled={submitting}
+                  aria-label={`Filter tasks by ${filterOption}`}
                   style={{
                     padding: '6px 12px',
                     borderRadius: 8,
@@ -872,13 +868,13 @@ export function App() {
             {selectedTaskIds.size > 0 && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: 12, borderRadius: 8, background: 'rgba(59, 130, 246, 0.1)' }}>
                 <span style={{ color: 'white', fontSize: 14 }}>{selectedTaskIds.size} selected</span>
-                <Button type="button" onClick={batchComplete} disabled={submitting} className="bg-green-500/20 text-green-300">
+                <Button type="button" onClick={batchComplete} disabled={submitting} className="bg-green-500/20 text-green-300" aria-label="Complete all selected tasks">
                   Complete All
                 </Button>
-                <Button type="button" onClick={batchArchive} disabled={submitting} className="bg-white/10 text-white">
+                <Button type="button" onClick={batchArchive} disabled={submitting} className="bg-white/10 text-white" aria-label="Archive all selected tasks">
                   Archive All
                 </Button>
-                <Button type="button" onClick={clearSelection} disabled={submitting} className="bg-white/10 text-white">
+                <Button type="button" onClick={clearSelection} disabled={submitting} className="bg-white/10 text-white" aria-label="Clear selection">
                   Clear Selection
                 </Button>
               </div>
@@ -901,13 +897,13 @@ export function App() {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
-                      <Skeleton height={20} width={20} variant="circular" />
+                      <Skeleton height="20px" width="20px" variant="circular" />
                       <div style={{ flex: 1, display: 'grid', gap: 8 }}>
-                        <Skeleton height={20} width="70%" />
+                        <Skeleton height="20px" width="70%" />
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <Skeleton height={14} width={60} />
-                          <Skeleton height={14} width={40} />
-                          <Skeleton height={14} width={50} />
+                          <Skeleton height="14px" width="60px" />
+                          <Skeleton height="14px" width="40px" />
+                          <Skeleton height="14px" width="50px" />
                         </div>
                       </div>
                     </div>

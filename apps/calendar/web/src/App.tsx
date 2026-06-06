@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Button } from '@suite/ui';
+import { Button, Input } from '@suite/ui';
 import { CalendarBrowsePanel } from './features/CalendarBrowsePanel';
 import {
   getTodayDateInputValue,
@@ -310,6 +310,8 @@ export function App() {
   if (authLoading) {
     return (
       <main
+        role="main"
+        aria-label="Calendar loading"
         style={{
           minHeight: '100%',
           background: '#050507',
@@ -329,6 +331,8 @@ export function App() {
   if (!user) {
     return (
       <main
+        role="main"
+        aria-label="Calendar sign in"
         style={{
           minHeight: '100%',
           background: '#050507',
@@ -348,34 +352,22 @@ export function App() {
           <form onSubmit={handleSignIn} style={{ display: 'grid', gap: 16 }}>
             <label style={{ display: 'grid', gap: 8 }}>
               <span>Email</span>
-              <input
+              <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                aria-label="Email address"
                 required
-                style={{
-                  borderRadius: 12,
-                  border: '1px solid rgba(255, 255, 255, 0.14)',
-                  background: '#0a0a0a',
-                  color: 'inherit',
-                  padding: '12px 14px',
-                }}
               />
             </label>
             <label style={{ display: 'grid', gap: 8 }}>
               <span>Password</span>
-              <input
+              <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                aria-label="Password"
                 required
-                style={{
-                  borderRadius: 12,
-                  border: '1px solid rgba(255, 255, 255, 0.14)',
-                  background: '#0a0a0a',
-                  color: 'inherit',
-                  padding: '12px 14px',
-                }}
               />
             </label>
             <Button type="submit">Sign in</Button>
@@ -401,6 +393,8 @@ export function App() {
 
   return (
     <main
+      role="main"
+      aria-label="Calendar"
       style={{
         minHeight: '100%',
         background: '#050507',
@@ -415,7 +409,7 @@ export function App() {
             <p style={{ margin: 0, color: '#7dd3fc', textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: 12 }}>
               Calendar
             </p>
-            <Button type="button" onClick={handleSignOut} className="bg-white/10 text-white">
+            <Button type="button" onClick={handleSignOut} className="bg-white/10 text-white" aria-label="Sign out">
               Sign out
             </Button>
           </div>
@@ -448,7 +442,7 @@ export function App() {
               </div>
 
               {editingEventId ? (
-                <Button type="button" onClick={cancelEditing} className="bg-white/10 text-white">
+                <Button type="button" onClick={cancelEditing} className="bg-white/10 text-white" aria-label="Cancel editing event">
                   Cancel edit
                 </Button>
               ) : null}
@@ -457,49 +451,28 @@ export function App() {
             <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16, marginTop: 24 }}>
               <label style={{ display: 'grid', gap: 8 }}>
                 <span>Title</span>
-                <input
+                <Input
                   value={title}
                   onChange={(inputEvent) => setTitle(inputEvent.target.value)}
                   aria-label="Event title"
-                  style={{
-                    borderRadius: 12,
-                    border: '1px solid rgba(255, 255, 255, 0.14)',
-                    background: '#0a0a0a',
-                    color: 'inherit',
-                    padding: '12px 14px',
-                  }}
                 />
               </label>
 
               <label style={{ display: 'grid', gap: 8 }}>
                 <span>Start</span>
-                <input
+                <Input
                   value={startAt}
                   onChange={(inputEvent) => setStartAt(inputEvent.target.value)}
                   aria-label="Event start time"
-                  style={{
-                    borderRadius: 12,
-                    border: '1px solid rgba(255, 255, 255, 0.14)',
-                    background: '#0a0a0a',
-                    color: 'inherit',
-                    padding: '12px 14px',
-                  }}
                 />
               </label>
 
               <label style={{ display: 'grid', gap: 8 }}>
                 <span>End</span>
-                <input
+                <Input
                   value={endAt}
                   onChange={(inputEvent) => setEndAt(inputEvent.target.value)}
                   aria-label="Event end time"
-                  style={{
-                    borderRadius: 12,
-                    border: '1px solid rgba(255, 255, 255, 0.14)',
-                    background: '#0a0a0a',
-                    color: 'inherit',
-                    padding: '12px 14px',
-                  }}
                 />
               </label>
 
@@ -508,7 +481,7 @@ export function App() {
                   {submitting ? 'Saving…' : editingEventId ? 'Update event' : 'Create event'}
                 </Button>
 
-                <Button type="button" onClick={loadEvents} className="bg-white/10 text-white">
+                <Button type="button" onClick={loadEvents} className="bg-white/10 text-white" aria-label="Reload events">
                   Reload events
                 </Button>
               </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent } from 'react';
-import { Button } from '@suite/ui';
+import { Button, Input } from '@suite/ui';
 import { type DriveFile } from '@suite/domain-drive';
 
 interface RenameDialogProps {
@@ -112,18 +112,11 @@ export function RenameDialog({
         <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16, marginTop: 24 }}>
           <label style={{ display: 'grid', gap: 8 }}>
             <span>New name</span>
-            <input
+            <Input
               value={renameName}
               onChange={(inputEvent) => setRenameName(inputEvent.target.value)}
               aria-label="New file name"
               autoFocus
-              style={{
-                borderRadius: 12,
-                border: '1px solid rgba(255, 255, 255, 0.14)',
-                background: '#0a0a0a',
-                color: 'inherit',
-                padding: '12px 14px',
-              }}
             />
           </label>
 

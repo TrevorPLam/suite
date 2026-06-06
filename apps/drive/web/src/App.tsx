@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Button } from '@suite/ui';
+import { Button, Input } from '@suite/ui';
 import { type DriveFile, type DriveFolder } from '@suite/domain-drive';
 import { DriveFileList } from './features/DriveFileList';
 import { FolderTree } from './features/FolderTree';
@@ -639,6 +639,8 @@ export function App() {
   if (authLoading) {
     return (
       <main
+        role="main"
+        aria-label="Drive loading"
         style={{
           minHeight: '100%',
           background: '#050507',
@@ -658,6 +660,8 @@ export function App() {
   if (!user) {
     return (
       <main
+        role="main"
+        aria-label="Drive sign in"
         style={{
           minHeight: '100%',
           background: '#050507',
@@ -677,34 +681,22 @@ export function App() {
           <form onSubmit={handleSignIn} style={{ display: 'grid', gap: 16 }}>
             <label style={{ display: 'grid', gap: 8 }}>
               <span>Email</span>
-              <input
+              <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                aria-label="Email address"
                 required
-                style={{
-                  borderRadius: 12,
-                  border: '1px solid rgba(255, 255, 255, 0.14)',
-                  background: '#0a0a0a',
-                  color: 'inherit',
-                  padding: '12px 14px',
-                }}
               />
             </label>
             <label style={{ display: 'grid', gap: 8 }}>
               <span>Password</span>
-              <input
+              <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                aria-label="Password"
                 required
-                style={{
-                  borderRadius: 12,
-                  border: '1px solid rgba(255, 255, 255, 0.14)',
-                  background: '#0a0a0a',
-                  color: 'inherit',
-                  padding: '12px 14px',
-                }}
               />
             </label>
             <Button type="submit">Sign in</Button>
@@ -730,6 +722,8 @@ export function App() {
 
   return (
     <main
+      role="main"
+      aria-label="Drive"
       style={{
         minHeight: '100%',
         background: '#050507',
@@ -744,7 +738,7 @@ export function App() {
             <p style={{ margin: 0, color: '#7dd3fc', textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: 12 }}>
               Drive
             </p>
-            <Button type="button" onClick={handleSignOut} className="bg-white/10 text-white">
+            <Button type="button" onClick={handleSignOut} className="bg-white/10 text-white" aria-label="Sign out">
               Sign out
             </Button>
           </div>
@@ -784,11 +778,11 @@ export function App() {
             />
 
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 24 }}>
-              <Button type="button" onClick={() => setUploadDialogOpen(true)}>
+              <Button type="button" onClick={() => setUploadDialogOpen(true)} aria-label="Upload file">
                 Upload file
               </Button>
 
-              <Button type="button" onClick={loadFiles} className="bg-white/10 text-white">
+              <Button type="button" onClick={loadFiles} className="bg-white/10 text-white" aria-label="Reload files">
                 Reload files
               </Button>
             </div>
@@ -808,21 +802,17 @@ export function App() {
               </div>
 
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input
+                <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search files..."
                   aria-label="Search files"
                   style={{
-                    borderRadius: 12,
-                    border: '1px solid rgba(255, 255, 255, 0.14)',
-                    background: '#0a0a0a',
-                    color: 'inherit',
                     padding: '8px 12px',
                     fontSize: 14,
                   }}
                 />
-                <Button type="button" onClick={loadFiles} className="bg-white/10 text-white" style={{ fontSize: 14, padding: '8px 12px' }}>
+                <Button type="button" onClick={loadFiles} className="bg-white/10 text-white" style={{ fontSize: 14, padding: '8px 12px' }} aria-label="Refresh files">
                   Refresh
                 </Button>
               </div>
@@ -835,6 +825,7 @@ export function App() {
                   onClick={() => handleFolderClick(undefined)}
                   className="bg-white/10 text-white"
                   style={{ fontSize: 14, padding: '6px 10px' }}
+                  aria-label="Navigate to root folder"
                 >
                   Root
                 </Button>
@@ -847,6 +838,7 @@ export function App() {
                       onClick={() => handleFolderClick(folder.id)}
                       className={index === getBreadcrumbPath().length - 1 ? 'bg-white/20 text-white' : 'bg-white/10 text-white'}
                       style={{ fontSize: 14, padding: '6px 10px' }}
+                      aria-label={`Navigate to folder ${folder.name}`}
                     >
                       {folder.name}
                     </Button>
@@ -928,10 +920,11 @@ export function App() {
                     type="button"
                     onClick={() => { setCreatingFolder(false); setNewFolderName(''); setFolderError(''); }}
                     className="bg-white/10 text-white"
+                    aria-label="Cancel creating folder"
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={creatingFolder}>
+                  <Button type="submit" disabled={creatingFolder} aria-label="Create folder">
                     {creatingFolder ? 'Creating…' : 'Create'}
                   </Button>
                 </div>
@@ -1011,10 +1004,11 @@ export function App() {
                     type="button"
                     onClick={() => setRenamingFolder(null)}
                     className="bg-white/10 text-white"
+                    aria-label="Cancel renaming folder"
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={renamingFolderState}>
+                  <Button type="submit" disabled={renamingFolderState} aria-label="Rename folder">
                     {renamingFolderState ? 'Renaming…' : 'Rename'}
                   </Button>
                 </div>
@@ -1076,6 +1070,7 @@ export function App() {
                   type="button"
                   onClick={() => setDeletingFolder(null)}
                   className="bg-white/10 text-white"
+                  aria-label="Cancel deleting folder"
                 >
                   Cancel
                 </Button>
@@ -1083,6 +1078,7 @@ export function App() {
                   type="button"
                   onClick={() => handleDeleteFolder(deletingFolder)}
                   className="bg-red-500/20 text-red-300"
+                  aria-label="Delete folder"
                 >
                   Delete
                 </Button>

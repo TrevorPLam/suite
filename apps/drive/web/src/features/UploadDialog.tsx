@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent } from 'react';
-import { Button } from '@suite/ui';
+import { Button, Input } from '@suite/ui';
 import { type DriveFolder } from '@suite/domain-drive';
 
 interface UploadDialogProps {
@@ -125,52 +125,31 @@ export function UploadDialog({
         <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16, marginTop: 24 }}>
           <label style={{ display: 'grid', gap: 8 }}>
             <span>Name</span>
-            <input
+            <Input
               value={name}
               onChange={(inputEvent) => setName(inputEvent.target.value)}
               aria-label="File name"
               autoFocus
-              style={{
-                borderRadius: 12,
-                border: '1px solid rgba(255, 255, 255, 0.14)',
-                background: '#0a0a0a',
-                color: 'inherit',
-                padding: '12px 14px',
-              }}
             />
           </label>
 
           <label style={{ display: 'grid', gap: 8 }}>
             <span>Size</span>
-            <input
+            <Input
               inputMode="numeric"
               value={size}
               onChange={(inputEvent) => setSize(inputEvent.target.value)}
               aria-label="File size in bytes"
-              style={{
-                borderRadius: 12,
-                border: '1px solid rgba(255, 255, 255, 0.14)',
-                background: '#0a0a0a',
-                color: 'inherit',
-                padding: '12px 14px',
-              }}
             />
           </label>
 
           <label style={{ display: 'grid', gap: 8 }}>
             <span>MIME Type (optional)</span>
-            <input
+            <Input
               value={mimeType}
               onChange={(inputEvent) => setMimeType(inputEvent.target.value)}
               aria-label="File MIME type"
               placeholder="application/pdf"
-              style={{
-                borderRadius: 12,
-                border: '1px solid rgba(255, 255, 255, 0.14)',
-                background: '#0a0a0a',
-                color: 'inherit',
-                padding: '12px 14px',
-              }}
             />
           </label>
 
