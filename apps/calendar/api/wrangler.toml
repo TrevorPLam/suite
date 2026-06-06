@@ -9,3 +9,7 @@ BETTER_AUTH_URL = ""
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
 id = "rate-limit-kv"
+
+[[kv_namespaces]]
+binding = "AUTH_KV"
+id = "auth-kv"

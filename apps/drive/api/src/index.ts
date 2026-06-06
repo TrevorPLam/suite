@@ -22,7 +22,7 @@ import {
 } from '@suite/domain-drive';
 import { wireRepositories, getR2Adapter } from './bootstrap.js';
 import { validateDriveEnv } from '@suite/env-config';
-import { mountAuth, requireAuth } from '@suite/auth';
+import { mountAuth, requireAuth, createAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import {
@@ -44,11 +44,14 @@ const usageRepository = process.env.DATABASE_URL ? new PostgresUsageRepository()
 type Env = {
   R2: R2Bucket;
   RATE_LIMIT_KV: KVNamespace;
+  AUTH_KV: KVNamespace;
+  waitUntil: (promise: Promise<unknown>) => void;
 };
 
 type Variables = {
   userId: string | null;
   r2Bucket: R2Bucket | null;
+  auth: ReturnType<typeof createAuth>;
 };
 
 const app = new Hono<{ Variables: Variables; Bindings: Env }>();
@@ -156,6 +159,21 @@ app.use('/api/*', async (c, next) => {
   await next();
   // No caching for authenticated endpoints
   c.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+});
+
+// Middleware to create auth instance per request
+app.use('/api/*', async (c, next) => {
+  const db = getDbOrNull();
+  const auth = createAuth({
+    db,
+    env: {
+      AUTH_KV: c.env.AUTH_KV,
+    },
+    waitUntil: c.env.waitUntil,
+    ...(process.env.TRUSTED_ORIGINS && { trustedOrigins: process.env.TRUSTED_ORIGINS }),
+  });
+  c.set('auth', auth);
+  await next();
 });
 
 // Mount Better Auth handler

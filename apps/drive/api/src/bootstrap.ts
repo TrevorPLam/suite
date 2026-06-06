@@ -1,5 +1,5 @@
 import { setDriveFileRepository, setDriveFolderRepository, setDriveKeyProviderFromEnv, setDriveStorage, isEncryptionEnabled, type StorageAdapter, InMemoryDriveFileRepository, InMemoryDriveFolderRepository } from '@suite/domain-drive';
-import { PostgresDriveFileRepository, PostgresDriveFolderRepository } from '@suite/db';
+import { PostgresDriveFileRepository, PostgresDriveFolderRepository, createDbClient } from '@suite/db';
 import { createCircuitBreaker, type CircuitBreaker } from '@suite/shared-kernel';
 
 // R2 Storage Adapter for Cloudflare R2
@@ -122,8 +122,10 @@ export async function wireRepositories(userId: string | null, r2Bucket?: R2Bucke
 
     // Use Postgres repositories if DATABASE_URL is set and userId is provided, otherwise use in-memory repositories
     if (userId && process.env.DATABASE_URL) {
-      setDriveFileRepository(new PostgresDriveFileRepository(userId));
-      setDriveFolderRepository(new PostgresDriveFolderRepository(userId));
+      const db = createDbClient({ DATABASE_URL: process.env.DATABASE_URL });
+      // Use default tenant for single-tenant setup (will be updated for multi-tenancy)
+      setDriveFileRepository(new PostgresDriveFileRepository(db, userId, 'default'));
+      setDriveFolderRepository(new PostgresDriveFolderRepository(db, userId, 'default'));
     } else {
       // Use in-memory repositories for testing or when userId is not available
       setDriveFileRepository(new InMemoryDriveFileRepository());

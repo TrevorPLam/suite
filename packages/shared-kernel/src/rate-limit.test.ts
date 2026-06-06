@@ -170,6 +170,7 @@ describe('rateLimit middleware with KV (distributed)', () => {
   const mockKV: KVNamespace = {
     get: vi.fn(),
     put: vi.fn(),
+    delete: vi.fn(),
   };
 
   beforeEach(() => {

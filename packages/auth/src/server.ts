@@ -1,43 +1,141 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { getDbOrNull } from '@suite/db';
 import { users, sessions, accounts } from '@suite/db';
 
-const db = getDbOrNull();
+interface KVNamespace {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+  delete(key: string): Promise<void>;
+}
 
-export const auth = betterAuth({
-  database: db ? drizzleAdapter(db, {
-    provider: 'pg',
-    schema: {
-      users,
-      sessions,
-      accounts,
-    },
-  }) : undefined,
-  emailAndPassword: {
-    enabled: true,
-    requireEmailVerification: false,
-  },
-  session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // 1 day
-  },
-  advanced: {
-    cookiePrefix: 'suite',
-    crossSubDomainCookies: {
-      enabled: false,
-    },
-  },
-});
+interface AuthEnv {
+  AUTH_KV?: KVNamespace;
+}
 
-export async function getSession(headers: Headers) {
-  return await auth.api.getSession({
+interface CreateAuthOptions {
+  db: Parameters<typeof drizzleAdapter>[0] | null;
+  env?: AuthEnv;
+  waitUntil?: (promise: Promise<unknown>) => void;
+  trustedOrigins?: string;
+}
+
+export function createAuth({ db, env, waitUntil, trustedOrigins }: CreateAuthOptions) {
+  const auth = betterAuth({
+    database: db ? drizzleAdapter(db, {
+      provider: 'pg',
+      schema: {
+        users,
+        sessions,
+        accounts,
+      },
+    }) : undefined,
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: false,
+    },
+    session: {
+      expiresIn: 60 * 60 * 24 * 7, // 7 days
+      updateAge: 60 * 60 * 24, // 1 day
+      storeSessionInDatabase: true, // Disable cookieCache due to better-auth#4203
+    },
+    advanced: {
+      cookiePrefix: 'suite',
+      crossSubDomainCookies: {
+        enabled: false,
+      },
+      trustedOrigins: trustedOrigins
+        ? trustedOrigins.split(',').map((origin) => origin.trim())
+        : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:5173'],
+      ...(env?.AUTH_KV ? (() => {
+        const kv = env.AUTH_KV;
+        return {
+          secondaryStorage: {
+            get: async (key: string) => {
+              try {
+                const value = await kv.get(key);
+                return value ? JSON.parse(value) : null;
+              } catch {
+                return null;
+              }
+            },
+            set: async (key: string, value: unknown, ttl: number) => {
+              try {
+                // KV requires minimum TTL of 60 seconds
+                const effectiveTtl = Math.max(ttl, 60);
+                await kv.put(key, JSON.stringify(value), {
+                  expirationTtl: effectiveTtl,
+                });
+              } catch {
+                // Silently fail if KV is unavailable
+              }
+            },
+            delete: async (key: string) => {
+              try {
+                await kv.delete(key);
+              } catch {
+                // Silently fail if KV is unavailable
+              }
+            },
+          },
+          rateLimit: {
+            customStorage: {
+              get: async (key: string) => {
+                try {
+                  const value = await kv.get(key);
+                  return value ? JSON.parse(value) : null;
+                } catch {
+                  return null;
+                }
+              },
+              set: async (key: string, value: unknown, _ttl: number) => {
+                try {
+                  // Rate limit uses hardcoded 60-second TTL
+                  await kv.put(key, JSON.stringify(value), {
+                    expirationTtl: 60,
+                  });
+                } catch {
+                  // Silently fail if KV is unavailable
+                }
+              },
+              delete: async (key: string) => {
+                try {
+                  await kv.delete(key);
+                } catch {
+                  // Silently fail if KV is unavailable
+                }
+              },
+            },
+          },
+        };
+      })() : {}),
+      ...(waitUntil ? (() => {
+        const wu = waitUntil;
+        return {
+          backgroundTasks: {
+            handler: (promise: Promise<unknown>) => {
+              wu(promise);
+            },
+          },
+        };
+      })() : {}),
+    },
+  });
+
+  return auth;
+}
+
+// Legacy singleton for backward compatibility (will be removed after migration)
+const db = (await import('@suite/db')).getDbOrNull();
+export const auth = createAuth({ db });
+
+export async function getSession(authInstance: ReturnType<typeof createAuth>, headers: Headers) {
+  return await authInstance.api.getSession({
     headers,
   });
 }
 
-export async function requireSession(headers: Headers) {
-  const session = await getSession(headers);
+export async function requireSession(authInstance: ReturnType<typeof createAuth>, headers: Headers) {
+  const session = await getSession(authInstance, headers);
   if (!session) {
     throw new Error('Unauthorized');
   }

@@ -8,6 +8,7 @@ export const calendarEnvSchema = z.object({
   PORT: z.coerce.number().min(1).max(65535).default(3001),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   ALLOWED_ORIGINS: z.string().optional(),
+  TRUSTED_ORIGINS: z.string().optional(),
 }).refine((data) => {
   if (data.NODE_ENV === 'production' && !data.ENCRYPTION_KEY) {
     return false;

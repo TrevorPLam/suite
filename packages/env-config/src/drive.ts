@@ -8,6 +8,7 @@ export const driveEnvSchema = z.object({
   PORT: z.coerce.number().min(1).max(65535).default(3003),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   ALLOWED_ORIGINS: z.string().optional(),
+  TRUSTED_ORIGINS: z.string().optional(),
   R2_BUCKET: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),

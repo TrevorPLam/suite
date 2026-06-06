@@ -10,6 +10,10 @@ BETTER_AUTH_URL = ""
 binding = "RATE_LIMIT_KV"
 id = "rate-limit-kv"
 
+[[kv_namespaces]]
+binding = "AUTH_KV"
+id = "auth-kv"
+
 [[r2_buckets]]
 binding = "R2"
 bucket_name = "drive-files"
