@@ -24,7 +24,7 @@ import {
   archiveTaskBodySchema,
   batchOperationBodySchema,
 } from './schemas.js';
-import { UsageMonitor } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit } from '@suite/shared-kernel';
 import { PostgresUsageRepository } from '@suite/db';
 
 // Validate environment variables at startup
@@ -54,6 +54,11 @@ app.use('/api/*', UsageMonitor({
   limit: 1000,
   periodMs: 3600000, // 1 hour
   usageRepository,
+}));
+
+// Mount rate limiting middleware (60 requests per minute per user)
+app.use('/api/*', rateLimit({
+  requestsPerMinute: 60,
 }));
 
 // Middleware to wire repositories with userId from auth context

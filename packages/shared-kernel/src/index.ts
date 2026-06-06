@@ -10,3 +10,5 @@ export interface BaseEntity {
 export { generateUUID } from './uuid.js';
 export { UsageMonitor } from './usage-monitor.js';
 export type { UsageMonitorOptions, UsageRepository, UsageRecord } from './usage-monitor.js';
+export { rateLimit, clearRateLimit, clearAllRateLimits } from './rate-limit.js';
+export type { RateLimitOptions } from './rate-limit.js';

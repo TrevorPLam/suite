@@ -935,10 +935,10 @@ Target File**: `.github/workflows/deploy.yml`
 
 ---
 
-### [ ] SEC-010: Add Rate Limiting Middleware
+### [x] SEC-010: Add Rate Limiting Middleware
 
-**Status**: Pending  
-**Priority**: P0  
+**Status**: Complete
+**Priority**: P0
 **Bounded Context**: API Security
 
 **Related Files**:
@@ -985,25 +985,37 @@ Target File**: `.github/workflows/deploy.yml`
 
 **Subtasks**:
 
-#### SEC-010-01: Create rate limiting middleware
+#### SEC-010-01: Create rate limiting middleware ✅
 **Target File**: `packages/shared-kernel/src/rate-limit.ts`
 **Action**: Create rateLimit middleware that accepts requests per minute parameter, tracks per userId in memory, returns 429 with retry-after when exceeded
 **Validate Command**: `pnpm --filter @suite/shared-kernel test`
 
-#### SEC-010-02: Mount rate limiting in calendar API
+#### SEC-010-02: Mount rate limiting in calendar API ✅
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Import rateLimit from @suite/shared-kernel and mount as app.use('*', rateLimit({ requestsPerMinute: 60 })) after auth
 **Validate Command**: `pnpm --filter @suite/calendar-api test`
 
-#### SEC-010-03: Mount rate limiting in tasks API
+#### SEC-010-03: Mount rate limiting in tasks API ✅
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Import rateLimit from @suite/shared-kernel and mount as app.use('*', rateLimit({ requestsPerMinute: 60 })) after auth
 **Validate Command**: `pnpm --filter @suite/tasks-api test`
 
-#### SEC-010-04: Mount rate limiting in drive API
+#### SEC-010-04: Mount rate limiting in drive API ✅
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Import rateLimit from @suite/shared-kernel and mount as app.use('*', rateLimit({ requestsPerMinute: 60 })) after auth
 **Validate Command**: `pnpm --filter @suite/drive-api test`
+
+**Implementation Notes**:
+- Created rateLimit middleware in shared-kernel with sliding window counter algorithm
+- Middleware tracks requests per authenticated user in memory (Map-based storage for MVP)
+- Returns 429 status with Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, and X-RateLimit-Reset headers
+- Skips rate limiting for unauthenticated requests and health check endpoints
+- Mounted rate limit middleware in all three APIs (calendar, tasks, drive) with 60 requests per minute limit
+- Added comprehensive test suite with 7 test cases covering all scenarios
+- Created vitest.config.ts for shared-kernel package to enable testing
+- Typecheck passed successfully for shared-kernel and all three APIs
+- Lint passed successfully for shared-kernel
+- All 7 tests passed successfully
 
 ---
 

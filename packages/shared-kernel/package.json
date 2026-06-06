@@ -8,10 +8,13 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "echo \"No tests configured yet\"",
+    "test": "vitest",
     "lint": "eslint src"
   },
   "dependencies": {
     "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "vitest": "catalog:"
   }
 }
