@@ -10,6 +10,7 @@
     "test": "pnpm -r --if-present test",
     "test:run": "pnpm -r --if-present test:run",
     "test:coverage": "pnpm -r --if-present test:coverage",
+    "coverage": "vitest run --coverage",
     "test:affected": "nx affected -t test",
     "test:affected:coverage": "nx affected -t coverage",
     "typecheck": "pnpm -r --if-present typecheck",

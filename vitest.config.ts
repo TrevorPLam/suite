@@ -11,7 +11,9 @@ export default defineConfig({
     exclude: ['node_modules', 'dist', '.nx', 'apps/*/web/**/*'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html', 'lcov'],
+      reporter: ['text', 'json', 'html'],
+      reportsDirectory: './coverage',
+      reportOnFailure: true,
       exclude: [
         'node_modules',
         'dist',

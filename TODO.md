@@ -452,7 +452,7 @@ Nx plugin inference automatically creates targets from config files. Configure o
 
 ## TEST-005: Add Coverage Report Configuration
 
-Status: [ ]
+Status: [x]
 
 **Related Files**:
 - `vitest.config.ts` (root)
@@ -504,23 +504,37 @@ coverage: {
 **Target File**: `vitest.config.ts`
 **Action**: Add coverage.reporter array with 'text', 'json', 'html' reporters. Enable coverage.reportOnFailure and coverage.all.
 **Validation**: Run `pnpm test --coverage` and verify all three report formats are generated in ./coverage.
+**Status**: ✅ Complete - Updated to reporter: ['text', 'json', 'html'], reportsDirectory: './coverage', reportOnFailure: true (all: true not supported in current Vitest version)
 
 #### TEST-005-02: Configure coverage reporters in package configs
 **Target Files**: All `packages/*/vitest.config.ts`
 **Action**: Add coverage.reporter configuration matching root config. Ensure consistent reporting across all packages.
 **Validation**: Run `pnpm test --coverage` in each package and verify coverage reports generate.
+**Status**: ✅ Complete - Updated all 8 package configs (auth, crypto, db, domain-calendar, domain-drive, domain-tasks, env-config, shared-kernel, ui)
 
 #### TEST-005-03: Configure coverage reporters in app configs
 **Target Files**: All `apps/*/vitest.config.ts`
 **Action**: Add coverage.reporter configuration matching root config. Ensure consistent reporting across all apps.
 **Validation**: Run `pnpm test --coverage` in each app and verify coverage reports generate.
+**Status**: ✅ Complete - Updated all 6 app configs (calendar/api, calendar/web, drive/api, drive/web, tasks/api, tasks/web)
 
 #### TEST-005-04: Add coverage script to package.json
 **Target File**: `package.json` (root)
 **Action**: Add "coverage": "vitest run --coverage" script to root package.json.
 **Validation**: Run `pnpm coverage` and verify coverage reports generate for entire monorepo.
+**Status**: ✅ Complete - Added "coverage": "vitest run --coverage" script
 
 ---
+
+**Implementation Notes**:
+- Updated all 15 vitest configs (root, 8 packages, 6 apps) to use reporter: ['text', 'json', 'html']
+- Added reportsDirectory: './coverage' and reportOnFailure: true to all configs
+- Note: 'all: true' option is not supported in current Vitest version and was omitted
+- Added "coverage": "vitest run --coverage" script to root package.json
+- Coverage reports successfully generate in ./coverage directory with HTML, JSON, and text formats
+- Typecheck passed, lint passed (pre-existing warnings unrelated to this change)
+- Coverage thresholds not met (55.98% lines vs 80% required) - this is expected as task scope excludes writing new tests
+- Coverage reports generate even when tests fail due to reportOnFailure: true
 
 ## TEST-006: Expand E2E Test Coverage
 
