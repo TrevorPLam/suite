@@ -1,25 +1,115 @@
 # Suite Monorepo
 
-This repository is the starting point for a large productivity suite built as a single monorepo.
+A productivity suite built as a monorepo with Calendar, Tasks, and Drive applications.
 
-## Initial scope
-- Calendar
-- Tasks / project management
-- Drive / file storage
+## Overview
 
-## Planned layout
-- `apps/` for deployable app surfaces
-- `packages/` for shared code and domain logic
-- `packages/domain-*` for bounded contexts
-- `packages/ui` for shared UI components and design system code
-- `packages/shared-kernel` for universal types only
+Suite is a TypeScript monorepo using pnpm workspaces, implementing Domain-Driven Design (DDD) principles with bounded contexts, shared infrastructure packages, and thin API layers.
 
-## Getting started
-1. Install dependencies with `pnpm install`.
-2. Add feature specs before implementation.
-3. Build out the shared packages first, then wire the first app surfaces.
+## Current State
 
-## Development
+### Completed Features
+
+**Phase 1: Shared Infrastructure**
+- PostgreSQL integration with Drizzle ORM
+- Environment configuration with Zod validation
+- E2EE crypto utilities with Web Crypto API (AES-256-GCM)
+- Authentication with Better Auth
+- Shared UI component library (shadcn/ui patterns)
+
+**Phase 2: Domain Packages**
+- Calendar domain with database integration
+- Tasks domain with database integration
+- Drive domain with database integration
+
+**Phase 3: Tasks App**
+- Task due dates, priorities, and tags
+- Task search and batch operations
+- API endpoints with validation
+- Web app with full UI
+
+**Phase 4: Drive App**
+- Folder hierarchy and navigation
+- File metadata tracking
+- File search and folder operations
+- API endpoints with validation
+- Web app with folder tree and file management
+
+**Phase 5: Technical Debt**
+- Cross-platform UUID generation
+- API proxy configuration for development
+- Error code standardization across domains
+
+## Architecture
+
+### Repository Structure
+
+```
+suite/
+├── apps/
+│   ├── calendar/          # Calendar app (API + web)
+│   ├── tasks/             # Tasks app (API + web)
+│   └── drive/             # Drive app (API + web)
+├── packages/
+│   ├── auth/              # Authentication (Better Auth)
+│   ├── crypto/            # E2EE crypto utilities
+│   ├── db/                # Database (Drizzle ORM + PostgreSQL)
+│   ├── env-config/        # Environment validation (Zod)
+│   ├── ui/                # Shared UI components
+│   ├── shared-kernel/     # Universal types and utilities
+│   ├── domain-calendar/   # Calendar bounded context
+│   ├── domain-tasks/      # Tasks bounded context
+│   └── domain-drive/      # Drive bounded context
+├── docs/                  # Documentation
+└── TODO.md                # Implementation roadmap
+```
+
+### Key Principles
+
+- **Domain packages never import other domain packages** - Use HTTP calls (Service Bindings) for cross-domain needs
+- **Every feature begins with a spec** - Create specs in `apps/<app>/specs/` before implementation
+- **API routes are thin** - Only handle validation, auth checks, and domain package calls
+- **Use shared packages** - Prefer workspace packages over published registry dependencies
+- **E2EE is non-negotiable** - All user content encrypted with AES-256-GCM before storage
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- pnpm 8+
+- PostgreSQL 14+
+
+### Installation
+
+```bash
+# Install dependencies
+pnpm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+### Development
+
+```bash
+# Run all packages in development
+pnpm dev
+
+# Run specific app
+pnpm --filter @suite/tasks-api dev
+pnpm --filter @suite/tasks-web dev
+
+# Run tests
+pnpm test
+
+# Type checking
+pnpm typecheck
+
+# Linting
+pnpm lint
+```
 
 ### API Proxy Configuration
 
@@ -40,5 +130,34 @@ VITE_API_URL=http://localhost:4000 pnpm --filter @suite/calendar-web dev
 
 The proxy is only active in development mode. Production builds should be configured to make direct API calls to the deployed API servers.
 
-## Next step
-The next phase is to scaffold the Calendar, Tasks, and Drive app packages with thin web/API entry points and shared foundation packages, starting with the canonical `packages/ui` package.
+## Testing
+
+```bash
+# Run all tests
+pnpm test
+
+# Run tests for specific package
+pnpm --filter @suite/domain-tasks test
+
+# Run tests with coverage
+pnpm test:coverage
+```
+
+## Documentation
+
+- [Architecture Decisions](docs/architecture.md)
+- [Development Workflow](docs/development.md)
+- [Testing Commands](docs/testing-commands.md)
+- [Implementation Roadmap](TODO.md)
+
+## Contributing
+
+1. Check TODO.md for the current task list
+2. Follow the spec-first development workflow
+3. Adhere to AGENTS.md rules and patterns
+4. Ensure all tests pass before committing
+5. Use conventional commit messages
+
+## License
+
+MIT
