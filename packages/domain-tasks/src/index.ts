@@ -9,6 +9,9 @@ export {
   deleteTask,
   filterTasks,
   resetTasks,
+  resetTasksDB,
+  setTaskRepository,
+  getTaskRepository,
 } from './lib/tasks.js';
 
 export type {
@@ -19,14 +22,15 @@ export type {
   UpdateTaskInput,
   ArchiveTaskInput,
   TaskFilter,
+  TaskRepository,
 } from './lib/tasks.js';
 
 import { listTasks } from './lib/tasks.js';
 
-export function getTasksOverview() {
+export async function getTasksOverview() {
   return {
     name: 'Tasks',
     description: 'Starter tasks domain package',
-    tasks: listTasks(),
+    tasks: await listTasks(),
   };
 }

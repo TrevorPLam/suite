@@ -319,7 +319,11 @@ importers:
 
   packages/domain-drive: {}
 
-  packages/domain-tasks: {}
+  packages/domain-tasks:
+    dependencies:
+      '@suite/db':
+        specifier: workspace:*
+        version: link:../db
 
   packages/env-config:
     dependencies:

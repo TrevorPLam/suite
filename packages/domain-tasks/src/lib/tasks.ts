@@ -1,3 +1,5 @@
+import type { QueryRepository } from '@suite/db';
+
 export type TaskItem = {
   id: string;
   title: string;
@@ -35,6 +37,82 @@ export class TaskError extends Error {
   }
 }
 
+export interface TaskRepository extends QueryRepository<TaskItem> {
+  clear?(): void;
+}
+
+// In-memory repository for testing (default)
+class InMemoryTaskRepository implements TaskRepository {
+  private tasks = new Map<string, TaskItem>();
+
+  async findById(id: string): Promise<TaskItem | null> {
+    return this.tasks.get(id) ?? null;
+  }
+
+  async findAll(): Promise<TaskItem[]> {
+    return Array.from(this.tasks.values());
+  }
+
+  async create(entity: Omit<TaskItem, 'id'>): Promise<TaskItem> {
+    const task: TaskItem = {
+      id: crypto.randomUUID(),
+      ...entity,
+    };
+    this.tasks.set(task.id, task);
+    return task;
+  }
+
+  async update(id: string, entity: Partial<TaskItem>): Promise<TaskItem | null> {
+    const existing = this.tasks.get(id);
+    if (!existing) return null;
+    const updated = { ...existing, ...entity };
+    this.tasks.set(id, updated);
+    return updated;
+  }
+
+  async delete(id: string): Promise<boolean> {
+    return this.tasks.delete(id);
+  }
+
+  async findWhere(criteria: Partial<TaskItem>): Promise<TaskItem[]> {
+    const allTasks = Array.from(this.tasks.values());
+    return allTasks.filter(task => {
+      for (const [key, value] of Object.entries(criteria)) {
+        if (task[key as keyof TaskItem] !== value) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  async count(criteria?: Partial<TaskItem>): Promise<number> {
+    if (!criteria || Object.keys(criteria).length === 0) {
+      return this.tasks.size;
+    }
+    const results = await this.findWhere(criteria);
+    return results.length;
+  }
+
+  clear(): void {
+    this.tasks.clear();
+  }
+}
+
+// Default repository (in-memory for backward compatibility)
+let defaultRepository: TaskRepository = new InMemoryTaskRepository();
+
+// Current repository (can be injected)
+let currentRepository: TaskRepository = defaultRepository;
+
+export function setTaskRepository(repository: TaskRepository): void {
+  currentRepository = repository;
+}
+
+export function getTaskRepository(): TaskRepository {
+  return currentRepository;
+}
+
 const taskItems = new Map<string, TaskItem>();
 
 function isNonEmptyString(value: unknown): value is string {
@@ -68,38 +146,47 @@ function normalizeTaskTitle(title: unknown): string {
 }
 
 export function resetTasks(): void {
-  taskItems.clear();
+  if (currentRepository instanceof InMemoryTaskRepository) {
+    (currentRepository as InMemoryTaskRepository).clear();
+  }
 }
 
-export function listTasks(): TaskItem[] {
-  return [...taskItems.values()].reverse().map(snapshot);
+export async function resetTasksDB(): Promise<void> {
+  // For database repositories, delete all tasks
+  const tasks = await currentRepository.findAll();
+  for (const task of tasks) {
+    await currentRepository.delete(task.id);
+  }
 }
 
-export function getTask(id: string): TaskItem | null {
-  const task = taskItems.get(id);
+export async function listTasks(): Promise<TaskItem[]> {
+  const tasks = await currentRepository.findAll();
+  return tasks.reverse().map(snapshot);
+}
 
+export async function getTask(id: string): Promise<TaskItem | null> {
+  const task = await currentRepository.findById(id);
   return task ? snapshot(task) : null;
 }
 
-export function createTask(input: CreateTaskInput): TaskItem {
-  const task: TaskItem = {
-    id: createTaskId(),
+export async function createTask(input: CreateTaskInput): Promise<TaskItem> {
+  const taskInput = {
     title: normalizeTaskTitle(input.title),
     completed: input.completed ?? false,
     archived: false,
   };
 
-  taskItems.set(task.id, task);
+  const created = await currentRepository.create(taskInput);
 
-  return snapshot(task);
+  return snapshot(created);
 }
 
-export function updateTaskCompletion(id: string, input: UpdateTaskCompletionInput): TaskItem {
+export async function updateTaskCompletion(id: string, input: UpdateTaskCompletionInput): Promise<TaskItem> {
   if (!isNonEmptyString(id)) {
     throw new TaskError('Invalid task id', 'validation_error', ['id must be a non-empty string']);
   }
 
-  const existingTask = taskItems.get(id);
+  const existingTask = await currentRepository.findById(id);
 
   if (!existingTask) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -107,22 +194,23 @@ export function updateTaskCompletion(id: string, input: UpdateTaskCompletionInpu
     ]);
   }
 
-  const updatedTask: TaskItem = {
-    ...existingTask,
-    completed: input.completed,
-  };
+  const updated = await currentRepository.update(id, { completed: input.completed });
 
-  taskItems.set(id, updatedTask);
+  if (!updated) {
+    throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
+      `No task exists for id "${id}"`,
+    ]);
+  }
 
-  return snapshot(updatedTask);
+  return snapshot(updated);
 }
 
-export function updateTask(id: string, input: UpdateTaskInput): TaskItem {
+export async function updateTask(id: string, input: UpdateTaskInput): Promise<TaskItem> {
   if (!isNonEmptyString(id)) {
     throw new TaskError('Invalid task id', 'validation_error', ['id must be a non-empty string']);
   }
 
-  const existingTask = taskItems.get(id);
+  const existingTask = await currentRepository.findById(id);
 
   if (!existingTask) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -130,22 +218,23 @@ export function updateTask(id: string, input: UpdateTaskInput): TaskItem {
     ]);
   }
 
-  const updatedTask: TaskItem = {
-    ...existingTask,
-    title: normalizeTaskTitle(input.title),
-  };
+  const updated = await currentRepository.update(id, { title: normalizeTaskTitle(input.title) });
 
-  taskItems.set(id, updatedTask);
+  if (!updated) {
+    throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
+      `No task exists for id "${id}"`,
+    ]);
+  }
 
-  return snapshot(updatedTask);
+  return snapshot(updated);
 }
 
-export function archiveTask(id: string, input: ArchiveTaskInput): TaskItem {
+export async function archiveTask(id: string, input: ArchiveTaskInput): Promise<TaskItem> {
   if (!isNonEmptyString(id)) {
     throw new TaskError('Invalid task id', 'validation_error', ['id must be a non-empty string']);
   }
 
-  const existingTask = taskItems.get(id);
+  const existingTask = await currentRepository.findById(id);
 
   if (!existingTask) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -153,22 +242,23 @@ export function archiveTask(id: string, input: ArchiveTaskInput): TaskItem {
     ]);
   }
 
-  const updatedTask: TaskItem = {
-    ...existingTask,
-    archived: input.archived,
-  };
+  const updated = await currentRepository.update(id, { archived: input.archived });
 
-  taskItems.set(id, updatedTask);
+  if (!updated) {
+    throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
+      `No task exists for id "${id}"`,
+    ]);
+  }
 
-  return snapshot(updatedTask);
+  return snapshot(updated);
 }
 
-export function deleteTask(id: string): void {
+export async function deleteTask(id: string): Promise<void> {
   if (!isNonEmptyString(id)) {
     throw new TaskError('Invalid task id', 'validation_error', ['id must be a non-empty string']);
   }
 
-  const existingTask = taskItems.get(id);
+  const existingTask = await currentRepository.findById(id);
 
   if (!existingTask) {
     throw new TaskError(`Task "${id}" was not found`, 'not_found_error', [
@@ -176,13 +266,29 @@ export function deleteTask(id: string): void {
     ]);
   }
 
-  taskItems.delete(id);
+  await currentRepository.delete(id);
 }
 
 export type TaskFilter = 'all' | 'active' | 'completed' | 'archived';
 
-export function filterTasks(filter: TaskFilter): TaskItem[] {
-  const allTasks = listTasks();
+export async function filterTasks(filter: TaskFilter): Promise<TaskItem[]> {
+  // Use database-specific filtering if available
+  if (currentRepository.findWhere) {
+    switch (filter) {
+      case 'active':
+        return currentRepository.findWhere({ completed: false, archived: false });
+      case 'completed':
+        return currentRepository.findWhere({ completed: true, archived: false });
+      case 'archived':
+        return currentRepository.findWhere({ archived: true });
+      case 'all':
+      default:
+        return currentRepository.findWhere({ archived: false });
+    }
+  }
+
+  // Fallback to in-memory filtering
+  const allTasks = await listTasks();
 
   switch (filter) {
     case 'active':
