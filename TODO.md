@@ -246,11 +246,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] CRYPTO-003: Add Key Zeroization
+### [x] CRYPTO-003: Add Key Zeroization
 
 **Priority**: P0
 **Bounded Context**: Security
-**Status**: Not Started
+**Status**: Complete (AGENT tasks done, HUMAN tasks pending)
 
 **Related Files**:
 - `packages/crypto/src/index.ts`
@@ -298,31 +298,31 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### CRYPTO-003-01: Implement secureZeroize function
+#### CRYPTO-003-01: Implement secureZeroize function ✅
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/memory.ts` (create)
 **Action**: Implement secureZeroize() function that accepts Uint8Array or ArrayBuffer and overwrites with zeros. Use volatile operations if possible (note: JavaScript has limited volatile support). Add JSDoc documentation explaining Web environment limitations and that this is best-effort protection.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-003-02: Export secureZeroize from index
+#### CRYPTO-003-02: Export secureZeroize from index ✅
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/index.ts`
 **Action**: Add export for secureZeroize from memory.ts module.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-003-03: Add memory zeroization tests
+#### CRYPTO-003-03: Add memory zeroization tests ✅
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/memory.test.ts` (create)
 **Action**: Add tests for secureZeroize function. Verify that byte arrays are zeroized after calling function. Test with various sizes and input types.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-003-04: Add zeroization to encryption module
+#### CRYPTO-003-04: Add zeroization to encryption module ✅
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/encryption.ts`
 **Action**: Review encryption.ts for any temporary key storage or intermediate values. Add secureZeroize calls after use where applicable. Note: Web Crypto API CryptoKey objects are handled by browser, focus on raw byte arrays.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-003-05: Add zeroization to key derivation module
+#### CRYPTO-003-05: Add zeroization to key derivation module ✅
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/keyderivation.ts`
 **Action**: Review keyderivation.ts for temporary password buffers or intermediate values. Add secureZeroize calls after use where applicable.
@@ -339,6 +339,16 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 **Target File**: `packages/crypto/ASSESSMENT.md`
 **Action**: Update ASSESSMENT.md to mark key zeroization as implemented. Remove from critical security gaps. Add to strengths section with noted limitations.
 **Validate Command**: No validation needed
+
+**Implementation Notes**:
+- Created memory.ts with secureZeroize() function using multi-pass zeroization (0, 0xFF, 0)
+- Added comprehensive JSDoc documentation explaining Web environment limitations
+- Exported secureZeroize from index.ts
+- Created memory.test.ts with 8 tests covering various scenarios
+- Reviewed encryption.ts: No raw byte arrays requiring zeroization (all CryptoKey objects)
+- Added zeroization to keyderivation.ts: passwordBuffer zeroized after importKey
+- Typecheck passes, lint passes, tests pass
+- Web environment limitations documented: no memory locking, GC behavior, memory dumps
 
 ---
 

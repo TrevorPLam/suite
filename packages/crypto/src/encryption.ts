@@ -1,6 +1,11 @@
 /**
  * AES-256-GCM encryption/decryption utilities
  * Uses Web Crypto API (subtle.crypto) available in both Node.js and browsers
+ * 
+ * Note: This module does not use secureZeroize because:
+ * - Web Crypto API CryptoKey objects are browser-managed and cannot be zeroized by JavaScript
+ * - All byte arrays are intermediate values passed directly to crypto.subtle operations
+ * - No temporary key material is stored in raw byte arrays that requires cleanup
  */
 
 export interface EncryptedData {

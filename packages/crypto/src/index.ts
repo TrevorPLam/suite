@@ -19,3 +19,6 @@ export { generateBlindIndex, deriveIndexKey } from './blind-index.js';
 
 // Constant-time comparison for timing attack prevention
 export { constantTimeEqual, constantTimeEqualSync } from './constant-time.js';
+
+// Memory zeroization for secure key cleanup
+export { secureZeroize } from './memory.js';

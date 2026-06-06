@@ -3,6 +3,8 @@
  * Uses Web Crypto API (subtle.crypto) available in both Node.js and browsers
  */
 
+import { secureZeroize } from './memory.js';
+
 /**
  * Derives a cryptographic key from a password using PBKDF2
  * @param password - Password string
@@ -27,6 +29,9 @@ export async function deriveKeyFromPassword(
     false,
     ['deriveKey']
   );
+
+  // Zeroize password buffer after use to prevent memory disclosure
+  secureZeroize(passwordBuffer);
 
   // Derive an AES-GCM key using PBKDF2 with SHA-256
   return crypto.subtle.deriveKey(
