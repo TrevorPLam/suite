@@ -58,6 +58,7 @@ describe('Environment Configuration', () => {
     process.env.BETTER_AUTH_URL = 'http://localhost:3002';
     process.env.PORT = '3001';
     process.env.NODE_ENV = 'production';
+    process.env.ENCRYPTION_KEY = 'a'.repeat(64);
 
     const env = validateTasksEnv();
     expect(env.DATABASE_URL).toBe('postgresql://localhost:5432/test');
@@ -100,5 +101,72 @@ describe('Environment Configuration', () => {
     process.env.NODE_ENV = 'development';
 
     expect(() => validateCalendarEnv()).toThrow();
+  });
+
+  it('should validate with valid 32-byte hex ENCRYPTION_KEY', () => {
+    process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+    process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
+    process.env.BETTER_AUTH_URL = 'http://localhost:3001';
+    process.env.PORT = '3000';
+    process.env.NODE_ENV = 'development';
+    process.env.ENCRYPTION_KEY = 'a'.repeat(64);
+
+    const env = validateCalendarEnv();
+    expect(env.ENCRYPTION_KEY).toBe('a'.repeat(64));
+  });
+
+  it('should throw error for invalid ENCRYPTION_KEY format (not hex)', () => {
+    process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+    process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
+    process.env.BETTER_AUTH_URL = 'http://localhost:3001';
+    process.env.PORT = '3000';
+    process.env.NODE_ENV = 'development';
+    process.env.ENCRYPTION_KEY = 'not-hex-string';
+
+    expect(() => validateCalendarEnv()).toThrow();
+  });
+
+  it('should throw error for invalid ENCRYPTION_KEY length (not 64 chars)', () => {
+    process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+    process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
+    process.env.BETTER_AUTH_URL = 'http://localhost:3001';
+    process.env.PORT = '3000';
+    process.env.NODE_ENV = 'development';
+    process.env.ENCRYPTION_KEY = 'a'.repeat(32);
+
+    expect(() => validateCalendarEnv()).toThrow();
+  });
+
+  it('should allow optional ENCRYPTION_KEY in development', () => {
+    process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+    process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
+    process.env.BETTER_AUTH_URL = 'http://localhost:3001';
+    process.env.PORT = '3000';
+    process.env.NODE_ENV = 'development';
+
+    const env = validateCalendarEnv();
+    expect(env.ENCRYPTION_KEY).toBeUndefined();
+  });
+
+  it('should require ENCRYPTION_KEY in production', () => {
+    process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+    process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
+    process.env.BETTER_AUTH_URL = 'http://localhost:3001';
+    process.env.PORT = '3000';
+    process.env.NODE_ENV = 'production';
+
+    expect(() => validateCalendarEnv()).toThrow('ENCRYPTION_KEY is required in production');
+  });
+
+  it('should validate production with valid ENCRYPTION_KEY', () => {
+    process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+    process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
+    process.env.BETTER_AUTH_URL = 'http://localhost:3001';
+    process.env.PORT = '3000';
+    process.env.NODE_ENV = 'production';
+    process.env.ENCRYPTION_KEY = 'a'.repeat(64);
+
+    const env = validateCalendarEnv();
+    expect(env.ENCRYPTION_KEY).toBe('a'.repeat(64));
   });
 });

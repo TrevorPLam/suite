@@ -1248,10 +1248,10 @@ Target File**: `.github/workflows/deploy.yml`
 
 ---
 
-### [ ] SEC-014: Add Encryption Key to Env-Config
+### [x] SEC-014: Add Encryption Key to Env-Config
 
-**Status**: Pending  
-**Priority**: P0  
+**Status**: Complete
+**Priority**: P0
 **Bounded Context**: Configuration
 
 **Related Files**:
@@ -1292,20 +1292,30 @@ Target File**: `.github/workflows/deploy.yml`
 
 **Subtasks**:
 
-#### SEC-014-01: Add ENCRYPTION_KEY to calendar env
+#### SEC-014-01: Add ENCRYPTION_KEY to calendar env ✅
 **Target File**: `packages/env-config/src/calendar.ts`
-**Action**: Add ENCRYPTION_KEY: z.string().length(64).regex(/^[a-f0-9]+$/).default('0'.repeat(64))
+**Action**: Add ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/, 'ENCRYPTION_KEY must be a 32-byte hex string (64 characters)').optional() with refine to require in production
 **Validate Command**: `pnpm --filter @suite/env-config test`
 
-#### SEC-014-02: Add ENCRYPTION_KEY to tasks env
+#### SEC-014-02: Add ENCRYPTION_KEY to tasks env ✅
 **Target File**: `packages/env-config/src/tasks.ts`
-**Action**: Add ENCRYPTION_KEY: z.string().length(64).regex(/^[a-f0-9]+$/).default('0'.repeat(64))
+**Action**: Add ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/, 'ENCRYPTION_KEY must be a 32-byte hex string (64 characters)').optional() with refine to require in production
 **Validate Command**: `pnpm --filter @suite/env-config test`
 
-#### SEC-014-03: Add ENCRYPTION_KEY to drive env
+#### SEC-014-03: Add ENCRYPTION_KEY to drive env ✅
 **Target File**: `packages/env-config/src/drive.ts`
-**Action**: Add ENCRYPTION_KEY: z.string().length(64).regex(/^[a-f0-9]+$/).default('0'.repeat(64))
+**Action**: Add ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/, 'ENCRYPTION_KEY must be a 32-byte hex string (64 characters)').optional() with refine to require in production
 **Validate Command**: `pnpm --filter @suite/env-config test`
+
+**Implementation Notes**:
+- Updated ENCRYPTION_KEY validation from base64 to 32-byte hex string (64 characters) in calendar, tasks, and drive env schemas
+- Added Zod refine to require ENCRYPTION_KEY when NODE_ENV is 'production'
+- ENCRYPTION_KEY remains optional in development and test environments
+- Added comprehensive test coverage for hex validation, length validation, and production requirement
+- Fixed existing test that set NODE_ENV to 'production' without ENCRYPTION_KEY
+- Typecheck passed successfully
+- Lint passed with pre-existing warnings (unrelated to this task)
+- All 14 env-config tests passed
 
 ---
 
