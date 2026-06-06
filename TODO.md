@@ -1309,11 +1309,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] DEP-024: Fix @better-auth/infra Dependency Scope
+### [x] DEP-024: Fix @better-auth/infra Dependency Scope
 
 **Priority**: P2
 **Bounded Context**: Dependencies
-**Status**: Not Started
+**Status**: Complete
 
 **Related Files**:
 - `packages/auth/package.json`
@@ -1337,15 +1337,17 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### DEP-024-01: Investigate dependency scope rules
+#### ✅ DEP-024-01: Investigate dependency scope rules
 **Target File**: `eslint.config.js`
 **Action**: Review dependency scope rules to understand why @better-auth/infra triggers scope:shared error.
 **Validate Command**: No validation needed
+**Note**: Investigation complete - eslint config's @nx/enforce-module-boundaries only restricts workspace package dependencies based on tags, not external npm packages. @better-auth/infra is an external package and is not subject to scope restrictions.
 
-#### DEP-024-02: Resolve dependency scope issue
+#### ✅ DEP-024-02: Resolve dependency scope issue
 **Target File**: `packages/auth/package.json` or eslint config
 **Action**: Either update eslint rules to allow @better-auth/infra or find alternative solution to satisfy dependency scope requirements.
 **Validate Command**: `pnpm --filter @suite/auth lint`
+**Note**: No changes needed - lint passes with exit code 0. The dependency is correctly configured and working.
 
 ---
 
