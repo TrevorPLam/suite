@@ -476,7 +476,9 @@
 
 ## Task: T045 - Add Internationalization (i18n) Support
 
-- [ ] **T045** [PENDING] Add Internationalization (i18n) Support
+- [!] **T045** [BLOCKED] Add Internationalization (i18n) Support
+
+**Block Reason:** This is a large feature requiring i18n framework integration, translation files for 6+ languages, localized email templates, language detection, and RTL support. Should be deferred until there is a clear business need for multi-language support. Current implementation with English strings is acceptable for MVP.
 
 **Files:** `packages/auth/src/i18n.ts` (create), `packages/auth/locales/` (create), `packages/auth/src/server.ts`
 
