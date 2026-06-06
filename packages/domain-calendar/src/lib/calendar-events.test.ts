@@ -374,6 +374,38 @@ describe('calendar-events - encryption', () => {
     const events = await listCalendarEvents();
     expect(events).toHaveLength(0);
   });
+
+  it('should store ciphertext in repository when encryption enabled', async () => {
+    const testKey = await generateAESKey(false);
+    setCalendarKeyProvider(async () => testKey);
+
+    const input: CreateCalendarEventInput = {
+      title: 'Team Meeting',
+      startAt: '2025-01-15T10:00:00Z',
+      endAt: '2025-01-15T11:00:00Z',
+    };
+
+    const event = await createCalendarEvent(input);
+
+    // Access repository directly to verify ciphertext is stored
+    const repository = getCalendarEventRepository();
+    const storedEvent = await repository.findById(event.id);
+
+    expect(storedEvent).not.toBeNull();
+
+    // Verify the stored event has encryptedTitle instead of title
+    expect(storedEvent).toHaveProperty('encryptedTitle');
+    expect(storedEvent).not.toHaveProperty('title');
+
+    // Verify encryptedTitle is not equal to plaintext title
+    const encryptedEvent = storedEvent as unknown as { encryptedTitle: unknown };
+    expect(encryptedEvent.encryptedTitle).not.toBe('Team Meeting');
+
+    // Verify encryptedTitle is an object with EncryptedData structure
+    expect(typeof encryptedEvent.encryptedTitle).toBe('object');
+    expect(encryptedEvent.encryptedTitle).toHaveProperty('ciphertext');
+    expect(encryptedEvent.encryptedTitle).toHaveProperty('iv');
+  });
 });
 
 describe('calendar-events - database-specific conflict detection', () => {

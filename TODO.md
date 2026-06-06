@@ -756,10 +756,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] DEP-013: Complete Encryption Verification Test
+### [x] DEP-013: Complete Encryption Verification Test
 
 **Priority**: P1
 **Bounded Context**: Testing
+**Status**: Complete
 
 **Related Files**:
 - `packages/domain-calendar/src/lib/calendar-events.test.ts`
@@ -782,10 +783,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### DEP-013-01: Implement encryption verification test
+#### ✅ DEP-013-01: Implement encryption verification test
 **Target File**: `packages/domain-calendar/src/lib/calendar-events.test.ts:275`
 **Action**: Implement test that verifies repository stores ciphertext when encryption is enabled. Remove TODO comment.
 **Validate Command**: `pnpm --filter @suite/domain-calendar test`
+**Implementation Notes**: Added test 'should store ciphertext in repository when encryption enabled' that directly accesses repository to verify encryptedTitle property exists and title property does not exist. Test also verifies encryptedTitle has EncryptedData structure (ciphertext, iv). All 47 tests pass.
 
 ---
 
