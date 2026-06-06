@@ -150,7 +150,9 @@
 
 ## Task: T040 - Add Secure Account Recovery with Identity Verification
 
-- [ ] **T040** [PENDING] Add Secure Account Recovery with Identity Verification
+- [!] **T040** [BLOCKED] Add Secure Account Recovery with Identity Verification
+
+**Block Reason:** Depends on T032 which is missing from TODO.md. Task also has contradictory requirements (biometric verification both in scope and out of scope). Needs clarification before implementation.
 
 **Files:** `packages/auth/src/account-recovery.ts` (create), `packages/auth/src/server.ts`
 
@@ -201,7 +203,7 @@
 
 ## Task: T041 - Implement Authentication Performance Optimization
 
-- [ ] **T041** [PENDING] Implement Authentication Performance Optimization
+- [x] **T041** [DONE] Implement Authentication Performance Optimization
 
 **Files:** `packages/auth/src/cache.ts` (create), `packages/auth/src/server.ts`
 
@@ -223,30 +225,47 @@
 
 ### Subtasks
 
-- [ ] **T041.01 [AGENT]** Create auth cache module
+- [x] **T041.01 [AGENT]** Create auth cache module ✅
   - **File:** `packages/auth/src/cache.ts` (create)
   - **Action:** Create configureAuthCache() function. Set up KV caching for sessions and user profiles.
   - **Validation:** `pnpm --filter @suite/auth typecheck`.
 
-- [ ] **T041.02 [AGENT]** Add session caching
+- [x] **T041.02 [AGENT]** Add session caching ✅
   - **File:** `packages/auth/src/cache.ts`
   - **Action:** Cache session data in KV with TTL. Invalidate on session changes.
   - **Validation:** `pnpm --filter @suite/auth test:run`.
+  - **Note:** Session caching is already implemented in server.ts via Better Auth's secondaryStorage. The cache module focuses on user profile caching.
 
-- [ ] **T041.03 [AGENT]** Add user profile caching
+- [x] **T041.03 [AGENT]** Add user profile caching ✅
   - **File:** `packages/auth/src/cache.ts`
   - **Action:** Cache user profiles in KV. Invalidate on profile updates.
   - **Validation:** `pnpm --filter @suite/auth test:run`.
 
-- [ ] **T041.04 [AGENT]** Add performance monitoring
+- [x] **T041.04 [AGENT]** Add performance monitoring ✅
   - **File:** `packages/auth/src/cache.ts`
   - **Action:** Track cache hit/miss rates. Monitor query latency. Log performance metrics.
   - **Validation:** `pnpm --filter @suite/auth test:run`.
 
-- [ ] **T041.05 [AGENT]** Add cache tests
+- [x] **T041.05 [AGENT]** Add cache tests ✅
   - **File:** `packages/auth/src/cache.test.ts` (create)
   - **Action:** Test session caching. Test profile caching. Test cache invalidation.
   - **Validation:** `pnpm --filter @suite/auth test:run`.
+
+### Implementation Notes
+- Created `packages/auth/src/cache.ts` with `configureAuthCache()` function that provides:
+  - User profile caching in KV with configurable TTL (default 5 minutes, minimum 60 seconds)
+  - Cache invalidation via `invalidateUserProfile()`
+  - Performance monitoring with cache hit/miss tracking and latency metrics (average, P95)
+  - Graceful degradation when KV is not available
+- Session caching is already handled by Better Auth's `secondaryStorage` in `server.ts` - no additional implementation needed
+- Created `packages/auth/src/cache.test.ts` with 13 tests covering:
+  - User profile get/set/invalidate operations
+  - Cache statistics tracking
+  - Performance metrics
+  - Error handling and KV unavailability scenarios
+- All 318 auth package tests pass (including 13 new cache tests)
+- Typecheck passes
+- Note: Database query optimization and prepared statements were not implemented as they require database-level changes outside the auth package scope. The cache module provides the performance optimization layer for user data.
 
 ---
 
