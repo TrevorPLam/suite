@@ -247,9 +247,9 @@ export type { CalendarEnv, TasksEnv, DriveEnv } from './types'
 
 ---
 
-### [ ] CRYPTO-01: Implement E2EE crypto utilities with Web Crypto API
+### [x] CRYPTO-01: Implement E2EE crypto utilities with Web Crypto API
 
-**Status**: Not started  
+**Status**: Complete
 **Related Files**: packages/crypto/src/index.ts, packages/crypto/package.json
 
 **Definition of Done**:
@@ -311,40 +311,51 @@ export { serializeKey, deserializeKey } from './serialization'
 
 **Subtasks**:
 
-#### CRYPTO-01.1: Install TypeScript Node types for Web Crypto
+#### ✅ CRYPTO-01.1: Install TypeScript Node types for Web Crypto
 **Target**: packages/crypto/package.json
 **Action**: Add @types/node to devDependencies for Web Crypto API types.
 **Validate**: `pnpm --filter @suite/crypto install`
 
-#### CRYPTO-01.2: Implement AES-256-GCM encryption
+#### ✅ CRYPTO-01.2: Implement AES-256-GCM encryption
 **Target**: packages/crypto/src/encryption.ts
 **Action**: Create encryptItem and decryptItem functions using AES-GCM with unique IV per operation.
 **Validate**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-01.3: Implement ECDH key pair generation
+#### ✅ CRYPTO-01.3: Implement ECDH key pair generation
 **Target**: packages/crypto/src/keypair.ts
 **Action**: Create generateKeyPair function using X25519 curve for key exchange.
 **Validate**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-01.4: Implement ECDH shared secret derivation
+#### ✅ CRYPTO-01.4: Implement ECDH shared secret derivation
 **Target**: packages/crypto/src/ecdh.ts
 **Action**: Create deriveSharedSecret function using ECDH with X25519.
 **Validate**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-01.5: Implement PBKDF2 key derivation
+#### ✅ CRYPTO-01.5: Implement PBKDF2 key derivation
 **Target**: packages/crypto/src/keyderivation.ts
 **Action**: Create deriveKeyFromPassword function using PBKDF2 with 100,000+ iterations.
 **Validate**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-01.6: Implement key serialization/deserialization
+#### ✅ CRYPTO-01.6: Implement key serialization/deserialization
 **Target**: packages/crypto/src/serialization.ts
 **Action**: Create functions to serialize/deserialize CryptoKey objects to/from JWK format.
 **Validate**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-01.7: Add comprehensive crypto tests
+#### ✅ CRYPTO-01.7: Add comprehensive crypto tests
 **Target**: packages/crypto/src/index.test.ts
 **Action**: Test all crypto operations with known vectors, edge cases, and error handling.
 **Validate**: `pnpm --filter @suite/crypto test`
+
+**Implementation Notes**:
+- Added @types/node and vitest to devDependencies
+- Implemented AES-256-GCM encryption with 96-bit IV (12 bytes) per operation
+- Implemented X25519 ECDH key pair generation for secure key exchange
+- Implemented PBKDF2 key derivation with 310,000 iterations (updated 2025+ best practice)
+- Implemented JWK and raw format key serialization/deserialization
+- Added HKDF for deriving AES keys from ECDH shared secrets
+- All 26 tests passing covering encryption, key pairs, ECDH, PBKDF2, serialization, and E2E flows
+- Uses Web Crypto API (subtle.crypto) available in both Node.js and browsers
+- ES module imports with .js extensions for node16/nodenext compatibility
 
 ---
 

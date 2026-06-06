@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "echo \"No tests configured yet\"",
+    "test": "vitest",
     "lint": "echo \"No lint configured yet\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "vitest": "^2.1.8"
   }
 }
