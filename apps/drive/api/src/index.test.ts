@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { resetDriveFiles, resetDriveFolders } from '@suite/domain-drive';
+import { resetDriveFiles, resetDriveFolders, setDriveFileRepository, setDriveFolderRepository, InMemoryDriveFileRepository, InMemoryDriveFolderRepository } from '@suite/domain-drive';
 
 // Type definitions for API responses
 interface FileResponse {
@@ -69,13 +69,21 @@ vi.mock('@suite/auth', async () => {
         c.set('userId', 'test-user-id');
         await next();
       } else {
+        // Return 401 without calling next() to stop middleware chain
         return c.json({ error: 'Unauthorized' }, 401);
       }
     }),
+    mountAuth: vi.fn(() => {}),
   };
 });
 
 import app from './index.js';
+
+// Wire in-memory repositories before all tests
+beforeEach(() => {
+  setDriveFileRepository(new InMemoryDriveFileRepository());
+  setDriveFolderRepository(new InMemoryDriveFolderRepository());
+});
 
 describe('drive API - health', () => {
   it('should return health check', async () => {
@@ -288,7 +296,7 @@ describe('drive API - rename file', () => {
 
   it('should rename a file', async () => {
     allowAuth = true;
-    const createRes = await app.request('/api/files', {
+    const createRes = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -373,7 +381,7 @@ describe('drive API - delete file', () => {
 
   it('should delete a file', async () => {
     allowAuth = true;
-    const createRes = await app.request('/api/files', {
+    const createRes = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -538,7 +546,7 @@ describe('drive API - rename folder', () => {
 
   it('should rename a folder', async () => {
     allowAuth = true;
-    const createRes = await app.request('/api/folders', {
+    const createRes = await app.request('/api/v1/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -610,7 +618,7 @@ describe('drive API - delete folder', () => {
 
   it('should delete an empty folder', async () => {
     allowAuth = true;
-    const createRes = await app.request('/api/folders', {
+    const createRes = await app.request('/api/v1/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -663,7 +671,7 @@ describe('drive API - move file', () => {
 
   it('should move a file to a folder', async () => {
     allowAuth = true;
-    const createRes = await app.request('/api/files', {
+    const createRes = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -691,7 +699,7 @@ describe('drive API - move file', () => {
 
   it('should move a file to root', async () => {
     allowAuth = true;
-    const createRes = await app.request('/api/files', {
+    const createRes = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

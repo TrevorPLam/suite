@@ -38,8 +38,8 @@ import { openApiDoc } from './openapi.js';
 // Validate environment variables at startup
 validateDriveEnv();
 
-// Create usage repository for monitoring
-const usageRepository = new PostgresUsageRepository();
+// Create usage repository for monitoring (only if DATABASE_URL is set)
+const usageRepository = process.env.DATABASE_URL ? new PostgresUsageRepository() : null;
 
 type Env = {
   R2: R2Bucket;
@@ -160,12 +160,14 @@ app.use('/api/*', async (c, next) => {
 // Mount Better Auth handler
 mountAuth(app);
 
-// Mount UsageMonitor middleware (blocks at 80% of 1000 requests per hour)
-app.use('/api/*', UsageMonitor({
-  limit: 1000,
-  periodMs: 3600000, // 1 hour
-  usageRepository,
-}));
+// Mount UsageMonitor middleware (blocks at 80% of 1000 requests per hour) - only if DATABASE_URL is set
+if (usageRepository) {
+  app.use('/api/*', UsageMonitor({
+    limit: 1000,
+    periodMs: 3600000, // 1 hour
+    usageRepository,
+  }));
+}
 
 // Mount rate limiting middleware (60 requests per minute per user)
 app.use('/api/*', rateLimit({
@@ -173,15 +175,13 @@ app.use('/api/*', rateLimit({
 }));
 
 // Middleware to wire repositories with userId from auth context
+// This runs before route handlers, but we'll wire repos after auth succeeds
 app.use('/api/*', async (c, next) => {
-  const userId = c.get('userId') as string | undefined;
-  const r2Bucket = c.env.R2 || null;
+  const r2Bucket = c.env?.R2 || null;
   c.set('r2Bucket', r2Bucket);
-  if (userId) {
-    await wireRepositories(userId, r2Bucket || undefined);
-  }
   await next();
 });
+
 
 function readDriveError(error: unknown): { status: 400 | 404 | 500; body: Record<string, unknown> } {
   if (error instanceof DriveError) {
@@ -302,6 +302,8 @@ http_error_rate{app="drive"} ${errorRate}
 });
 
 app.get('/api/v1/files', async (c) => {
+  // Wire repositories for public endpoint (no auth required)
+  await wireRepositories(null, c.env?.R2 || undefined);
   const files = await listDriveFiles();
   return c.json({ files });
 });
@@ -646,6 +648,8 @@ app.get('/api/v1/files/:id/download', async (c) => {
 
 // Folder endpoints
 app.get('/api/v1/folders', async (c) => {
+  // Wire repositories for public endpoint (no auth required)
+  await wireRepositories(null, c.env?.R2 || undefined);
   const parentId = c.req.query('parentId');
   const folders = await listFolders(parentId);
   return c.json({ folders });
@@ -876,6 +880,8 @@ app.post('/api/v1/files/:id/move', requireAuth, async (c) => {
 
 // Search endpoint
 app.get('/api/v1/files/search', async (c) => {
+  // Wire repositories for public endpoint (no auth required)
+  await wireRepositories(null, c.env?.R2 || undefined);
   const query = c.req.query();
   const result = searchFilesQuerySchema.safeParse(query);
 

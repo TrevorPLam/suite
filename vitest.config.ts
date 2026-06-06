@@ -10,7 +10,7 @@ export default defineConfig({
     include: ['packages/**/*.test.ts', 'apps/*/api/**/*.test.ts'],
     exclude: ['node_modules', 'dist', '.nx', 'apps/*/web/**/*'],
     coverage: {
-      provider: 'istanbul',
+      provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       exclude: [
         'node_modules',

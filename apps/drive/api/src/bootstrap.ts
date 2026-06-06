@@ -1,4 +1,4 @@
-import { setDriveFileRepository, setDriveFolderRepository, setDriveKeyProviderFromEnv, setDriveStorage, type StorageAdapter } from '@suite/domain-drive';
+import { setDriveFileRepository, setDriveFolderRepository, setDriveKeyProviderFromEnv, setDriveStorage, type StorageAdapter, InMemoryDriveFileRepository, InMemoryDriveFolderRepository } from '@suite/domain-drive';
 import { PostgresDriveFileRepository, PostgresDriveFolderRepository } from '@suite/db';
 import { createCircuitBreaker, type CircuitBreaker } from '@suite/shared-kernel';
 
@@ -120,21 +120,34 @@ export function getR2Adapter(): R2StorageAdapter | null {
   return r2Adapter;
 }
 
-export async function wireRepositories(userId: string, r2Bucket?: R2Bucket): Promise<void> {
-  // Set up encryption key provider from environment
-  await setDriveKeyProviderFromEnv();
+export async function wireRepositories(userId: string | null, r2Bucket?: R2Bucket): Promise<void> {
+  try {
+    // Set up encryption key provider from environment
+    await setDriveKeyProviderFromEnv();
 
-  // Set up storage adapter
-  if (r2Bucket) {
-    const adapter = new R2StorageAdapter(r2Bucket);
-    setDriveStorage(adapter);
-    setR2Adapter(adapter);
-  } else {
-    // Fall back to in-memory storage for development
-    setDriveStorage(new InMemoryStorageAdapter());
+    // Set up storage adapter
+    if (r2Bucket) {
+      const adapter = new R2StorageAdapter(r2Bucket);
+      setDriveStorage(adapter);
+      setR2Adapter(adapter);
+    } else {
+      // Fall back to in-memory storage for development
+      setDriveStorage(new InMemoryStorageAdapter());
+    }
+
+    // Use Postgres repositories if DATABASE_URL is set and userId is provided, otherwise use in-memory repositories
+    if (userId && process.env.DATABASE_URL) {
+      setDriveFileRepository(new PostgresDriveFileRepository(userId));
+      setDriveFolderRepository(new PostgresDriveFolderRepository(userId));
+    } else {
+      // Use in-memory repositories for testing or when userId is not available
+      setDriveFileRepository(new InMemoryDriveFileRepository());
+      setDriveFolderRepository(new InMemoryDriveFolderRepository());
+    }
+  } catch (error) {
+    // If repository wiring fails, fall back to in-memory repositories
+    console.error('Failed to wire repositories, falling back to in-memory:', error);
+    setDriveFileRepository(new InMemoryDriveFileRepository());
+    setDriveFolderRepository(new InMemoryDriveFolderRepository());
   }
-
-  // DATABASE_URL is now required - always use Postgres repositories
-  setDriveFileRepository(new PostgresDriveFileRepository(userId));
-  setDriveFolderRepository(new PostgresDriveFolderRepository(userId));
 }

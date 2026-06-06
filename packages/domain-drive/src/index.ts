@@ -114,7 +114,7 @@ export function getDriveStorage(): StorageAdapter | null {
 }
 
 // In-memory repository for testing (default)
-class InMemoryDriveFileRepository implements DriveFileRepository {
+export class InMemoryDriveFileRepository implements DriveFileRepository {
   private files = new Map<string, DriveFile>();
 
   async findById(id: string): Promise<DriveFile | null> {
@@ -178,7 +178,7 @@ class InMemoryDriveFileRepository implements DriveFileRepository {
 }
 
 // In-memory folder repository for testing
-class InMemoryDriveFolderRepository implements DriveFolderRepository {
+export class InMemoryDriveFolderRepository implements DriveFolderRepository {
   private folders = new Map<string, DriveFolder>();
 
   async findById(id: string): Promise<DriveFolder | null> {

@@ -10,7 +10,7 @@ export default defineConfig({
     exclude: ['node_modules', 'dist'],
     setupFiles: ['./src/test-setup.ts'],
     coverage: {
-      provider: 'istanbul',
+      provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       exclude: [
         'node_modules',

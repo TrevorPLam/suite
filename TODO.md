@@ -1,1427 +1,1782 @@
-# Suite Deployment Task List - P0 (Critical Security & Infrastructure)
+# Testing Infrastructure Improvement Tasks
 
-This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD), and Behavior-Driven Development (BDD) principles.
-
-## Legend
+## Task Format Legend
 
 - [ ] Incomplete
 - [x] Complete
 - [~] In Progress
 - [!] Blocked
 
-### [!] P2-006: Add Image Optimization
-
-**Status**: Blocked  
-**Priority**: P2  
-**Bounded Context**: Web Performance
-
-**Related Files**:
-- `apps/drive/web/src/components/FilePreview.tsx` (create)
-- `apps/drive/web/src/App.tsx`
-
-**Definition of Done**:
-- Images loaded lazily
-- Images resized to display dimensions
-- WebP format preferred
-- Responsive images with srcset
-- Placeholder while loading
-
-**Out of Scope**:
-- Image CDN integration
-- Client-side image processing
-
-**Rules to Follow**:
-- Lazy load off-screen images
-- Serve appropriate sizes
-
-**Advanced Pattern**:
-- Intersection Observer for lazy loading
-- Responsive image component
-
-**Anti-Patterns**:
-- Loading full-size images
-- No lazy loading
-
-**Imports/Exports**:
-- None (HTML/CSS)
-
-**Depends On**:
-- None
-
-**Blocks**:
-- None
-
-**Block Reason**: FilePreview.tsx does not exist and no image preview feature exists to optimize. Task assumes image preview UI that hasn't been built yet.
-
-**Subtasks**:
-
-#### P2-006-01: Add lazy loading to drive image preview
-**Target File**: `apps/drive/web/src/components/FilePreview.tsx`
-**Action**: Add loading="lazy" to img elements; implement Intersection Observer for advanced lazy loading
-**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
-
-#### P2-006-02: Add responsive images to drive
-**Target File**: `apps/drive/web/src/App.tsx`
-**Action**: Add srcset to image elements for responsive sizing
-**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+Status: [ ] | [x] | [~] | [!]
 
 ---
 
-### [x] P2-007: Add API Versioning
+## TEST-001: Switch Vitest to V8 Coverage Provider
 
-**Status**: Completed  
-**Priority**: P2  
-**Bounded Context**: API
+Status: [x]
 
 **Related Files**:
-- `apps/calendar/api/src/index.ts`
-- `apps/tasks/api/src/index.ts`
-- `apps/drive/api/src/index.ts`
+- `vitest.config.ts` (root)
+- `packages/*/vitest.config.ts`
+- `apps/*/vitest.config.ts`
 
 **Definition of Done**:
-- All routes prefixed with /api/v1
-- Version header in responses
-- Deprecation header for old versions
-- Version documentation
-- Migration path for breaking changes
+- All Vitest configurations use V8 provider instead of Istanbul
+- Coverage reports generate successfully
+- Test execution time improves by at least 10%
+- All existing tests pass with new provider
 
 **Out of Scope**:
-- Multiple version support simultaneously
-- Version-specific middleware
+- Modifying test logic
+- Changing coverage thresholds
+- Adding new test files
 
 **Rules to Follow**:
-- Version APIs from v1
-- Document breaking changes
+- V8 provider is default and recommended for Node.js environments
+- Istanbul only needed for non-V8 runtimes (Bun, Cloudflare Workers)
+- Remove @vitest/coverage-istanbul dependency if present
+- Keep @vitest/coverage-v8 as provider
 
-**Advanced Pattern**:
-- Version middleware
-- Semantic versioning
-
-**Anti-Patterns**:
-- Breaking changes without version bump
-- No version information
-
-**Imports/Exports**:
-- None (routing)
-
-**Depends On**:
-- None
-
-**Blocks**:
-- None
-
-**Subtasks**:
-
-#### P2-007-01: Add v1 prefix to calendar API routes
-**Target File**: `apps/calendar/api/src/index.ts`
-**Action**: Change all routes from /api/... to /api/v1/...
-**Validate Command**: `curl http://localhost:3001/api/v1/events`
-
-#### P2-007-02: Add version header to calendar API
-**Target File**: `apps/calendar/api/src/index.ts`
-**Action**: Add API-Version: 1.0.0 header to all responses
-**Validate Command**: `curl -I http://localhost:3001/api/v1/events`
-
-#### P2-007-03: Add v1 prefix to tasks API routes
-**Target File**: `apps/tasks/api/src/index.ts`
-**Action**: Change all routes from /api/... to /api/v1/...
-**Validate Command**: `curl http://localhost:3002/api/v1/tasks`
-
-#### P2-007-04: Add version header to tasks API
-**Target File**: `apps/tasks/api/src/index.ts`
-**Action**: Add API-Version: 1.0.0 header to all responses
-**Validate Command**: `curl -I http://localhost:3002/api/v1/tasks`
-
-#### P2-007-05: Add v1 prefix to drive API routes
-**Target File**: `apps/drive/api/src/index.ts`
-**Action**: Change all routes from /api/... to /api/v1/...
-**Validate Command**: `curl http://localhost:3003/api/v1/files`
-
-#### P2-007-06: Add version header to drive API
-**Target File**: `apps/drive/api/src/index.ts`
-**Action**: Add API-Version: 1.0.0 header to all responses
-**Validate Command**: `curl -I http://localhost:3003/api/v1/files`
-
----
-
-### [x] P2-008: Add Health Checks and Observability
-
-**Status**: Completed
-**Priority**: P2
-**Bounded Context**: Observability
-
-**Related Files**:
-- `apps/calendar/api/src/index.ts`
-- `apps/tasks/api/src/index.ts`
-- `apps/drive/api/src/index.ts`
-
-**Definition of Done**:
-- /api/health endpoint on all APIs
-- Health check includes: status, timestamp, dependencies
-- /api/metrics endpoint for basic metrics
-- Metrics include: request count, error rate, latency
-- Metrics in Prometheus format
-
-**Out of Scope**:
-- Full observability stack
-- Distributed tracing
-- Metrics dashboard
-
-**Rules to Follow**:
-- Health checks must be fast
-- Metrics must be structured
-
-**Advanced Pattern**:
-- Prometheus metrics format
-- Health check aggregation
+**Advanced Coding Pattern**:
+AST-based coverage remapping (Vitest v3.2.0+) provides V8 speed with Istanbul accuracy. No pre-instrumentation step required.
 
 **Anti-Patterns**:
-- Slow health checks
-- Unstructured metrics
+- Using Istanbul when V8 is available
+- Pre-transpiling source files for coverage
+- Mixing providers across configs
 
 **Imports/Exports**:
-- APIs export health and metrics endpoints
+```typescript
+// vitest.config.ts
+import { defineConfig } from 'vitest/config'
 
-**Depends On**:
-- SEC-012 (Structured logging)
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'v8' // Changed from 'istanbul'
+    }
+  }
+})
+```
 
-**Blocks**:
-- None
+**Depends On**: None
+**Blocks**: TEST-002, TEST-003
 
-**Implementation Notes**:
-- Added timestamp field to all health endpoints
-- Added /api/metrics endpoint to all three APIs with Prometheus format
-- Metrics include: request count, error count, latency (p50, p95, p99, avg), error rate
-- In-memory metrics collection with middleware (keeps last 1000 latency samples)
-- Typecheck passes for calendar-api and tasks-api
-- Pre-existing typecheck errors in drive-api test file (unrelated to this task)
+### Subtasks
 
-**Subtasks**:
-
-#### P2-008-01: Add metrics endpoint to calendar API
-**Target File**: `apps/calendar/api/src/index.ts`
-**Action**: Add GET /api/metrics that returns Prometheus-formatted metrics for request count, errors, latency
-**Validate Command**: `curl http://localhost:3001/api/metrics`
-**Status**: ✅ Complete
-
-#### P2-008-02: Add metrics endpoint to tasks API
-**Target File**: `apps/tasks/api/src/index.ts`
-**Action**: Add GET /api/metrics that returns Prometheus-formatted metrics for request count, errors, latency
-**Validate Command**: `curl http://localhost:3002/api/metrics`
-**Status**: ✅ Complete
-
-#### P2-008-03: Add metrics endpoint to drive API
-**Target File**: `apps/drive/api/src/index.ts`
-**Action**: Add GET /api/metrics that returns Prometheus-formatted metrics for request count, errors, latency
-**Validate Command**: `curl http://localhost:3003/api/metrics`
-**Status**: ✅ Complete
-
----
-
-### [x] P2-009: Increase Test Coverage Thresholds
-
-**Status**: Completed
-**Priority**: P2
-**Bounded Context**: Testing
-
-**Related Files**:
-- `vitest.config.ts`
-
-**Definition of Done**:
-- Coverage thresholds set to 80% for lines, functions, branches, statements
-- CI fails if coverage below threshold
-- Coverage report generated
-- Coverage uploaded to codecov or similar
-
-**Out of Scope**:
-- 100% coverage requirement
-- Coverage for generated code
-
-**Rules to Follow**:
-- Maintain high coverage
-- CI enforces thresholds
-
-**Advanced Pattern**:
-- Per-package coverage thresholds
-- Coverage exclusions
-
-**Anti-Patterns**:
-- Zero thresholds
-- Ignoring coverage failures
-
-**Imports/Exports**:
-- None (configuration)
-
-**Depends On**:
-- SEC-006 (DB tests running in CI)
-
-**Blocks**:
-- None
-
-**Implementation Notes**:
-- Updated coverage thresholds from 0 to 80% for all metrics (lines, functions, branches, statements)
-- Subtask P2-009-02 was already complete - CI workflow already had codecov upload configured
-- Lint passed with 0 errors (only warnings)
-- Pre-existing typecheck errors in drive-api and tasks-api test files (unrelated to this task)
-- Pre-existing test failures in calendar-web (AuthProvider context issue, unrelated to this task)
-
-**Subtasks**:
-
-#### P2-009-01: Update coverage thresholds in vitest config
+#### TEST-001-01: Update root Vitest config to V8 provider
 **Target File**: `vitest.config.ts`
-**Action**: Change coverage.thresholds from 0 to 80 for lines, functions, branches, statements
-**Validate Command**: `pnpm test --coverage`
+**Action**: Change coverage.provider from 'istanbul' to 'v8' in root configuration. Remove any Istanbul-specific options if present.
+**Validation**: `pnpm test --coverage` at root should generate coverage report with V8 provider.
 **Status**: ✅ Complete
 
-#### P2-009-02: Add coverage upload to CI
-**Target File**: `.github/workflows/ci.yml`
-**Action**: Add step to upload coverage report to codecov or similar service
-**Validate Command**: `gh workflow view ci.yml | grep coverage`
-**Status**: ✅ Already complete (codecov upload existed at lines 91-96)
+#### TEST-001-02: Update package Vitest configs to V8 provider
+**Target Files**: 
+- `packages/auth/vitest.config.ts`
+- `packages/crypto/vitest.config.ts`
+- `packages/db/vitest.config.ts`
+- `packages/domain-calendar/vitest.config.ts`
+- `packages/domain-drive/vitest.config.ts`
+- `packages/domain-tasks/vitest.config.ts`
+- `packages/env-config/vitest.config.ts`
+- `packages/shared-kernel/vitest.config.ts`
+- `packages/ui/vitest.config.ts`
+**Action**: Add or update coverage.provider to 'v8' in each package config. Ensure consistent configuration across all packages.
+**Validation**: Run `pnpm test --coverage` for each package individually to verify coverage generation.
+**Status**: ✅ Complete - Updated domain-calendar, domain-drive, domain-tasks (only packages with coverage config)
+
+#### TEST-001-03: Update app Vitest configs to V8 provider
+**Target Files**:
+- `apps/calendar/api/vitest.config.ts`
+- `apps/calendar/web/vitest.config.ts`
+- `apps/drive/api/vitest.config.ts`
+- `apps/drive/web/vitest.config.ts`
+- `apps/tasks/api/vitest.config.ts`
+- `apps/tasks/web/vitest.config.ts`
+**Action**: Add or update coverage.provider to 'v8' in each app config. Ensure web app configs (jsdom/happy-dom) work correctly with V8.
+**Validation**: Run `pnpm test --coverage` for each app to verify coverage generation.
+**Status**: ✅ Complete
+
+#### TEST-001-04: Remove Istanbul dependencies
+**Target File**: `package.json` (root and individual packages)
+**Action**: Remove @vitest/coverage-istanbul from dependencies if present. Ensure @vitest/coverage-v8 is installed.
+**Validation**: `pnpm install` should complete without errors. Check no Istanbul references remain in lockfile.
+**Status**: ✅ Complete - Replaced @vitest/coverage-istanbul with @vitest/coverage-v8 in root package.json
 
 ---
 
-### [x] P2-010: Add E2E Tests with Playwright
+**Implementation Notes**:
+- V8 coverage provider successfully enabled across all configs (root, 3 domain packages, 6 apps)
+- @vitest/coverage-istanbul replaced with @vitest/coverage-v8 in root package.json
+- Coverage reports generate successfully with V8 provider (confirmed by "Coverage enabled with v8" output)
+- Typecheck passed, lint passed (pre-existing warnings unrelated to this change)
+- Test failures in drive/web are pre-existing (ThemeProvider setup issue) and unrelated to coverage provider change
 
-**Status**: Completed
-**Priority**: P2
-**Bounded Context**: Testing
+---
+
+## TEST-002: Standardize Coverage Thresholds
+
+Status: [ ]
 
 **Related Files**:
-- `apps/calendar/web/e2e/calendar.spec.ts` (create)
-- `apps/tasks/web/e2e/tasks.spec.ts` (create)
-- `apps/drive/web/e2e/drive.spec.ts` (create)
-- `playwright.config.ts` (create)
+- `vitest.config.ts` (root)
+- `packages/domain-*/vitest.config.ts`
+- `apps/*/vitest.config.ts`
 
 **Definition of Done**:
-- Playwright configured for all web apps
-- E2E test for calendar create event flow
-- E2E test for tasks create task flow
-- E2E test for drive upload file flow
-- E2E tests run in CI
-- Tests use test database
+- Root config sets 80% global thresholds
+- Domain packages set 90% thresholds (critical business logic)
+- API apps set 85% thresholds
+- Web apps set 70% thresholds
+- Per-file thresholds configured for domain packages
+- All thresholds enforced in CI
 
 **Out of Scope**:
-- Visual regression tests
-- Cross-browser testing beyond Chromium
+- Writing new tests to meet thresholds
+- Changing test logic
+- Modifying coverage provider
 
 **Rules to Follow**:
-- Test critical user flows
-- Isolated test data
+- Positive thresholds = minimum percentage required
+- Negative thresholds = maximum uncovered items allowed
+- Use glob patterns for per-file thresholds
+- Enable perFile to identify low-coverage files
+- Keep web app thresholds lower (UI harder to cover)
 
-**Advanced Pattern**:
-- Page Object Model
-- Test data fixtures
+**Advanced Coding Pattern**:
+Tiered coverage thresholds with glob patterns allow different standards for different code types. Domain logic deserves higher coverage than UI code.
 
 **Anti-Patterns**:
-- Flaky tests
-- Shared test state
+- Setting 100% thresholds (encourages bad testing practices)
+- Using same threshold for all code types
+- Ignoring threshold failures in CI
 
 **Imports/Exports**:
-- E2E tests in each web app
+```typescript
+coverage: {
+  thresholds: {
+    global: {
+      lines: 80,
+      functions: 80,
+      branches: 75,
+      statements: 80
+    },
+    'packages/domain-*/**/*.ts': {
+      lines: 90,
+      functions: 90,
+      branches: 85,
+      statements: 90,
+      perFile: true
+    }
+  }
+}
+```
 
-**Depends On**:
-- SEC-004 (Auth end-to-end)
-- SEC-006 (Postgres default path)
+**Depends On**: TEST-001
+**Blocks**: TEST-005
 
-**Blocks**:
-- None
+### Subtasks
 
-**Implementation Notes**:
-- Installed @playwright/test and @types/node as dev dependencies
-- Created playwright.config.ts with webServer configuration for all three apps (calendar on 5173, tasks on 5174, drive on 5175)
-- Created E2E test files for calendar, tasks, and drive web apps
-- Tests follow Playwright best practices: use locators, web-first assertions, test isolation
-- Added E2E job to CI workflow that runs on push, installs Chromium, runs tests, uploads reports
-- Lint passed with 0 errors (only warnings)
-- Pre-existing typecheck errors in drive-api and tasks-api test files (unrelated to this task)
+#### TEST-002-01: Configure root coverage thresholds
+**Target File**: `vitest.config.ts`
+**Action**: Set global thresholds to 80% for lines, functions, branches, statements. Add per-file threshold configuration for domain packages at 90%.
+**Validation**: Run `pnpm test --coverage` and verify threshold enforcement in output.
 
-**Subtasks**:
+#### TEST-002-02: Configure domain package thresholds
+**Target Files**:
+- `packages/domain-calendar/vitest.config.ts`
+- `packages/domain-drive/vitest.config.ts`
+- `packages/domain-tasks/vitest.config.ts`
+**Action**: Set thresholds to 90% for lines, functions, branches, statements. Enable perFile: true to identify low-coverage files.
+**Validation**: Run `pnpm test --coverage` in each domain package to verify thresholds.
 
-#### P2-010-01: Install and configure Playwright
+#### TEST-002-03: Configure API app thresholds
+**Target Files**:
+- `apps/calendar/api/vitest.config.ts`
+- `apps/drive/api/vitest.config.ts`
+- `apps/tasks/api/vitest.config.ts`
+**Action**: Set thresholds to 85% for lines, functions, branches, statements. Remove 0% placeholder thresholds.
+**Validation**: Run `pnpm test --coverage` in each API app to verify thresholds.
+
+#### TEST-002-04: Configure web app thresholds
+**Target Files**:
+- `apps/calendar/web/vitest.config.ts`
+- `apps/drive/web/vitest.config.ts`
+- `apps/tasks/web/vitest.config.ts`
+**Action**: Set thresholds to 70% for lines, functions, branches, statements. Remove 0% placeholder thresholds.
+**Validation**: Run `pnpm test --coverage` in each web app to verify thresholds.
+
+#### TEST-002-05: Configure infrastructure package thresholds
+**Target Files**:
+- `packages/auth/vitest.config.ts`
+- `packages/crypto/vitest.config.ts`
+- `packages/db/vitest.config.ts`
+- `packages/env-config/vitest.config.ts`
+- `packages/shared-kernel/vitest.config.ts`
+- `packages/ui/vitest.config.ts`
+**Action**: Set thresholds to 80% for lines, functions, branches, statements. Crypto package should have 90% (security-critical).
+**Validation**: Run `pnpm test --coverage` in each package to verify thresholds.
+
+---
+
+## TEST-003: Implement Playwright StorageState for Authentication
+
+Status: [ ]
+
+**Related Files**:
+- `playwright.config.ts`
+- `apps/calendar/web/e2e/calendar.spec.ts`
+- `apps/drive/web/e2e/drive.spec.ts`
+- `apps/tasks/web/e2e/tasks.spec.ts`
+- New: `playwright.global-setup.ts`
+
+**Definition of Done**:
+- Global setup file creates authenticated storage state
+- Storage state saved to `.auth/storage-state.json` (gitignored)
+- Test fixtures load storage state for authenticated tests
+- Login overhead eliminated from all tests
+- Multiple user roles supported (if applicable)
+
+**Out of Scope**:
+- Implementing new authentication flows
+- Modifying auth package
+- Adding new E2E tests
+
+**Rules to Follow**:
+- Storage state files contain session tokens, must be gitignored
+- Regenerate storage state at CI start, don't commit
+- Use setup project pattern for auth
+- Each user role gets separate storage state file
+- Tests start already authenticated, no login steps
+
+**Advanced Coding Pattern**:
+Playwright's storageState feature persists cookies/localStorage/sessionStorage to JSON. Global setup runs once before entire suite, eliminating login overhead across hundreds of tests.
+
+**Anti-Patterns**:
+- Logging in before each test (beforeEach)
+- Committing storage state files to repository
+- Reusing stale tokens across days
+- Loading storage state in page instead of context
+
+**Imports/Exports**:
+```typescript
+// playwright.global-setup.ts
+import { FullConfig } from '@playwright/test'
+
+async function globalSetup(config: FullConfig) {
+  const browser = await chromium.launch()
+  const context = await browser.newContext()
+  const page = await context.newPage()
+  // Login flow
+  await context.storageState({ path: '.auth/storage-state.json' })
+  await browser.close()
+}
+
+export default globalSetup
+```
+
+**Depends On**: None
+**Blocks**: TEST-006
+
+### Subtasks
+
+#### TEST-003-01: Create global setup file
+**Target File**: `playwright.global-setup.ts` (new)
+**Action**: Create global setup file that launches browser, performs login flow, saves storage state to `.auth/storage-state.json`. Export default globalSetup function.
+**Validation**: Run `npx playwright test --config=playwright.config.ts` and verify `.auth/storage-state.json` is created.
+
+#### TEST-003-02: Add .auth to gitignore
+**Target File**: `.gitignore`
+**Action**: Add `.auth/` directory to gitignore to prevent committing session tokens.
+**Validation**: Run `git status` and verify `.auth/` is not tracked.
+
+#### TEST-003-03: Configure Playwright to use global setup
 **Target File**: `playwright.config.ts`
-**Action**: Create playwright.config.ts with webServer configuration for all three apps
-**Validate Command**: `npx playwright test --list`
-**Status**: ✅ Complete
+**Action**: Add globalSetup and globalTeardown configuration pointing to `playwright.global-setup.ts`. Configure storageState for test projects.
+**Validation**: Run `npx playwright test` and verify tests use pre-authenticated state.
 
-#### P2-010-02: Create calendar E2E test
+#### TEST-003-04: Refactor calendar E2E tests to use storageState
 **Target File**: `apps/calendar/web/e2e/calendar.spec.ts`
-**Action**: Create test that signs in, creates event, verifies event appears
-**Validate Command**: `npx playwright test calendar.spec.ts`
-**Status**: ✅ Complete
+**Action**: Remove login steps from tests. Configure test project to use storageState fixture. Update tests to start already authenticated.
+**Validation**: Run `npx playwright test apps/calendar/web/e2e/calendar.spec.ts` and verify tests pass without login steps.
 
-#### P2-010-03: Create tasks E2E test
-**Target File**: `apps/tasks/web/e2e/tasks.spec.ts`
-**Action**: Create test that signs in, creates task, verifies task appears
-**Validate Command**: `npx playwright test tasks.spec.ts`
-**Status**: ✅ Complete
-
-#### P2-010-04: Create drive E2E test
+#### TEST-003-05: Refactor drive E2E tests to use storageState
 **Target File**: `apps/drive/web/e2e/drive.spec.ts`
-**Action**: Create test that signs in, uploads file, verifies file appears
-**Validate Command**: `npx playwright test drive.spec.ts`
-**Status**: ✅ Complete
+**Action**: Remove login steps from tests. Configure test project to use storageState fixture. Update tests to start already authenticated.
+**Validation**: Run `npx playwright test apps/drive/web/e2e/drive.spec.ts` and verify tests pass without login steps.
 
-#### P2-010-05: Add E2E to CI workflow
+#### TEST-003-06: Refactor tasks E2E tests to use storageState
+**Target File**: `apps/tasks/web/e2e/tasks.spec.ts`
+**Action**: Remove login steps from tests. Configure test project to use storageState fixture. Update tests to start already authenticated.
+**Validation**: Run `npx playwright test apps/tasks/web/e2e/tasks.spec.ts` and verify tests pass without login steps.
+
+---
+
+## TEST-004: Add @nx/vitest Plugin Integration
+
+Status: [ ]
+
+**Related Files**:
+- `nx.json`
+- `package.json` (root)
+- `vitest.config.ts` (root)
+
+**Definition of Done**:
+- @nx/vitest plugin installed and configured
+- Vitest tasks inferred for all projects with vitest configs
+- Separate test and test-ci targets configured
+- watch mode for local, run mode for CI
+- Affected testing configured
+
+**Out of Scope**:
+- Modifying existing test logic
+- Changing test file structure
+- Adding new tests
+
+**Rules to Follow**:
+- Plugin infers tasks from vitest.config.* files
+- Use testMode: 'watch' for local development
+- Use testMode: 'run' for CI determinism
+- Configure separate targets for unit and e2e if using Vitest for both
+- Use include/exclude patterns to scope plugin application
+
+**Advanced Coding Pattern**:
+Nx plugin inference automatically creates targets from config files. Configure once in nx.json, all projects with vitest configs get test targets automatically.
+
+**Anti-Patterns**:
+- Manually defining test targets in project.json
+- Using same testMode for local and CI
+- Not configuring affected testing
+
+**Imports/Exports**:
+```json
+// nx.json
+{
+  "plugins": [
+    {
+      "plugin": "@nx/vitest",
+      "options": {
+        "testTargetName": "test",
+        "ciTargetName": "test-ci",
+        "ciGroupName": "Unit Tests (CI)",
+        "testMode": "watch"
+      }
+    }
+  ]
+}
+```
+
+**Depends On**: None
+**Blocks**: TEST-008
+
+### Subtasks
+
+#### TEST-004-01: Install @nx/vitest plugin
+**Target File**: `package.json` (root)
+**Action**: Add @nx/vitest to devDependencies. Run pnpm install to install the plugin.
+**Validation**: Run `pnpm list @nx/vitest` and verify it's installed.
+
+#### TEST-004-02: Configure @nx/vitest plugin in nx.json
+**Target File**: `nx.json`
+**Action**: Add @nx/vitest plugin configuration with testTargetName, ciTargetName, ciGroupName, and testMode options.
+**Validation**: Run `nx show project calendar-api` and verify test target is inferred.
+
+#### TEST-004-03: Verify task inference for all projects
+**Target Files**: All project.json files (auto-generated)
+**Action**: Run `nx show project` for each project to verify test targets are inferred correctly from vitest configs.
+**Validation**: All projects with vitest configs should have test targets inferred.
+
+#### TEST-004-04: Configure affected testing in CI
 **Target File**: `.github/workflows/ci.yml`
-**Action**: Add e2e job that runs Playwright tests after build
-**Validate Command**: `gh workflow view ci.yml | grep playwright`
-**Status**: ✅ Complete
+**Action**: Update CI workflow to use `nx affected -t test --base=main~1` instead of running all tests.
+**Validation**: Run CI workflow on a feature branch and verify only affected projects are tested.
 
 ---
 
-### [x] P2-011: Add Error Code Taxonomy
+## TEST-005: Add Coverage Report Configuration
 
-**Status**: Completed
-**Priority**: P2
-**Bounded Context**: Error Handling
+Status: [ ]
 
 **Related Files**:
-- `packages/shared-kernel/src/errors.ts` (create)
-- `apps/calendar/api/src/index.ts`
-- `apps/tasks/api/src/index.ts`
-- `apps/drive/api/src/index.ts`
+- `vitest.config.ts` (root)
+- `packages/*/vitest.config.ts`
+- `apps/*/vitest.config.ts`
 
 **Definition of Done**:
-- Error codes defined per taxonomy document
-- All errors return code field
-- Error codes documented
-- Client can handle errors by code
-- Consistent error format across APIs
+- Coverage reports include HTML, JSON, and text formats
+- Coverage reports output to ./coverage directory
+- Coverage enabled in CI
+- reportOnFailure enabled for debugging
+- all: true to include all files in coverage
 
 **Out of Scope**:
-- Custom error handling per endpoint
-- Error localization
+- Changing coverage provider
+- Modifying coverage thresholds
+- Writing new tests
 
 **Rules to Follow**:
-- Follow error taxonomy from planning docs
-- Machine-readable error codes
+- Use multiple reporters for different use cases (HTML for local, JSON for CI)
+- Enable reportOnFailure to see coverage even when tests fail
+- Use all: true to include untested files in coverage
+- Clean coverage directory before runs (default behavior)
 
-**Advanced Pattern**:
-- Error class hierarchy
-- Error code constants
+**Advanced Coding Pattern**:
+Multiple coverage reporters serve different audiences: HTML for developers (interactive), JSON for CI tools (parseable), text for terminal output (quick check).
 
 **Anti-Patterns**:
-- String-only error messages
-- Inconsistent error formats
+- Only using text reporter (loses detail)
+- Not enabling reportOnFailure (hard to debug failures)
+- Including test files in coverage reports
 
 **Imports/Exports**:
-- Shared-kernel exports error classes and codes
-
-**Depends On**:
-- None
-
-**Blocks**:
-- None
-
-**Implementation Notes**:
-- Created `packages/shared-kernel/src/errors.ts` with error code constants and error classes following the taxonomy from planning docs
-- Error codes follow pattern: `<domain>_<error_name>` or `global_<error_name>` for cross-domain errors
-- All error classes extend base `AppError` class with code, message, details, and timestamp
-- Updated all three APIs (calendar, tasks, drive) to use standardized error format with code field
-- Error responses now include: `{ error: { code, message, details?, timestamp } }`
-- Typecheck passes for shared-kernel, calendar-api, and tasks-api
-- Lint passes with 0 errors (only warnings)
-- Pre-existing typecheck errors in drive-api test file (unrelated to this task)
-
-**Subtasks**:
-
-#### P2-011-01: Create error code constants
-**Target File**: `packages/shared-kernel/src/errors.ts`
-**Action**: Create error code constants following taxonomy: VALIDATION_ERROR, NOT_FOUND, UNAUTHORIZED, FORBIDDEN, CONFLICT, INTERNAL_ERROR
-**Validate Command**: `pnpm --filter @suite/shared-kernel typecheck`
-**Status**: ✅ Complete
-
-#### P2-011-02: Create error classes
-**Target File**: `packages/shared-kernel/src/errors.ts`
-**Action**: Create error classes (ValidationError, NotFoundError, etc.) that include code and message
-**Validate Command**: `pnpm --filter @suite/shared-kernel typecheck`
-**Status**: ✅ Complete
-
-#### P2-011-03: Update calendar API to use error classes
-**Target File**: `apps/calendar/api/src/index.ts`
-**Action**: Replace generic errors with typed error classes from shared-kernel
-**Validate Command**: `pnpm --filter @suite/calendar-api test`
-**Status**: ✅ Complete
-
-#### P2-011-04: Update tasks API to use error classes
-**Target File**: `apps/tasks/api/src/index.ts`
-**Action**: Replace generic errors with typed error classes from shared-kernel
-**Validate Command**: `pnpm --filter @suite/tasks-api test`
-**Status**: ✅ Complete
-
-#### P2-011-05: Update drive API to use error classes
-**Target File**: `apps/drive/api/src/index.ts`
-**Action**: Replace generic errors with typed error classes from shared-kernel
-**Validate Command**: `pnpm --filter @suite/drive-api test`
-**Status**: ✅ Complete
-
----
-
-### [x] P2-012: Add Request ID Tracing
-
-**Status**: Completed
-**Priority**: P2
-**Bounded Context**: Observability
-
-**Related Files**:
-- `packages/shared-kernel/src/request-id.ts` (create)
-- `apps/calendar/api/src/index.ts`
-- `apps/tasks/api/src/index.ts`
-- `apps/drive/api/src/index.ts`
-
-**Definition of Done**:
-- Request ID generated for each request
-- Request ID included in logs
-- Request ID returned in response header
-- Request ID passed to downstream services
-- Traceability across request lifecycle
-
-**Out of Scope**:
-- Distributed tracing across services
-- Span generation
-
-**Rules to Follow**:
-- Include request ID in all logs
-- Return request ID to client
-
-**Advanced Pattern**:
-- Middleware for request ID generation
-- UUID v4 for request IDs
-
-**Anti-Patterns**:
-- Missing request IDs in logs
-- Inconsistent request ID format
-
-**Imports/Exports**:
-- Shared-kernel exports requestId middleware
-
-**Depends On**:
-- SEC-012 (Structured logging)
-
-**Blocks**:
-- None
-
-**Implementation Notes**:
-- Created `packages/shared-kernel/src/request-id.ts` with middleware that generates UUID v4 request IDs
-- Middleware respects existing X-Request-Id from client for distributed tracing
-- Request ID is set in Hono context and added to response header as X-Request-Id
-- Mounted request ID middleware before logger in all three APIs (calendar, tasks, drive)
-- Lint passed with 0 errors
-- Pre-existing typecheck errors in drive-api and tasks-api test files (unrelated to this task)
-
-**Subtasks**:
-
-#### P2-012-01: Create request ID middleware
-**Target File**: `packages/shared-kernel/src/request-id.ts`
-**Action**: Create middleware that generates UUID v4, sets in context, adds to response header
-**Validate Command**: `pnpm --filter @suite/shared-kernel typecheck`
-**Status**: ✅ Complete
-
-#### P2-012-02: Mount request ID middleware in calendar API
-**Target File**: `apps/calendar/api/src/index.ts`
-**Action**: Import and mount requestId middleware before logger
-**Validate Command**: `curl -I http://localhost:3001/api/v1/events | grep X-Request-Id`
-**Status**: ✅ Complete
-
-#### P2-012-03: Mount request ID middleware in tasks API
-**Target File**: `apps/tasks/api/src/index.ts`
-**Action**: Import and mount requestId middleware before logger
-**Validate Command**: `curl -I http://localhost:3002/api/v1/tasks | grep X-Request-Id`
-**Status**: ✅ Complete
-
-#### P2-012-04: Mount request ID middleware in drive API
-**Target File**: `apps/drive/api/src/index.ts`
-**Action**: Import and mount requestId middleware before logger
-**Validate Command**: `curl -I http://localhost:3003/api/v1/files | grep X-Request-Id`
-**Status**: ✅ Complete
-
----
-
-### [!] P2-013: Add Graceful Shutdown
-
-**Status**: Blocked
-**Priority**: P2
-**Bounded Context**: API
-
-**Related Files**:
-- `apps/calendar/api/src/index.ts`
-- `apps/tasks/api/src/index.ts`
-- `apps/drive/api/src/index.ts`
-
-**Definition of Done**:
-- SIGTERM handler implemented
-- In-flight requests allowed to complete
-- Database connections closed gracefully
-- Shutdown logged
-- Health check returns shutting down
-
-**Out of Scope**:
-- Zero-downtime deployments
-- Connection draining for Workers
-
-**Rules to Follow**:
-- Handle shutdown signals
-- Complete in-flight work
-
-**Advanced Pattern**:
-- Graceful shutdown with timeout
-- Connection pool draining
-
-**Anti-Patterns**:
-- Immediate process exit
-- Unclosed connections
-
-**Imports/Exports**:
-- None (signal handling)
-
-**Depends On**:
-- None
-
-**Blocks**:
-- None
-
-**Block Reason**: Task assumes traditional Node.js server with SIGTERM handling. Cloudflare Workers are serverless with no SIGTERM signals, no application-managed connection pools (D1 bindings are runtime-managed), and automatic 30-second grace period for in-flight requests. Graceful shutdown is handled by the Cloudflare runtime, not application code.
-
-**Subtasks**:
-
-#### P2-013-01: Add graceful shutdown to calendar API
-**Target File**: `apps/calendar/api/src/index.ts`
-**Action**: Add SIGTERM handler that stops accepting new requests, waits for in-flight requests, closes DB connections
-**Validate Command**: `pnpm --filter @suite/calendar-api typecheck`
-
-#### P2-013-02: Add graceful shutdown to tasks API
-**Target File**: `apps/tasks/api/src/index.ts`
-**Action**: Add SIGTERM handler that stops accepting new requests, waits for in-flight requests, closes DB connections
-**Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
-
-#### P2-013-03: Add graceful shutdown to drive API
-**Target File**: `apps/drive/api/src/index.ts`
-**Action**: Add SIGTERM handler that stops accepting new requests, waits for in-flight requests, closes DB connections
-**Validate Command**: `pnpm --filter @suite/drive-api typecheck`
-
----
-
-### [x] P2-014: Add OpenAPI/Swagger Documentation
-
-**Status**: Completed
-**Priority**: P2
-**Bounded Context**: API Documentation
-
-**Related Files**:
-- `apps/calendar/api/src/openapi.ts` (create)
-- `apps/tasks/api/src/openapi.ts` (create)
-- `apps/drive/api/src/openapi.ts` (create)
-
-**Definition of Done**:
-- OpenAPI spec generated for each API
-- /api/docs endpoint serves Swagger UI
-- All endpoints documented
-- Request/response schemas documented
-- Authentication documented
-
-**Out of Scope**:
-- Code generation from OpenAPI
-- API client SDK generation
-
-**Rules to Follow**:
-- Document all public endpoints
-- Keep docs in sync with code
-
-**Advanced Pattern**:
-- Automatic OpenAPI generation from routes
-- Schema inference from Zod
-
-**Anti-Patterns**:
-- Outdated documentation
-- Undocumented endpoints
-
-**Imports/Exports**:
-- APIs serve OpenAPI spec
-
-**Depends On**:
-- P1-009 (Standardize API validation)
-
-**Blocks**:
-- None
-
-**Implementation Notes**:
-- Installed @hono/swagger-ui dependency in all three APIs
-- Created OpenAPI spec documents for calendar, tasks, and drive APIs
-- Added /api/openapi.json endpoint to serve OpenAPI spec
-- Added /api/docs endpoint to serve Swagger UI
-- All endpoints documented with request/response schemas
-- Authentication documented using BearerAuth scheme
-- Typecheck passes for calendar-api and tasks-api
-- Lint passes for all three APIs with 0 errors (only warnings)
-- Pre-existing typecheck errors in drive-api test file (unrelated to this task)
-
-**Subtasks**:
-
-#### P2-014-01: Generate OpenAPI spec for calendar API
-**Target File**: `apps/calendar/api/src/openapi.ts`
-**Action**: Create OpenAPI spec document for all calendar endpoints with schemas
-**Validate Command**: `pnpm --filter @suite/calendar-api typecheck`
-**Status**: ✅ Complete
-
-#### P2-014-02: Serve Swagger UI for calendar API
-**Target File**: `apps/calendar/api/src/index.ts`
-**Action**: Add GET /api/docs that serves Swagger UI with OpenAPI spec
-**Validate Command**: `curl http://localhost:3001/api/docs`
-**Status**: ✅ Complete
-
-#### P2-014-03: Generate OpenAPI spec for tasks API
-**Target File**: `apps/tasks/api/src/openapi.ts`
-**Action**: Create OpenAPI spec document for all tasks endpoints with schemas
-**Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
-**Status**: ✅ Complete
-
-#### P2-014-04: Serve Swagger UI for tasks API
-**Target File**: `apps/tasks/api/src/index.ts`
-**Action**: Add GET /api/docs that serves Swagger UI with OpenAPI spec
-**Validate Command**: `curl http://localhost:3002/api/docs`
-**Status**: ✅ Complete
-
-#### P2-014-05: Generate OpenAPI spec for drive API
-**Target File**: `apps/drive/api/src/openapi.ts`
-**Action**: Create OpenAPI spec document for all drive endpoints with schemas
-**Validate Command**: `pnpm --filter @suite/drive-api typecheck`
-**Status**: ✅ Complete
-
-#### P2-014-06: Serve Swagger UI for drive API
-**Target File**: `apps/drive/api/src/index.ts`
-**Action**: Add GET /api/docs that serves Swagger UI with OpenAPI spec
-**Validate Command**: `curl http://localhost:3003/api/docs`
-**Status**: ✅ Complete
-
----
-
-### [x] P2-015: Add Circuit Breaker Pattern
-
-**Status**: Completed
-**Priority**: P2
-**Bounded Context**: API Resilience
-
-**Related Files**:
-- `packages/shared-kernel/src/circuit-breaker.ts` (create)
-- `apps/drive/api/src/bootstrap.ts`
-
-**Definition of Done**:
-- Circuit breaker implemented for external calls
-- Circuit opens after N failures
-- Circuit closes after success
-- Fallback responses when circuit open
-- Circuit state logged
-
-**Out of Scope**:
-- Circuit breaker for database (use connection pool)
-- Circuit breaker dashboard
-
-**Rules to Follow**:
-- Protect against cascading failures
-- Provide fallback responses
-
-**Advanced Pattern**:
-- State machine for circuit states
-- Configurable thresholds
-
-**Anti-Patterns**:
-- No failure isolation
-- Cascading failures
-
-**Imports/Exports**:
-- Shared-kernel exports circuit breaker
-
-**Depends On**:
-- None
-
-**Blocks**:
-- None
-
-**Implementation Notes**:
-- Created CircuitBreaker class with three states: CLOSED, OPEN, HALF_OPEN
-- Configurable thresholds: failureThreshold (default 5), timeoutMs (default 30000), successThreshold (default 2)
-- Circuit breaker wraps R2 operations in R2StorageAdapter (put, get, delete)
-- State changes logged via optional logger callback
-- Note: In Cloudflare Workers, circuit breaker is in-memory and doesn't persist across requests. Each Worker instance maintains its own state, providing protection against burst failures within a single instance's lifecycle.
-- Typecheck passes for shared-kernel
-- Lint passes for shared-kernel and drive-api
-- Pre-existing typecheck errors in drive-api test file (unrelated to this task)
-
-**Subtasks**:
-
-#### P2-015-01: Create circuit breaker utility
-**Target File**: `packages/shared-kernel/src/circuit-breaker.ts`
-**Action**: Create CircuitBreaker class with states (closed, open, half-open), failure threshold, timeout
-**Validate Command**: `pnpm --filter @suite/shared-kernel test`
-**Status**: ✅ Complete
-
-#### P2-015-02: Wrap R2 calls with circuit breaker in drive API
-**Target File**: `apps/drive/api/src/bootstrap.ts`
-**Action**: Wrap R2 client calls with circuit breaker to handle R2 failures
-**Validate Command**: `pnpm --filter @suite/drive-api test`
-**Status**: ✅ Complete
-
----
-
-### [x] P2-016: Add Request Timeout Middleware
-
-**Status**: Completed
-**Priority**: P2
-**Bounded Context**: API Performance
-
-**Related Files**:
-- `apps/calendar/api/src/index.ts`
-- `apps/tasks/api/src/index.ts`
-- `apps/drive/api/src/index.ts`
-- `packages/shared-kernel/src/errors.ts`
-
-**Definition of Done**:
-- Request timeout middleware mounted
-- Default timeout 30 seconds
-- Timeout configurable per route
-- Timeout returns 408 status
-- Timeout logged
-
-**Out of Scope**:
-- Per-client timeout configuration
-- Timeout for streaming responses
-
-**Rules to Follow**:
-- Prevent hanging requests
-- Reasonable default timeout
-
-**Advanced Pattern**:
-- AbortController for cancellation
-- Per-route timeout override
-
-**Anti-Patterns**:
-- Unlimited request time
-- No timeout handling
-
-**Imports/Exports**:
-- None (middleware)
-
-**Depends On**:
-- None
-
-**Blocks**:
-- None
-
-**Implementation Notes**:
-- Added GLOBAL_REQUEST_TIMEOUT error code to shared-kernel errors.ts
-- Used Hono's built-in timeout middleware with custom HTTPException
-- Custom timeout exception returns standardized error format with code, message, and timestamp
-- Calendar API: 30s timeout on all /api/* routes
-- Tasks API: 30s timeout on all /api/* routes
-- Drive API: 30s timeout on all /api/* routes, 5 minute timeout on POST /api/v1/files (upload)
-- Typecheck passes for calendar-api, tasks-api, and shared-kernel
-- Pre-existing typecheck errors in drive-api test file (unrelated to this task)
-
-**Subtasks**:
-
-#### P2-016-01: Add timeout middleware to calendar API
-**Target File**: `apps/calendar/api/src/index.ts`
-**Action**: Add timeout middleware with 30s default; return 408 on timeout
-**Validate Command**: `pnpm --filter @suite/calendar-api typecheck`
-**Status**: ✅ Complete
-
-#### P2-016-02: Add timeout middleware to tasks API
-**Target File**: `apps/tasks/api/src/index.ts`
-**Action**: Add timeout middleware with 30s default; return 408 on timeout
-**Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
-**Status**: ✅ Complete
-
-#### P2-016-03: Add timeout middleware to drive API
-**Target File**: `apps/drive/api/src/index.ts`
-**Action**: Add timeout middleware with 30s default; return 408 on timeout; longer timeout for upload routes
-**Validate Command**: `pnpm --filter @suite/drive-api typecheck`
-**Status**: ✅ Complete
-
----
-
-### [x] P2-017: Add Request Body Size Limit
-
-**Status**: Completed
-**Priority**: P2
-**Bounded Context**: API Security
-
-**Related Files**:
-- `apps/calendar/api/src/index.ts`
-- `apps/tasks/api/src/index.ts`
-- `apps/drive/api/src/index.ts`
-- `packages/shared-kernel/src/errors.ts`
-
-**Definition of Done**:
-- Request body size limit middleware mounted
-- Default limit 1MB
-- Upload routes have higher limit (100MB)
-- Oversized requests return 413
-- Size limit logged
-
-**Out of Scope**:
-- Per-user size limits
-- Dynamic size limits
-
-**Rules to Follow**:
-- Prevent DoS via large payloads
-- Appropriate limits per route
-
-**Advanced Pattern**:
-- Per-route limit override
-- Streaming for large uploads
-
-**Anti-Patterns**:
-- Unlimited body size
-- Same limit for all routes
-
-**Imports/Exports**:
-- None (middleware)
-
-**Depends On**:
-- None
-
-**Blocks**:
-- None
-
-**Implementation Notes**:
-- Added GLOBAL_REQUEST_TOO_LARGE error code to shared-kernel errors.ts
-- Used Hono's built-in bodyLimit middleware from 'hono/body-limit'
-- Calendar API: 1MB limit on all /api/* routes with standardized 413 error response
-- Tasks API: 1MB limit on all /api/* routes with standardized 413 error response
-- Drive API: 1MB limit on all /api/* routes, 100MB override on POST /api/v1/files (upload)
-- All error responses include code, message, details (maxSize), and timestamp
-- Lint passed with 0 errors
-- Pre-existing typecheck errors in drive-api and tasks-api test files (unrelated to this task)
-
-**Subtasks**:
-
-#### P2-017-01: Add body size limit to calendar API
-**Target File**: `apps/calendar/api/src/index.ts`
-**Action**: Add body size limit middleware with 1MB default
-**Validate Command**: `pnpm --filter @suite/calendar-api typecheck`
-**Status**: ✅ Complete
-
-#### P2-017-02: Add body size limit to tasks API
-**Target File**: `apps/tasks/api/src/index.ts`
-**Action**: Add body size limit middleware with 1MB default
-**Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
-**Status**: ✅ Complete
-
-#### P2-017-03: Add body size limit to drive API
-**Target File**: `apps/drive/api/src/index.ts`
-**Action**: Add body size limit middleware with 1MB default; 100MB for upload routes
-**Validate Command**: `pnpm --filter @suite/drive-api typecheck`
-**Status**: ✅ Complete
-
----
-
-### [!] P2-018: Add Response Compression
-
-**Status**: Blocked
-**Priority**: P2
-**Bounded Context**: API Performance
-
-**Related Files**:
-- `apps/calendar/api/src/index.ts`
-- `apps/tasks/api/src/index.ts`
-- `apps/drive/api/src/index.ts`
-
-**Definition of Done**:
-- Compression middleware mounted
-- Gzip compression enabled
-- Compress responses > 1KB
-- Accept-Encoding header honored
-- Compression level configurable
-
-**Out of Scope**:
-- Brotli compression
-- Dynamic compression level
-
-**Rules to Follow**:
-- Compress text-based responses
-- Don't compress already compressed content
-
-**Advanced Pattern**:
-- Compression threshold
-- Content-type based compression
-
-**Anti-Patterns**:
-- Compressing small responses
-- Compressing images
-
-**Imports/Exports**:
-- None (middleware)
-
-**Depends On**:
-- None
-
-**Blocks**:
-- None
-
-**Block Reason**: Cloudflare Workers automatically compress responses at the platform level. Hono documentation states: "On Cloudflare Workers and Deno Deploy, the response body will be compressed automatically, so there is no need to use this middleware." Adding compression middleware would be redundant and adds unnecessary overhead.
-
-**Subtasks**:
-
-#### P2-018-01: Add compression to calendar API
-**Target File**: `apps/calendar/api/src/index.ts`
-**Action**: Add compression middleware with gzip, threshold 1KB
-**Validate Command**: `curl -H "Accept-Encoding: gzip" http://localhost:3001/api/v1/events -I | grep Content-Encoding`
-
-#### P2-018-02: Add compression to tasks API
-**Target File**: `apps/tasks/api/src/index.ts`
-**Action**: Add compression middleware with gzip, threshold 1KB
-**Validate Command**: `curl -H "Accept-Encoding: gzip" http://localhost:3002/api/v1/tasks -I | grep Content-Encoding`
-
-#### P2-018-03: Add compression to drive API
-**Target File**: `apps/drive/api/src/index.ts`
-**Action**: Add compression middleware with gzip, threshold 1KB; skip compression for file download routes
-**Validate Command**: `curl -H "Accept-Encoding: gzip" http://localhost:3003/api/v1/files -I | grep Content-Encoding`
-
----
-
-### [x] P2-019: Add Cache Control Headers
-
-**Status**: Completed
-**Priority**: P2
-**Bounded Context**: API Performance
-
-**Related Files**:
-- `apps/calendar/api/src/index.ts`
-- `apps/tasks/api/src/index.ts`
-- `apps/drive/api/src/index.ts`
-
-**Definition of Done**:
-- Cache-Control headers set on GET endpoints
-- ETag headers for conditional requests
-- Last-Modified headers
-- 304 responses for conditional requests
-- No caching for authenticated endpoints
-
-**Out of Scope**:
-- CDN integration
-- Response caching middleware
-
-**Rules to Follow**:
-- Cache GET endpoints appropriately
-- Don't cache private data
-
-**Advanced Pattern**:
-- ETag generation from content
-- Cache-Control per endpoint
-
-**Anti-Patterns**:
-- Caching authenticated data
-- No cache headers
-
-**Imports/Exports**:
-- None (headers)
-
-**Depends On**:
-- None
-
-**Blocks**:
-- None
-
-**Implementation Notes**:
-- Added cache control middleware to all three APIs (calendar, tasks, drive)
-- Authenticated endpoints use `Cache-Control: no-cache, no-store, must-revalidate` to prevent caching of private data
-- Health endpoints use `Cache-Control: public, max-age=60` to allow short-term caching of public health status
-- Lint passed with 0 errors (only warnings)
-- Pre-existing typecheck errors in drive-api and tasks-api test files (unrelated to this task)
-
-**Subtasks**:
-
-#### P2-019-01: Add cache headers to calendar API
-**Target File**: `apps/calendar/api/src/index.ts`
-**Action**: Add Cache-Control: no-cache for authenticated endpoints; Cache-Control: max-age=60 for public health endpoint
-**Validate Command**: `curl -I http://localhost:3001/api/v1/events | grep Cache-Control`
-**Status**: ✅ Complete
-
-#### P2-019-02: Add cache headers to tasks API
-**Target File**: `apps/tasks/api/src/index.ts`
-**Action**: Add Cache-Control: no-cache for authenticated endpoints; Cache-Control: max-age=60 for public health endpoint
-**Validate Command**: `curl -I http://localhost:3002/api/v1/tasks | grep Cache-Control`
-**Status**: ✅ Complete
-
-#### P2-019-03: Add cache headers to drive API
-**Target File**: `apps/drive/api/src/index.ts`
-**Action**: Add Cache-Control: no-cache for authenticated endpoints; Cache-Control: max-age=60 for public health endpoint
-**Validate Command**: `curl -I http://localhost:3003/api/v1/files | grep Cache-Control`
-**Status**: ✅ Complete
-
----
-
-### [x] P2-021: Fix Pre-existing Lint Errors in Tasks Web
-
-**Status**: Completed
-**Priority**: P2
-**Bounded Context**: Code Quality
-
-**Related Files**:
-- `apps/tasks/web/src/App.tsx`
-- `apps/tasks/web/src/components/TaskRow.tsx`
-
-**Definition of Done**:
-- Remove unused variable 'setSearchTags' in App.tsx
-- Remove unused parameter 'onEditTagsChange' in TaskRow.tsx
-- Lint passes for tasks/web with 0 errors
-
-**Out of Scope**:
-- Fixing any warnings (only errors)
-- Changing functionality
-
-**Rules to Follow**:
-- Prefix unused variables/parameters with underscore if needed for interface compatibility
-- Remove truly unused code
-
-**Anti-Patterns**:
-- Commenting out code instead of removing
-- Adding eslint-disable comments
-
-**Depends On**:
-- None
-
-**Blocks**:
-- None
-
-**Implementation Notes**:
-- Task was already completed. Unused variables/parameters were prefixed with underscores:
-  - App.tsx line 113: `_setSearchTags`
-  - TaskRow.tsx line 48: `_onEditTagsChange`
-- Lint passes with exit code 0 (no errors, only warnings)
-- Typecheck passes with exit code 0
-- Eslint config is configured to ignore underscore-prefixed variables via `argsIgnorePattern: '^_'`
-
-**Subtasks**:
-
-#### P2-021-01: Fix unused setSearchTags in App.tsx
-**Target File**: `apps/tasks/web/src/App.tsx`
-**Action**: Remove unused setSearchTags variable or prefix with underscore if needed
-**Validate Command**: `pnpm --filter @suite/tasks-web lint`
-**Status**: ✅ Complete
-
-#### P2-021-02: Fix unused onEditTagsChange in TaskRow.tsx
-**Target File**: `apps/tasks/web/src/components/TaskRow.tsx`
-**Action**: Remove unused onEditTagsChange parameter or prefix with underscore if needed
-**Validate Command**: `pnpm --filter @suite/tasks-web lint`
-**Status**: ✅ Complete
-
----
-
-### [x] P2-020: Add Dark Mode Support
-
-**Status**: Completed
-**Priority**: P2
-**Bounded Context**: Web UX
-
-**Related Files**:
-- `apps/calendar/web/src/App.tsx`
-- `apps/tasks/web/src/App.tsx`
-- `apps/drive/web/src/App.tsx`
-- `packages/ui/src/components/theme-provider.tsx` (create)
-- `packages/ui/src/styles/globals.css`
-
-**Definition of Done**:
-- Dark mode toggle in all apps
-- System preference detected
-- Theme persisted in storage
-- All components styled for dark mode
-- Smooth theme transitions
-
-**Out of Scope**:
-- Custom theme colors
-- Theme editor
-
-**Rules to Follow**:
-- Respect system preference
-- Persist user choice
-
-**Advanced Pattern**:
-- CSS custom properties for theming
-- Theme context provider
-
-**Anti-Patterns**:
-- Hardcoded light mode
-- No theme persistence
-
-**Imports/Exports**:
-- None (UI theming)
-
-**Depends On**:
-- None
-
-**Blocks**:
-- None
-
-**Implementation Notes**:
-- Created shared ThemeProvider in packages/ui with React Context API
-- Theme supports three modes: light, dark, system
-- System preference detected via window.matchMedia('(prefers-color-scheme: dark)')
-- Theme persisted in localStorage with key 'suite-theme'
-- CSS custom properties defined in globals.css for light and dark themes
-- Dark mode overrides: background, foreground, border, muted-foreground, card, card-foreground, popover, popover-foreground, accent, accent-foreground
-- All three web apps (calendar, tasks, drive) now have theme toggle buttons
-- Toggle cycles: light → dark → system → light
-- Toggle button shows current theme with emoji indicator
-- All inline styles updated to use CSS variables (var(--color-*))
-- Typecheck passes for all three web apps
-- Lint passes for UI package
-- CSS lint warnings for @theme and @custom-variant are expected (Tailwind CSS v4 directives)
-
-**Subtasks**:
-
-#### P2-020-01: Add dark mode to calendar web
-**Target File**: `apps/calendar/web/src/App.tsx`
-**Action**: Add theme state, toggle button, CSS variables for dark mode colors
-**Validate Command**: `pnpm --filter @suite/calendar-web typecheck`
-**Status**: ✅ Complete
-
-#### P2-020-02: Add dark mode to tasks web
-**Target File**: `apps/tasks/web/src/App.tsx`
-**Action**: Add theme state, toggle button, CSS variables for dark mode colors
-**Validate Command**: `pnpm --filter @suite/tasks-web typecheck`
-**Status**: ✅ Complete
-
-#### P2-020-03: Add dark mode to drive web
-**Target File**: `apps/drive/web/src/App.tsx`
-**Action**: Add theme state, toggle button, CSS variables for dark mode colors
-**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
-**Status**: ✅ Complete
-
----
-
-### [x] INF-001: Fix Postgres Bundling in Web Builds
-
-**Status**: Completed
-**Priority**: P1
-**Bounded Context**: Infrastructure
-
-**Related Files**:
-- `apps/calendar/web/vite.config.ts`
-- `apps/tasks/web/vite.config.ts`
-- `apps/drive/web/vite.config.ts`
-- `packages/db/package.json`
-
-**Definition of Done**:
-- `pnpm --filter @suite/calendar-web build` succeeds
-- `pnpm --filter @suite/tasks-web build` succeeds
-- `pnpm --filter @suite/drive-web build` succeeds
-- `postgres` module is not included in browser bundles
-
-**Issue Description**:
-Vite build fails for all three web apps with:
+```typescript
+coverage: {
+  reporter: ['text', 'json', 'html'],
+  reportsDirectory: './coverage',
+  reportOnFailure: true,
+  all: true
+}
 ```
-"performance" is not exported by "__vite-browser-external", imported by "postgres/src/connection.js"
-```
-This occurs because `drizzle-orm` or another dependency is pulling the `postgres` Node.js driver into browser bundles. The `postgres` package imports Node-only modules (`perf_hooks`, `crypto`, `stream`).
 
-**Out of Scope**:
-- Replacing drizzle-orm
-- Removing postgres from API packages
+**Depends On**: TEST-001, TEST-002
+**Blocks**: None
 
-**Rules to Follow**:
-- Keep DB code out of browser bundles
-- Use `resolve.alias` or `optimizeDeps.exclude` in Vite config
+### Subtasks
 
-**Anti-Patterns**:
-- Bundling server-only code into client builds
-- Adding broad `external` arrays that hide real problems
+#### TEST-005-01: Configure coverage reporters in root config
+**Target File**: `vitest.config.ts`
+**Action**: Add coverage.reporter array with 'text', 'json', 'html' reporters. Enable coverage.reportOnFailure and coverage.all.
+**Validation**: Run `pnpm test --coverage` and verify all three report formats are generated in ./coverage.
 
-**Depends On**:
-- None
+#### TEST-005-02: Configure coverage reporters in package configs
+**Target Files**: All `packages/*/vitest.config.ts`
+**Action**: Add coverage.reporter configuration matching root config. Ensure consistent reporting across all packages.
+**Validation**: Run `pnpm test --coverage` in each package and verify coverage reports generate.
 
-**Blocks**:
-- P1-006 build validation
-- Any web app production builds
+#### TEST-005-03: Configure coverage reporters in app configs
+**Target Files**: All `apps/*/vitest.config.ts`
+**Action**: Add coverage.reporter configuration matching root config. Ensure consistent reporting across all apps.
+**Validation**: Run `pnpm test --coverage` in each app and verify coverage reports generate.
 
-**Implementation Notes**:
-- Added `build.rollupOptions.external: ['postgres']` to all three web app Vite configs
-- This excludes the postgres Node.js driver from browser bundles
-- The postgres module was being pulled in transitively through domain packages (domain-calendar, domain-tasks, domain-drive) which depend on @suite/db
-- All three web builds now succeed: calendar-web, tasks-web, drive-web
-- Typecheck passes for all three web apps
-- Lint passes with 0 errors (only warnings for existing `any` types, unrelated to this task)
-
-**Subtasks**:
-
-#### INF-001-01: Add postgres to Vite externals/alias
-**Target File**: `apps/calendar/web/vite.config.ts`, `apps/tasks/web/vite.config.ts`, `apps/drive/web/vite.config.ts`
-**Action**: Configure Vite to exclude `postgres` from bundling or alias it to an empty module
-**Validate Command**: `pnpm --filter @suite/calendar-web build`
-**Status**: ✅ Complete
+#### TEST-005-04: Add coverage script to package.json
+**Target File**: `package.json` (root)
+**Action**: Add "coverage": "vitest run --coverage" script to root package.json.
+**Validation**: Run `pnpm coverage` and verify coverage reports generate for entire monorepo.
 
 ---
 
-### [x] INF-003: Fix Calendar Web Test Failures
+## TEST-006: Expand E2E Test Coverage
 
-**Status**: Completed
-**Priority**: P1
-**Bounded Context**: Testing
+Status: [ ]
 
 **Related Files**:
-- `apps/calendar/web/src/App.test.tsx`
-- `apps/calendar/web/src/auth-provider.tsx`
+- `apps/calendar/web/e2e/calendar.spec.ts`
+- `apps/drive/web/e2e/drive.spec.ts`
+- `apps/tasks/web/e2e/tasks.spec.ts`
 
 **Definition of Done**:
-- `pnpm --filter @suite/calendar-web test` passes
-- `pnpm --filter @suite/calendar-web test:coverage` passes
-- All 5 tests in App.test.tsx pass
-
-**Issue Description**:
-Calendar web tests fail with "useAuth must be used within AuthProvider" error. The test file does not wrap components in AuthProvider context, causing all 5 tests to fail.
+- Error flow tests added (validation failures, network errors)
+- Edge case tests added (empty states, large datasets)
+- Cross-app scenarios added (calendar → tasks integration)
+- Each app has at least 10 E2E tests
+- All tests use resilient locators (getByRole, getByLabel)
 
 **Out of Scope**:
-- Modifying production code (only test files)
-- Changing test logic (only context wrapper fix)
+- Testing third-party dependencies
+- Testing external APIs
+- Visual regression testing (separate task)
 
 **Rules to Follow**:
-- Wrap test components in required providers
-- Maintain test behavior
+- Test user-visible behavior, not implementation
+- Use getByRole/getByLabel locators (not CSS/XPath)
+- Each test fully isolated
+- Use storageState for authentication
+- Mock external API calls with page.route
+
+**Advanced Coding Pattern**:
+Playwright's page.route API allows mocking third-party dependencies. Tests remain fast and reliable by avoiding external network calls.
 
 **Anti-Patterns**:
-- Skipping tests instead of fixing them
-- Removing tests that verify important behavior
+- Testing implementation details (CSS classes, DOM structure)
+- Using CSS/XPath selectors
+- Sharing state between tests
+- Not isolating tests
 
-**Depends On**:
-- None
+**Imports/Exports**:
+```typescript
+// Mock external API
+await page.route('**/api/external', route => 
+  route.fulfill({ status: 200, body: mockData })
+)
+```
 
-**Blocks**:
-- `pnpm -r run test:coverage` workflow validation
-- Any PR requiring full test suite
+**Depends On**: TEST-003
+**Blocks**: None
 
-**Implementation Notes**:
-- Mocked @suite/auth dependencies (authClient, useSession) to avoid auth context issues
-- Mocked auth-provider directly (useAuth, AuthProvider) to bypass context requirements
-- Mocked @suite/ui components (Button, Input, useTheme, ThemeProvider) to avoid theme context issues
-- Removed loading state check from first test since auth is mocked as already loaded
-- All 5 tests now pass: renders loading state then empty state, creates event, updates event, shows validation errors, has accessible labels
-- Typecheck passes for calendar-web
-- Lint passes with 0 errors (2 pre-existing warnings for `any` types in auth-provider.tsx, unrelated to this task)
+### Subtasks
 
-**Subtasks**:
+#### TEST-006-01: Add error flow tests to calendar E2E
+**Target File**: `apps/calendar/web/e2e/calendar.spec.ts`
+**Action**: Add tests for validation errors (missing required fields, invalid dates), network errors (API failure), and conflict scenarios.
+**Validation**: Run `npx playwright test apps/calendar/web/e2e/calendar.spec.ts` and verify new tests pass.
 
-#### INF-003-01: Add AuthProvider wrapper to calendar web tests
-**Target File**: `apps/calendar/web/src/App.test.tsx`
-**Action**: Wrap test components in AuthProvider to fix context errors
-**Validate Command**: `pnpm --filter @suite/calendar-web test`
-**Status**: ✅ Complete
+#### TEST-006-02: Add edge case tests to calendar E2E
+**Target File**: `apps/calendar/web/e2e/calendar.spec.ts`
+**Action**: Add tests for empty calendar state, large number of events, recurring events, and event deletion.
+**Validation**: Run `npx playwright test apps/calendar/web/e2e/calendar.spec.ts` and verify new tests pass.
+
+#### TEST-006-03: Add error flow tests to drive E2E
+**Target File**: `apps/drive/web/e2e/drive.spec.ts`
+**Action**: Add tests for validation errors (invalid file names, size limits), network errors (upload failure), and permission errors.
+**Validation**: Run `npx playwright test apps/drive/web/e2e/drive.spec.ts` and verify new tests pass.
+
+#### TEST-006-04: Add edge case tests to drive E2E
+**Target File**: `apps/drive/web/e2e/drive.spec.ts`
+**Action**: Add tests for empty drive state, large file uploads, folder navigation, and file deletion.
+**Validation**: Run `npx playwright test apps/drive/web/e2e/drive.spec.ts` and verify new tests pass.
+
+#### TEST-006-05: Add error flow tests to tasks E2E
+**Target File**: `apps/tasks/web/e2e/tasks.spec.ts`
+**Action**: Add tests for validation errors (missing required fields, invalid due dates), network errors (API failure), and completion errors.
+**Validation**: Run `npx playwright test apps/tasks/web/e2e/tasks.spec.ts` and verify new tests pass.
+
+#### TEST-006-06: Add edge case tests to tasks E2E
+**Target File**: `apps/tasks/web/e2e/tasks.spec.ts`
+**Action**: Add tests for empty tasks state, large number of tasks, task filtering, and batch operations.
+**Validation**: Run `npx playwright test apps/tasks/web/e2e/tasks.spec.ts` and verify new tests pass.
+
+#### TEST-006-07: Add cross-app integration test
+**Target File**: New: `apps/calendar/web/e2e/integration.spec.ts`
+**Action**: Add test that creates a task from a calendar event (cross-app workflow). Test navigation between apps and data flow.
+**Validation**: Run `npx playwright test apps/calendar/web/e2e/integration.spec.ts` and verify test passes.
+
+#### TEST-006-08: Improve selectors in all E2E tests
+**Target Files**: All E2E spec files
+**Action**: Replace CSS/XPath selectors with getByRole/getByLabel/getByText. Use codegen to generate resilient locators.
+**Validation**: Run all E2E tests and verify they pass with new selectors.
 
 ---
 
-### [x] INF-002: Fix API Test Type Errors
+## TEST-007: Adopt Hono testClient for Type-Safe API Testing
 
-**Status**: Completed
-**Priority**: P1
-**Bounded Context**: Testing
+Status: [ ]
 
 **Related Files**:
+- `apps/calendar/api/src/index.ts`
+- `apps/calendar/api/src/index.test.ts`
+- `apps/drive/api/src/index.ts`
 - `apps/drive/api/src/index.test.ts`
+- `apps/tasks/api/src/index.ts`
 - `apps/tasks/api/src/index.test.ts`
 
 **Definition of Done**:
-- `pnpm --filter @suite/drive-api typecheck` passes
-- `pnpm --filter @suite/tasks-api typecheck` passes
-- `pnpm -r run typecheck` passes
-
-**Issue Description**:
-API test files have TypeScript errors where `json` and `createJson` are typed as `unknown`. This prevents typecheck from passing for drive/api and tasks/api packages.
+- Route definitions chained directly on Hono instance
+- testClient imported and used in all API tests
+- Type-safe endpoint calls with autocompletion
+- Headers and query parameters type-checked
+- All existing tests pass with testClient
 
 **Out of Scope**:
-- Modifying production code (only test files)
-- Changing test logic (only type fixes)
+- Changing API logic
+- Adding new endpoints
+- Modifying domain packages
 
 **Rules to Follow**:
-- Fix type errors with proper type assertions or type guards
-- Maintain test behavior
+- testClient requires chained route definitions for type inference
+- Routes defined separately break type inference
+- Use testClient for typed endpoint calls
+- Leverage autocompletion for parameters
+- Pass headers as second parameter
+
+**Advanced Coding Pattern**:
+Hono's testClient provides type-safe route calls by inferring types from chained route definitions. Editor autocompletion reduces errors and improves developer experience.
 
 **Anti-Patterns**:
-- Using `@ts-ignore` or `@ts-expect-error` without justification
-- Suppressing type errors instead of fixing them
+- Defining routes separately from Hono instance
+- Using app.request() directly (loses type safety)
+- Not chaining route definitions
+- Ignoring type errors in tests
 
-**Depends On**:
-- None
+**Imports/Exports**:
+```typescript
+// index.ts
+const app = new Hono()
+  .get('/events', handler)
+  .post('/events', handler)
 
-**Blocks**:
-- `pnpm -r run typecheck` workflow validation
-- Any PR requiring full typecheck
+// index.test.ts
+import { testClient } from 'hono/testing'
+const client = testClient(app)
+const res = await client.events.$get({ query: { date: '2026-01-01' } })
+```
 
-**Implementation Notes**:
-- Added TypeScript interfaces for API responses (FileResponse, FolderResponse, FilesListResponse, FoldersListResponse, FileCreateResponse, FolderCreateResponse, ErrorResponse, SuccessResponse)
-- Applied type assertions to all `json` and `createJson` variables in drive/api test file
-- tasks/api test file had no type errors (already passing)
-- Full typecheck passes for all 18 workspace projects
-- Lint passes with 0 errors (only warnings for existing `any` types in mocks)
-- Pre-existing test failures in drive-api (unrelated to type errors - test logic issues with expected status codes)
+**Depends On**: None
+**Blocks**: TEST-009
 
-**Subtasks**:
+### Subtasks
 
-#### INF-002-01: Fix drive/api test type errors
+#### TEST-007-01: Refactor calendar API route definitions
+**Target File**: `apps/calendar/api/src/index.ts`
+**Action**: Refactor route definitions to chain directly on Hono instance instead of defining separately. Ensure all routes are chained.
+**Validation**: Run `pnpm test apps/calendar/api` and verify tests still pass.
+
+#### TEST-007-02: Adopt testClient in calendar API tests
+**Target File**: `apps/calendar/api/src/index.test.ts`
+**Action**: Import testClient from 'hono/testing'. Replace app.request() calls with testClient calls. Use typed endpoint methods.
+**Validation**: Run `pnpm test apps/calendar/api` and verify tests pass with type-safe calls.
+
+#### TEST-007-03: Refactor drive API route definitions
+**Target File**: `apps/drive/api/src/index.ts`
+**Action**: Refactor route definitions to chain directly on Hono instance instead of defining separately. Ensure all routes are chained.
+**Validation**: Run `pnpm test apps/drive/api` and verify tests still pass.
+
+#### TEST-007-04: Adopt testClient in drive API tests
 **Target File**: `apps/drive/api/src/index.test.ts`
-**Action**: Add proper type assertions for `json` and `createJson` variables to resolve `unknown` type errors
-**Validate Command**: `pnpm --filter @suite/drive-api typecheck`
-**Status**: ✅ Complete
+**Action**: Import testClient from 'hono/testing'. Replace app.request() calls with testClient calls. Use typed endpoint methods.
+**Validation**: Run `pnpm test apps/drive/api` and verify tests pass with type-safe calls.
 
-#### INF-002-02: Fix tasks/api test type errors
+#### TEST-007-05: Refactor tasks API route definitions
+**Target File**: `apps/tasks/api/src/index.ts`
+**Action**: Refactor route definitions to chain directly on Hono instance instead of defining separately. Ensure all routes are chained.
+**Validation**: Run `pnpm test apps/tasks/api` and verify tests still pass.
+
+#### TEST-007-06: Adopt testClient in tasks API tests
 **Target File**: `apps/tasks/api/src/index.test.ts`
-**Action**: Add proper type assertions for `json` and `createJson` variables to resolve `unknown` type errors
-**Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
-**Status**: ✅ Already complete (no type errors existed)
+**Action**: Import testClient from 'hono/testing'. Replace app.request() calls with testClient calls. Use typed endpoint methods.
+**Validation**: Run `pnpm test apps/tasks/api` and verify tests pass with type-safe calls.
 
 ---
 
-### [ ] INF-004: Fix Drive API Test Failures
+## TEST-008: Configure Nx Affected Testing
 
-**Status**: Pending
-**Priority**: P2
-**Bounded Context**: Testing
+Status: [ ]
 
 **Related Files**:
-- `apps/drive/api/src/index.test.ts`
+- `.github/workflows/ci.yml`
+- `nx.json`
 
 **Definition of Done**:
-- `pnpm --filter @suite/drive-api test` passes
-- All 43 tests in drive/api pass
-
-**Issue Description**:
-Drive API tests have 7 failures due to incorrect expected status codes:
-- "should return 404 for non-existent folder" expects 401 but gets 500
-- "POST /api/files/:id/move returns 401 without session" expects 401 but gets 500
-- "should return 404 for non-existent file" (move) expects 401 but gets 500
-- "should search files by query" expects 200 but gets 500
-- "should search files by query and folderId" expects 200 but gets 500
-- "should reject missing query parameter" expects 400 but gets 500
-- "should reject empty query parameter" expects 400 but gets 500
-
-These are test logic issues, not type errors. The API is returning 500 errors for these scenarios.
+- CI workflow uses nx affected -t test
+- Base branch configured for affected calculation
+- Only changed projects tested in CI
+- Remote caching configured (optional)
+- Task splitting configured for slow tests
 
 **Out of Scope**:
-- Modifying production API code
-- Changing test behavior (only fixing expected values)
+- Modifying test logic
+- Adding new tests
+- Changing Nx project structure
 
 **Rules to Follow**:
-- Fix test expectations to match actual API behavior
-- Investigate why API returns 500 for these scenarios
+- Use --base flag to specify comparison branch
+- Affected testing uses project graph to determine changes
+- Remote caching shares test results across team
+- Task splitting for E2E tests (each file = separate task)
+- testMode: 'run' for CI determinism
+
+**Advanced Coding Pattern**:
+Nx affected command analyzes project graph to determine which projects are affected by changes. Only runs tests for changed projects, significantly reducing CI time.
 
 **Anti-Patterns**:
-- Ignoring test failures
-- Suppressing test errors
+- Running all tests in CI regardless of changes
+- Not configuring base branch correctly
+- Using watch mode in CI
 
-**Depends On**:
-- None
+**Imports/Exports**:
+```yaml
+# .github/workflows/ci.yml
+- run: nx affected -t test --base=main~1
+```
 
-**Blocks**:
-- `pnpm -r run test` workflow validation
-- Any PR requiring full test suite
+**Depends On**: TEST-004
+**Blocks**: None
 
-**Subtasks**:
+### Subtasks
 
-#### INF-004-01: Investigate drive API 500 errors
-**Target File**: `apps/drive/api/src/index.test.ts`
-**Action**: Debug why API returns 500 for search, move, and delete operations on non-existent resources
-**Validate Command**: `pnpm --filter @suite/drive-api test`
+#### TEST-008-01: Update CI workflow to use affected testing
+**Target File**: `.github/workflows/ci.yml`
+**Action**: Replace test commands with `nx affected -t test --base=main~1`. Configure separate steps for unit and E2E tests.
+**Validation**: Push a feature branch and verify CI only tests affected projects.
 
-#### INF-004-02: Fix drive API test expectations
-**Target File**: `apps/drive/api/src/index.test.ts`
-**Action**: Update test expectations to match actual API behavior after investigation
-**Validate Command**: `pnpm --filter @suite/drive-api test`
+#### TEST-008-02: Configure task splitting for E2E tests
+**Target File**: `nx.json`
+**Action**: Configure ciTargetName for E2E tests to enable task splitting. Each test file becomes separate cacheable task.
+**Validation**: Run `nx show project calendar-web` and verify e2e-ci target is configured.
+
+#### TEST-008-03: Configure remote caching (optional)
+**Target File**: `nx.json`
+**Action**: Add Nx Cloud configuration or self-hosted remote caching. Enable cache sharing across team.
+**Validation**: Run `nx connect` and verify remote caching is active.
+
+#### TEST-008-04: Organize tests by feature
+**Target Files**: All test directories
+**Action**: Reorganize test files by feature rather than by type. Improves cache hits and targeted CI runs.
+**Validation**: Run `nx affected -t test` and verify feature-based organization works correctly.
+
+---
+
+## TEST-009: Add Property-Based Tests for Domain Rules
+
+Status: [ ]
+
+**Related Files**:
+- `packages/domain-calendar/src/lib/calendar-events.test.ts`
+- `packages/domain-drive/src/index.test.ts`
+- `packages/domain-tasks/src/lib/tasks.test.ts`
+- New: `packages/*/src/lib/properties.test.ts`
+
+**Definition of Done**:
+- Property-based tests added for domain invariants
+- vitest-fp or fast-check installed
+- Tests validate rules across random inputs
+- Domain rules proven to hold for edge cases
+- All property tests pass consistently
+
+**Out of Scope**:
+- Testing non-domain code
+- Replacing existing unit tests
+- Adding to non-domain packages
+
+**Rules to Follow**:
+- Property-based testing validates invariants, not specific examples
+- Use fast-check or vitest-fp for property generation
+- Focus on domain rules (discounts cannot exceed X, dates must be valid)
+- Properties should hold for all valid inputs
+- Run property tests with many iterations (100-1000)
+
+**Advanced Coding Pattern**:
+Property-based testing generates hundreds of random inputs to validate that domain invariants hold. Catches edge cases that example-based tests miss.
+
+**Anti-Patterns**:
+- Using property-based tests for UI code
+- Testing implementation details
+- Not shrinking failing cases
+- Too few iterations
+
+**Imports/Exports**:
+```typescript
+import { fc } from 'fast-check'
+import { describe, it } from 'vitest'
+
+it('discount never exceeds 50%', () => {
+  fc.assert(
+    fc.property(fc.float({ min: 0, max: 100 }), (discount) => {
+      const result = calculateDiscount(discount)
+      return result <= 50
+    })
+  )
+})
+```
+
+**Depends On**: None
+**Blocks**: None
+
+### Subtasks
+
+#### TEST-009-01: Install fast-check
+**Target File**: `package.json` (root)
+**Action**: Add fast-check to devDependencies. Run pnpm install.
+**Validation**: Run `pnpm list fast-check` and verify it's installed.
+
+#### TEST-009-02: Add property tests for calendar domain
+**Target File**: `packages/domain-calendar/src/lib/calendar-events.test.ts`
+**Action**: Add property-based tests for calendar invariants (end time after start time, no overlapping events without conflict detection, valid date ranges).
+**Validation**: Run `pnpm test packages/domain-calendar` and verify property tests pass.
+
+#### TEST-009-03: Add property tests for drive domain
+**Target File**: `packages/domain-drive/src/index.test.ts`
+**Action**: Add property-based tests for drive invariants (file names valid, folder paths don't contain cycles, file sizes within limits).
+**Validation**: Run `pnpm test packages/domain-drive` and verify property tests pass.
+
+#### TEST-009-04: Add property tests for tasks domain
+**Target File**: `packages/domain-tasks/src/lib/tasks.test.ts`
+**Action**: Add property-based tests for task invariants (due dates in future or past, priorities within valid range, tags are non-empty).
+**Validation**: Run `pnpm test packages/domain-tasks` and verify property tests pass.
+
+#### TEST-009-05: Add property tests for crypto package
+**Target File**: `packages/crypto/src/index.test.ts`
+**Action**: Add property-based tests for crypto invariants (encryption roundtrip, key derivation deterministic, signatures verify correctly).
+**Validation**: Run `pnpm test packages/crypto` and verify property tests pass.
+
+---
+
+## TEST-010: Add Integration Tests for Domain-Repository
+
+Status: [ ]
+
+**Related Files**:
+- `packages/db/src/repositories/tasks.test.ts`
+- New: `packages/db/src/repositories/calendar.test.ts`
+- New: `packages/db/src/repositories/drive.test.ts`
+
+**Definition of Done**:
+- Integration tests for all domain repositories
+- Tests use real database (test instance)
+- CRUD operations tested end-to-end
+- Transaction rollback after each test
+- Database schema migrations applied
+
+**Out of Scope**:
+- Testing domain logic (covered by unit tests)
+- Testing API layer (covered by API tests)
+- Using production database
+
+**Rules to Follow**:
+- Use test database with TEST_DATABASE_URL
+- Apply migrations before tests
+- Rollback transactions after each test
+- Clean database state between tests
+- Skip tests if DATABASE_URL not set
+
+**Advanced Coding Pattern**:
+Integration tests with real database catch ORM mapping issues, constraint violations, and query performance problems that unit tests with mocks miss.
+
+**Anti-Patterns**:
+- Using production database
+- Not cleaning database between tests
+- Mocking database calls (defeats purpose)
+- Not applying migrations
+
+**Imports/Exports**:
+```typescript
+beforeAll(async () => {
+  await migrate(TEST_DATABASE_URL)
+})
+
+afterAll(async () => {
+  await rollback(TEST_DATABASE_URL)
+})
+
+beforeEach(async () => {
+  await db.transaction().rollback()
+})
+```
+
+**Depends On**: None
+**Blocks**: None
+
+### Subtasks
+
+#### TEST-010-01: Add calendar repository integration tests
+**Target File**: New: `packages/db/src/repositories/calendar.test.ts`
+**Action**: Create integration tests for PostgresCalendarRepository. Test create, find, update, delete, and query operations with real database.
+**Validation**: Set TEST_DATABASE_URL and run `pnpm test packages/db/src/repositories/calendar.test.ts`.
+
+#### TEST-010-02: Add drive repository integration tests
+**Target File**: New: `packages/db/src/repositories/drive.test.ts`
+**Action**: Create integration tests for PostgresDriveRepository. Test file and folder CRUD operations with real database.
+**Validation**: Set TEST_DATABASE_URL and run `pnpm test packages/db/src/repositories/drive.test.ts`.
+
+#### TEST-010-03: Enhance tasks repository integration tests
+**Target File**: `packages/db/src/repositories/tasks.test.ts`
+**Action**: Enhance existing tests to cover more scenarios (batch operations, filtering, searching, transactions).
+**Validation**: Set TEST_DATABASE_URL and run `pnpm test packages/db/src/repositories/tasks.test.ts`.
+
+#### TEST-010-04: Add database migration setup
+**Target File**: `packages/db/src/repositories/setup.ts` (new)
+**Action**: Create setup/teardown functions for database migrations. Apply migrations before tests, rollback after.
+**Validation**: Run integration tests and verify migrations are applied correctly.
+
+#### TEST-010-05: Configure test database environment
+**Target File**: `.env.example`
+**Action**: Add TEST_DATABASE_URL example to .env.example. Document how to set up test database.
+**Validation**: Verify .env.example includes TEST_DATABASE_URL with documentation.
+
+---
+
+## TEST-011: Improve React Testing Library Patterns
+
+Status: [ ]
+
+**Related Files**:
+- `apps/calendar/web/src/App.test.tsx`
+- `apps/drive/web/src/App.test.tsx`
+- `apps/tasks/web/src/App.test.tsx`
+- `packages/ui/src/index.test.tsx`
+
+**Definition of Done**:
+- All tests use userEvent instead of fireEvent
+- Implementation detail assertions removed
+- Test names describe behavior not implementation
+- Role-based queries prioritized
+- Accessibility testing implicit via queries
+
+**Out of Scope**:
+- Adding new component tests
+- Changing component logic
+- Adding visual regression tests
+
+**Rules to Follow**:
+- Test user behavior, not implementation
+- Use userEvent for realistic interactions
+- Query priority: role > label > text > testId
+- Write descriptive test names
+- Accessibility implicit via role queries
+
+**Advanced Coding Pattern**:
+userEvent simulates real user behavior (click, type) more accurately than fireEvent. Role-based queries double as accessibility checks.
+
+**Anti-Patterns**:
+- Testing internal state
+- Using fireEvent
+- CSS selector queries
+- Vague test names
+
+**Imports/Exports**:
+```typescript
+import { userEvent } from '@testing-library/user-event'
+import { screen } from '@testing-library/react'
+
+const user = userEvent.setup()
+await user.click(screen.getByRole('button', { name: 'Submit' }))
+```
+
+**Depends On**: None
+**Blocks**: None
+
+### Subtasks
+
+#### TEST-011-01: Replace fireEvent with userEvent in calendar tests
+**Target File**: `apps/calendar/web/src/App.test.tsx`
+**Action**: Import userEvent from @testing-library/user-event. Replace all fireEvent calls with userEvent calls.
+**Validation**: Run `pnpm test apps/calendar/web` and verify tests pass.
+
+#### TEST-011-02: Remove implementation assertions in calendar tests
+**Target File**: `apps/calendar/web/src/App.test.tsx`
+**Action**: Remove assertions testing internal state, props, or implementation details. Keep only user-visible behavior assertions.
+**Validation**: Run `pnpm test apps/calendar/web` and verify tests pass.
+
+#### TEST-011-03: Improve test names in calendar tests
+**Target File**: `apps/calendar/web/src/App.test.tsx`
+**Action**: Rename tests to describe behavior (e.g., "shows error when required field missing" instead of "validates form").
+**Validation**: Run `pnpm test apps/calendar/web` and verify tests pass.
+
+#### TEST-011-04: Replace fireEvent with userEvent in drive tests
+**Target File**: `apps/drive/web/src/App.test.tsx`
+**Action**: Import userEvent from @testing-library/user-event. Replace all fireEvent calls with userEvent calls.
+**Validation**: Run `pnpm test apps/drive/web` and verify tests pass.
+
+#### TEST-011-05: Remove implementation assertions in drive tests
+**Target File**: `apps/drive/web/src/App.test.tsx`
+**Action**: Remove assertions testing internal state, props, or implementation details. Keep only user-visible behavior assertions.
+**Validation**: Run `pnpm test apps/drive/web` and verify tests pass.
+
+#### TEST-011-06: Improve test names in drive tests
+**Target File**: `apps/drive/web/src/App.test.tsx`
+**Action**: Rename tests to describe behavior (e.g., "shows upload dialog when button clicked" instead of "opens dialog").
+**Validation**: Run `pnpm test apps/drive/web` and verify tests pass.
+
+#### TEST-011-07: Replace fireEvent with userEvent in tasks tests
+**Target File**: `apps/tasks/web/src/App.test.tsx`
+**Action**: Import userEvent from @testing-library/user-event. Replace all fireEvent calls with userEvent calls.
+**Validation**: Run `pnpm test apps/tasks/web` and verify tests pass.
+
+#### TEST-011-08: Remove implementation assertions in tasks tests
+**Target File**: `apps/tasks/web/src/App.test.tsx`
+**Action**: Remove assertions testing internal state, props, or implementation details. Keep only user-visible behavior assertions.
+**Validation**: Run `pnpm test apps/tasks/web` and verify tests pass.
+
+#### TEST-011-09: Improve test names in tasks tests
+**Target File**: `apps/tasks/web/src/App.test.tsx`
+**Action**: Rename tests to describe behavior (e.g., "marks task complete when checkbox clicked" instead of "toggles completion").
+**Validation**: Run `pnpm test apps/tasks/web` and verify tests pass.
+
+#### TEST-011-10: Improve UI component tests
+**Target File**: `packages/ui/src/index.test.tsx`
+**Action**: Replace fireEvent with userEvent. Remove implementation assertions. Improve test names to describe behavior.
+**Validation**: Run `pnpm test packages/ui` and verify tests pass.
+
+---
+
+## TEST-012: Add Cross-Browser Playwright Tests
+
+Status: [ ]
+
+**Related Files**:
+- `playwright.config.ts`
+
+**Definition of Done**:
+- Firefox and WebKit added to browser projects
+- Tests run on all three browsers
+- Browser-specific issues identified and fixed
+- CI runs tests on all browsers
+
+**Out of Scope**:
+- Testing on mobile browsers
+- Testing on legacy browsers
+- Visual regression testing
+
+**Rules to Follow**:
+- Chromium is default (most common)
+- Firefox and WebKit catch cross-browser issues
+- Use same tests across all browsers
+- Fix browser-specific issues in source code
+
+**Advanced Coding Pattern**:
+Playwright's multi-browser support catches CSS, JavaScript, and rendering differences across browsers before they affect users.
+
+**Anti-Patterns**:
+- Only testing on Chromium
+- Ignoring browser-specific failures
+- Writing browser-specific tests
+
+**Imports/Exports**:
+```typescript
+// playwright.config.ts
+projects: [
+  { name: 'chromium', use: devices['Desktop Chrome'] },
+  { name: 'firefox', use: devices['Desktop Firefox'] },
+  { name: 'webkit', use: devices['Desktop Safari'] }
+]
+```
+
+**Depends On**: TEST-006
+**Blocks**: None
+
+### Subtasks
+
+#### TEST-012-01: Add Firefox to Playwright config
+**Target File**: `playwright.config.ts`
+**Action**: Add Firefox browser project to projects array. Configure with Desktop Firefox device.
+**Validation**: Run `npx playwright test --project=firefox` and verify tests run on Firefox.
+
+#### TEST-012-02: Add WebKit to Playwright config
+**Target File**: `playwright.config.ts`
+**Action**: Add WebKit browser project to projects array. Configure with Desktop Safari device.
+**Validation**: Run `npx playwright test --project=webkit` and verify tests run on WebKit.
+
+#### TEST-012-03: Run tests on all browsers locally
+**Target File**: None
+**Action**: Run `npx playwright test` to execute tests on all configured browsers. Identify and fix any browser-specific failures.
+**Validation**: All tests pass on Chromium, Firefox, and WebKit.
+
+#### TEST-012-04: Update CI to run on all browsers
+**Target File**: `.github/workflows/ci.yml`
+**Action**: Update CI workflow to run Playwright tests on all browsers. May require matrix strategy or separate jobs.
+**Validation**: Run CI workflow and verify tests run on all browsers.
+
+---
+
+## TEST-013: Add Contract Tests for Domain Boundaries
+
+Status: [ ]
+
+**Related Files**:
+- New: `packages/domain-calendar/src/contract.test.ts`
+- New: `packages/domain-drive/src/contract.test.ts`
+- New: `packages/domain-tasks/src/contract.test.ts`
+
+**Definition of Done**:
+- Contract tests for HTTP service bindings between domains
+- API contracts validated
+- Breaking changes detected early
+- Consumer-driven contracts if applicable
+
+**Out of Scope**:
+- Testing internal domain logic
+- Testing within same domain
+- Testing third-party APIs
+
+**Rules to Follow**:
+- Contract tests validate HTTP service bindings
+- Test request/response contracts
+- Use OpenAPI/Swagger specs if available
+- Run contract tests in CI
+- Version contracts appropriately
+
+**Advanced Coding Pattern**:
+Contract testing ensures bounded contexts communicate via agreed-upon contracts. Catches breaking changes before deployment.
+
+**Anti-Patterns**:
+- Testing implementation details
+- Not versioning contracts
+- Ignoring contract failures
+
+**Imports/Exports**:
+```typescript
+import { describe, it } from 'vitest'
+import { app } from './index'
+
+it('calendar API contract', async () => {
+  const res = await app.request('/api/v1/events', {
+    method: 'POST',
+    body: JSON.stringify({ title: 'Meeting' })
+  })
+  expect(res.status).toBe(201)
+  const data = await res.json()
+  expect(data).toHaveProperty('id')
+  expect(data).toHaveProperty('title')
+})
+```
+
+**Depends On**: TEST-007
+**Blocks**: None
+
+### Subtasks
+
+#### TEST-013-01: Add contract tests for calendar domain
+**Target File**: New: `packages/domain-calendar/src/contract.test.ts`
+**Action**: Create contract tests for calendar domain HTTP service bindings. Validate request/response formats, status codes, and error responses.
+**Validation**: Run `pnpm test packages/domain-calendar/src/contract.test.ts` and verify contract tests pass.
+
+#### TEST-013-02: Add contract tests for drive domain
+**Target File**: New: `packages/domain-drive/src/contract.test.ts`
+**Action**: Create contract tests for drive domain HTTP service bindings. Validate request/response formats, status codes, and error responses.
+**Validation**: Run `pnpm test packages/domain-drive/src/contract.test.ts` and verify contract tests pass.
+
+#### TEST-013-03: Add contract tests for tasks domain
+**Target File**: New: `packages/domain-tasks/src/contract.test.ts`
+**Action**: Create contract tests for tasks domain HTTP service bindings. Validate request/response formats, status codes, and error responses.
+**Validation**: Run `pnpm test packages/domain-tasks/src/contract.test.ts` and verify contract tests pass.
+
+#### TEST-013-04: Add contract tests to CI
+**Target File**: `.github/workflows/ci.yml`
+**Action**: Add contract test step to CI workflow. Run contract tests before deployment.
+**Validation**: Run CI workflow and verify contract tests execute.
+
+---
+
+## TEST-014: Add Visual Regression Tests
+
+Status: [ ]
+
+**Related Files**:
+- New: `apps/calendar/web/e2e/visual.spec.ts`
+- New: `apps/drive/web/e2e/visual.spec.ts`
+- New: `apps/tasks/web/e2e/visual.spec.ts`
+- `playwright.config.ts`
+
+**Definition of Done**:
+- Visual regression tests for key UI components
+- Playwright screenshot comparison configured
+- Baseline images stored
+- CI runs visual tests
+- Visual changes detected and reviewed
+
+**Out of Scope**:
+- Testing every screen
+- Testing dynamic content (dates, random data)
+- Replacing functional E2E tests
+
+**Rules to Follow**:
+- Test static UI components
+- Mask dynamic content (dates, user-specific data)
+- Store baselines in version control
+- Review visual changes in PRs
+- Update baselines intentionally
+
+**Advanced Coding Pattern**:
+Visual regression tests catch CSS, layout, and rendering changes that functional tests miss. Critical for design systems.
+
+**Anti-Patterns**:
+- Testing dynamic content without masking
+- Not reviewing baseline changes
+- Storing baselines outside version control
+
+**Imports/Exports**:
+```typescript
+test('calendar visual regression', async ({ page }) => {
+  await page.goto('/calendar')
+  await expect(page).toHaveScreenshot('calendar.png', {
+    mask: [page.locator('[data-date]')]
+  })
+})
+```
+
+**Depends On**: TEST-006
+**Blocks**: None
+
+### Subtasks
+
+#### TEST-014-01: Configure Playwright for visual regression
+**Target File**: `playwright.config.ts`
+**Action**: Configure expect for screenshot comparison. Set up screenshot directory and baseline storage.
+**Validation**: Run `npx playwright test` with visual test and verify screenshot comparison works.
+
+#### TEST-014-02: Add visual tests for calendar app
+**Target File**: New: `apps/calendar/web/e2e/visual.spec.ts`
+**Action**: Add visual regression tests for calendar UI (event list, create dialog, event details). Mask dynamic content.
+**Validation**: Run `npx playwright test apps/calendar/web/e2e/visual.spec.ts` and verify screenshots generate.
+
+#### TEST-014-03: Add visual tests for drive app
+**Target File**: New: `apps/drive/web/e2e/visual.spec.ts`
+**Action**: Add visual regression tests for drive UI (file list, upload dialog, folder view). Mask dynamic content.
+**Validation**: Run `npx playwright test apps/drive/web/e2e/visual.spec.ts` and verify screenshots generate.
+
+#### TEST-014-04: Add visual tests for tasks app
+**Target File**: New: `apps/tasks/web/e2e/visual.spec.ts`
+**Action**: Add visual regression tests for tasks UI (task list, create dialog, filters). Mask dynamic content.
+**Validation**: Run `npx playwright test apps/tasks/web/e2e/visual.spec.ts` and verify screenshots generate.
+
+#### TEST-014-05: Add visual tests to CI
+**Target File**: `.github/workflows/ci.yml`
+**Action**: Add visual regression test step to CI workflow. Configure artifact upload for screenshots.
+**Validation**: Run CI workflow and verify visual tests execute with screenshot artifacts.
+
+---
+
+## TEST-015: Add Performance Benchmarks
+
+Status: [ ]
+
+**Related Files**:
+- New: `packages/*/src/benchmarks.test.ts`
+- New: `apps/*/api/benchmarks.test.ts`
+
+**Definition of Done**:
+- Performance benchmarks for critical paths
+- Benchmark results tracked over time
+- Performance regressions detected
+- Benchmarks run in CI
+- Baseline performance established
+
+**Out of Scope**:
+- Benchmarking every function
+- Micro-optimizations
+- Benchmarking UI interactions
+
+**Rules to Follow**:
+- Benchmark critical paths (crypto operations, database queries)
+- Use vitest benchmark or similar
+- Track results over time
+- Set performance thresholds
+- Investigate regressions
+
+**Advanced Coding Pattern**:
+Performance benchmarks catch regressions in critical paths before they affect users. Establish baseline performance and track changes.
+
+**Anti-Patterns**:
+- Benchmarking non-critical code
+- Ignoring performance regressions
+- Not tracking results over time
+
+**Imports/Exports**:
+```typescript
+import { bench, describe } from 'vitest'
+
+describe('crypto performance', () => {
+  bench('encrypt 1KB', () => {
+    encrypt(data, key)
+  }, { iterations: 1000 })
+})
+```
+
+**Depends On**: None
+**Blocks**: None
+
+### Subtasks
+
+#### TEST-015-01: Add crypto benchmarks
+**Target File**: New: `packages/crypto/src/benchmarks.test.ts`
+**Action**: Add performance benchmarks for crypto operations (encrypt, decrypt, key generation, key derivation).
+**Validation**: Run `pnpm bench packages/crypto` and verify benchmarks execute.
+
+#### TEST-015-02: Add domain benchmarks
+**Target Files**: 
+- New: `packages/domain-calendar/src/benchmarks.test.ts`
+- New: `packages/domain-drive/src/benchmarks.test.ts`
+- New: `packages/domain-tasks/src/benchmarks.test.ts`
+**Action**: Add performance benchmarks for critical domain operations (conflict detection, search, batch operations).
+**Validation**: Run `pnpm bench packages/domain-*` and verify benchmarks execute.
+
+#### TEST-015-03: Add API benchmarks
+**Target Files**:
+- New: `apps/calendar/api/benchmarks.test.ts`
+- New: `apps/drive/api/benchmarks.test.ts`
+- New: `apps/tasks/api/benchmarks.test.ts`
+**Action**: Add performance benchmarks for API endpoints (request handling, serialization, validation).
+**Validation**: Run `pnpm bench apps/*/api` and verify benchmarks execute.
+
+#### TEST-015-04: Configure benchmark thresholds
+**Target Files**: All benchmark files
+**Action**: Set performance thresholds for benchmarks. Fail benchmarks if performance degrades beyond threshold.
+**Validation**: Run benchmarks and verify thresholds are enforced.
+
+#### TEST-015-05: Add benchmarks to CI
+**Target File**: `.github/workflows/ci.yml`
+**Action**: Add benchmark step to CI workflow. Track benchmark results over time.
+**Validation**: Run CI workflow and verify benchmarks execute with result tracking.
+
+---
+
+## TEST-016: Enable Playwright Sharding for CI
+
+Status: [ ]
+
+**Related Files**:
+- `.github/workflows/ci.yml`
+- `playwright.config.ts`
+
+**Definition of Done**:
+- Playwright tests sharded across multiple CI workers
+- Test execution time reduced
+- Sharding configuration in CI
+- Test isolation verified
+- Flaky tests not caused by sharding
+
+**Out of Scope**:
+- Sharding unit tests (use Nx task splitting)
+- Sharding on local development
+- Modifying test logic
+
+**Rules to Follow**:
+- Shard when suite exceeds 5 minutes on single machine
+- Each shard runs full worker parallelism
+- Tests must be fully isolated
+- Configure shard count based on CI workers
+- Use --shard flag
+
+**Advanced Coding Pattern**:
+Playwright sharding splits test files across multiple CI machines. Each shard runs with full worker parallelism. 20-minute suite becomes 5-minute suite across 4 shards.
+
+**Anti-Patterns**:
+- Sharding without test isolation
+- Sharding small test suites
+- Not configuring shard count correctly
+
+**Imports/Exports**:
+```yaml
+# .github/workflows/ci.yml
+strategy:
+  matrix:
+    shard: [1/4, 2/4, 3/4, 4/4]
+- run: npx playwright test --shard=$matrix.shard
+```
+
+**Depends On**: TEST-006
+**Blocks**: None
+
+### Subtasks
+
+#### TEST-016-01: Verify test isolation
+**Target File**: None
+**Action**: Run Playwright tests with multiple workers to verify tests are isolated. Fix any shared state issues.
+**Validation**: Run `npx playwright test --workers=4` and verify all tests pass.
+
+#### TEST-016-02: Configure sharding in Playwright config
+**Target File**: `playwright.config.ts`
+**Action**: Document sharding strategy in config comments. Ensure tests are sharding-ready.
+**Validation**: Review config and verify sharding documentation is present.
+
+#### TEST-016-03: Add sharding to CI workflow
+**Target File**: `.github/workflows/ci.yml`
+**Action**: Add matrix strategy for sharding. Configure shard count based on available CI workers. Use --shard flag.
+**Validation**: Run CI workflow and verify tests are sharded across workers.
+
+#### TEST-016-04: Measure sharding performance improvement
+**Target File**: None
+**Action**: Compare CI execution time before and after sharding. Document performance improvement.
+**Validation**: CI execution time reduced by expected factor (e.g., 4x with 4 shards).
+
+---
+
+## TEST-017: Add Trace Viewer Configuration
+
+Status: [ ]
+
+**Related Files**:
+- `playwright.config.ts`
+
+**Definition of Done**:
+- Trace viewer enabled for failed tests
+- Trace artifacts uploaded in CI
+- Trace viewer configured for local debugging
+- Trace retention policy configured
+- Documentation for using trace viewer
+
+**Out of Scope**:
+- Recording traces for all tests (too slow)
+- Storing traces permanently
+
+**Rules to Follow**:
+- Record traces only on failure (retain-on-failure)
+- Upload trace artifacts in CI
+- Use trace viewer for debugging flaky tests
+- Set appropriate retention policy
+- Document how to use traces
+
+**Advanced Coding Pattern**:
+Playwright trace viewer captures network requests, console logs, and screenshots for failed tests. Essential for debugging CI-only failures.
+
+**Anti-Patterns**:
+- Recording traces for all tests
+- Not uploading trace artifacts
+- Not reviewing traces for failures
+
+**Imports/Exports**:
+```typescript
+// playwright.config.ts
+use: {
+  trace: 'retain-on-failure'
+}
+```
+
+**Depends On**: None
+**Blocks**: None
+
+### Subtasks
+
+#### TEST-017-01: Configure trace viewer in Playwright config
+**Target File**: `playwright.config.ts`
+**Action**: Set trace to 'retain-on-failure' in use configuration. Configure trace directory.
+**Validation**: Run failing test and verify trace is generated.
+
+#### TEST-017-02: Add trace artifact upload to CI
+**Target File**: `.github/workflows/ci.yml`
+**Action**: Add step to upload trace artifacts as CI artifacts. Configure artifact retention.
+**Validation**: Run CI with failing test and verify trace artifact is uploaded.
+
+#### TEST-017-03: Document trace viewer usage
+**Target File**: `docs/README.md` or new testing docs
+**Action**: Add documentation for using Playwright trace viewer. Include local and CI debugging workflows.
+**Validation**: Review documentation and verify it's clear and complete.
+
+#### TEST-017-04: Add trace viewer to debugging workflow
+**Target File**: Testing documentation
+**Action**: Add trace viewer to standard debugging workflow. Document when to use traces.
+**Validation**: Review debugging workflow and verify trace viewer is included.
+
+---
+
+## TEST-018: Add Test Data Factories
+
+Status: [ ]
+
+**Related Files**:
+- New: `packages/*/src/test/factories.ts`
+- New: `apps/*/api/test/factories.ts`
+
+**Definition of Done**:
+- Test data factories for common entities
+- Factories provide realistic test data
+- Factories support overrides
+- Factories reduce test duplication
+- Factories used across test suites
+
+**Out of Scope**:
+- Factories for every possible variation
+- Complex factory logic
+- Factories that hide test intent
+
+**Rules to Follow**:
+- Factories provide sensible defaults
+- Support overrides for specific test needs
+- Keep factories simple
+- Use factories for common entities
+- Don't over-abstract
+
+**Advanced Coding Pattern**:
+Test data factories centralize test data creation, reduce duplication, and ensure consistency across test suites. Support overrides for specific test scenarios.
+
+**Anti-Patterns**:
+- Over-engineering factories
+- Factories that hide test intent
+- Not using factories for common data
+
+**Imports/Exports**:
+```typescript
+// factories.ts
+export const createEvent = (overrides = {}) => ({
+  id: crypto.randomUUID(),
+  title: 'Team Meeting',
+  start: new Date('2026-01-01T10:00:00Z'),
+  end: new Date('2026-01-01T11:00:00Z'),
+  ...overrides
+})
+
+// test.ts
+const event = createEvent({ title: 'Custom Title' })
+```
+
+**Depends On**: None
+**Blocks**: None
+
+### Subtasks
+
+#### TEST-018-01: Create calendar event factory
+**Target File**: New: `packages/domain-calendar/src/test/factories.ts`
+**Action**: Create factory for calendar events with sensible defaults. Support overrides for title, dates, location.
+**Validation**: Use factory in existing tests and verify tests pass.
+
+#### TEST-018-02: Create drive file factory
+**Target File**: New: `packages/domain-drive/src/test/factories.ts`
+**Action**: Create factory for files and folders with sensible defaults. Support overrides for name, size, type.
+**Validation**: Use factory in existing tests and verify tests pass.
+
+#### TEST-018-03: Create task factory
+**Target File**: New: `packages/domain-tasks/src/test/factories.ts`
+**Action**: Create factory for tasks with sensible defaults. Support overrides for title, dueDate, priority, tags.
+**Validation**: Use factory in existing tests and verify tests pass.
+
+#### TEST-018-04: Create user factory for API tests
+**Target File**: New: `apps/*/api/test/factories.ts`
+**Action**: Create factory for test users with sensible defaults. Support overrides for email, permissions.
+**Validation**: Use factory in existing API tests and verify tests pass.
+
+#### TEST-018-05: Refactor existing tests to use factories
+**Target Files**: All test files
+**Action**: Replace inline test data creation with factory calls. Reduce duplication across tests.
+**Validation**: Run all tests and verify they pass with factories.
+
+---
+
+## TEST-019: Add Test Utilities
+
+Status: [ ]
+
+**Related Files**:
+- New: `packages/*/src/test/utils.ts`
+- New: `apps/*/api/test/utils.ts`
+
+**Definition of Done**:
+- Common test utilities extracted
+- Auth helpers for authenticated tests
+- Database helpers for integration tests
+- Request helpers for API tests
+- Utilities reduce test duplication
+
+**Out of Scope**:
+- Utilities that hide test intent
+- Over-abstraction
+- Utilities for one-off scenarios
+
+**Rules to Follow**:
+- Extract common test patterns
+- Keep utilities simple
+- Document utility purpose
+- Don't hide test intent
+- Use utilities judiciously
+
+**Advanced Coding Pattern**:
+Test utilities extract common patterns (auth setup, request helpers, database helpers) to reduce duplication and improve test maintainability.
+
+**Anti-Patterns**:
+- Over-abstracting test utilities
+- Hiding test intent behind utilities
+- Creating utilities for one-off scenarios
+
+**Imports/Exports**:
+```typescript
+// utils.ts
+export const authenticatedRequest = async (app, path, options) => {
+  const headers = { Authorization: `Bearer ${getMockToken()}` }
+  return app.request(path, { ...options, headers })
+}
+
+// test.ts
+const res = await authenticatedRequest(app, '/api/events', { method: 'POST' })
+```
+
+**Depends On**: None
+**Blocks**: None
+
+### Subtasks
+
+#### TEST-019-01: Create auth test utilities
+**Target File**: New: `packages/auth/src/test/utils.ts`
+**Action**: Create utilities for mock auth tokens, authenticated requests, permission helpers.
+**Validation**: Use utilities in existing tests and verify tests pass.
+
+#### TEST-019-02: Create database test utilities
+**Target File**: New: `packages/db/src/test/utils.ts`
+**Action**: Create utilities for database setup, teardown, transaction helpers, seed data.
+**Validation**: Use utilities in integration tests and verify tests pass.
+
+#### TEST-019-03: Create API request test utilities
+**Target File**: New: `apps/*/api/test/utils.ts`
+**Action**: Create utilities for common API request patterns (authenticated requests, error handling, response parsing).
+**Validation**: Use utilities in existing API tests and verify tests pass.
+
+#### TEST-019-04: Create crypto test utilities
+**Target File**: New: `packages/crypto/src/test/utils.ts`
+**Action**: Create utilities for key generation, encryption helpers, test data preparation.
+**Validation**: Use utilities in existing crypto tests and verify tests pass.
+
+#### TEST-019-05: Refactor existing tests to use utilities
+**Target Files**: All test files
+**Action**: Replace common patterns with utility calls. Reduce duplication across tests.
+**Validation**: Run all tests and verify they pass with utilities.
+
+---
+
+## TEST-020: Add Accessibility Testing
+
+Status: [ ]
+
+**Related Files**:
+- `apps/calendar/web/src/App.test.tsx`
+- `apps/drive/web/src/App.test.tsx`
+- `apps/tasks/web/src/App.test.tsx`
+- `packages/ui/src/index.test.tsx`
+
+**Definition of Done**:
+- axe-core integrated for accessibility testing
+- Critical components tested for accessibility
+- Accessibility violations fail tests
+- Accessibility tests run in CI
+- Accessibility baseline established
+
+**Out of Scope**:
+- Testing every component immediately
+- Fixing all accessibility issues at once
+- Replacing role-based queries
+
+**Rules to Follow**:
+- Test critical user paths first
+- Use axe-core for automated testing
+- Fix violations in priority order
+- Document manual testing needs
+- Accessibility is ongoing commitment
+
+**Advanced Coding Pattern**:
+axe-core provides automated accessibility testing for common violations. Catches issues before they affect users with disabilities.
+
+**Anti-Patterns**:
+- Relying solely on automated tests
+- Ignoring accessibility violations
+- Not testing keyboard navigation
+
+**Imports/Exports**:
+```typescript
+import { axe } from 'vitest-axe'
+import { render } from '@testing-library/react'
+
+it('has no accessibility violations', async () => {
+  const { container } = render(<App />)
+  const results = await axe(container)
+  expect(results).toHaveNoViolations()
+})
+```
+
+**Depends On**: TEST-011
+**Blocks**: None
+
+### Subtasks
+
+#### TEST-020-01: Install axe-core and vitest-axe
+**Target File**: `package.json` (root)
+**Action**: Add @axe-core/react and vitest-axe to devDependencies. Run pnpm install.
+**Validation**: Run `pnpm list @axe-core/react vitest-axe` and verify they're installed.
+
+#### TEST-020-02: Add accessibility tests to calendar app
+**Target File**: `apps/calendar/web/src/App.test.tsx`
+**Action**: Add axe accessibility tests for critical components (event list, create dialog, event details).
+**Validation**: Run `pnpm test apps/calendar/web` and verify accessibility tests pass.
+
+#### TEST-020-03: Add accessibility tests to drive app
+**Target File**: `apps/drive/web/src/App.test.tsx`
+**Action**: Add axe accessibility tests for critical components (file list, upload dialog, folder view).
+**Validation**: Run `pnpm test apps/drive/web` and verify accessibility tests pass.
+
+#### TEST-020-04: Add accessibility tests to tasks app
+**Target File**: `apps/tasks/web/src/App.test.tsx`
+**Action**: Add axe accessibility tests for critical components (task list, create dialog, filters).
+**Validation**: Run `pnpm test apps/tasks/web` and verify accessibility tests pass.
+
+#### TEST-020-05: Add accessibility tests to UI components
+**Target File**: `packages/ui/src/index.test.tsx`
+**Action**: Add axe accessibility tests for all UI components (Button, Input, Dialog, Card, etc.).
+**Validation**: Run `pnpm test packages/ui` and verify accessibility tests pass.
+
+#### TEST-020-06: Add accessibility tests to CI
+**Target File**: `.github/workflows/ci.yml`
+**Action**: Ensure accessibility tests run in CI. Fail build on accessibility violations.
+**Validation**: Run CI workflow and verify accessibility tests execute.
+
+---
+
+## Task Execution Order
+
+### Phase 1: Foundation (High Priority)
+1. TEST-001: Switch Vitest to V8 Coverage Provider
+2. TEST-002: Standardize Coverage Thresholds
+3. TEST-003: Implement Playwright StorageState for Authentication
+4. TEST-004: Add @nx/vitest Plugin Integration
+
+### Phase 2: Coverage & Reporting (High Priority)
+5. TEST-005: Add Coverage Report Configuration
+6. TEST-008: Configure Nx Affected Testing
+
+### Phase 3: Test Quality (Medium Priority)
+7. TEST-007: Adopt Hono testClient for Type-Safe API Testing
+8. TEST-011: Improve React Testing Library Patterns
+9. TEST-018: Add Test Data Factories
+10. TEST-019: Add Test Utilities
+
+### Phase 4: Expanded Coverage (Medium Priority)
+11. TEST-006: Expand E2E Test Coverage
+12. TEST-009: Add Property-Based Tests for Domain Rules
+13. TEST-010: Add Integration Tests for Domain-Repository
+14. TEST-020: Add Accessibility Testing
+
+### Phase 5: Advanced Features (Low Priority)
+15. TEST-012: Add Cross-Browser Playwright Tests
+16. TEST-013: Add Contract Tests for Domain Boundaries
+17. TEST-014: Add Visual Regression Tests
+18. TEST-015: Add Performance Benchmarks
+19. TEST-016: Enable Playwright Sharding for CI
+20. TEST-017: Add Trace Viewer Configuration
+
+---
+
+## Commands Reference
+
+### Run all tests
+```bash
+pnpm test
+```
+
+### Run tests with coverage
+```bash
+pnpm test --coverage
+```
+
+### Run specific package tests
+```bash
+pnpm test packages/domain-calendar
+pnpm test packages/crypto
+```
+
+### Run specific app tests
+```bash
+pnpm test apps/calendar/api
+pnpm test apps/calendar/web
+```
+
+### Run E2E tests
+```bash
+npx playwright test
+```
+
+### Run E2E tests for specific app
+```bash
+npx playwright test apps/calendar/web/e2e
+```
+
+### Run affected tests (Nx)
+```bash
+nx affected -t test --base=main~1
+```
+
+### Run benchmarks
+```bash
+pnpm bench
+```
+
+### Run typecheck
+```bash
+pnpm typecheck
+```
+
+### Run lint
+```bash
+pnpm lint
+```
+
+### Run CI
+```bash
+pnpm build
+pnpm test
+pnpm typecheck
+pnpm lint
+```
