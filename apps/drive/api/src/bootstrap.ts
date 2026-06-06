@@ -98,7 +98,7 @@ export function getR2Adapter(): R2StorageAdapter | null {
   return r2Adapter;
 }
 
-export async function wireRepositories(userId: string | null, env: DriveEnv, r2Bucket?: R2Bucket): Promise<void> {
+export async function wireRepositories(userId: string | null, env: DriveEnv & { HYPERDRIVE?: { connectionString: string } }, r2Bucket?: R2Bucket): Promise<void> {
   try {
     // Set up encryption key provider from environment
     await setDriveKeyProviderFromEnv();
@@ -121,9 +121,15 @@ export async function wireRepositories(userId: string | null, env: DriveEnv, r2B
       setDriveStorage(new InMemoryStorageAdapter());
     }
 
-    // Use Postgres repositories if DATABASE_URL is set and userId is provided, otherwise use in-memory repositories
-    if (userId && env.DATABASE_URL) {
-      const db = createDbClient({ DATABASE_URL: env.DATABASE_URL });
+    // Use Postgres repositories if HYPERDRIVE or DATABASE_URL is set and userId is provided, otherwise use in-memory repositories
+    if (userId && (env.HYPERDRIVE || env.DATABASE_URL)) {
+      const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
+      if (env.HYPERDRIVE) {
+        dbEnv.HYPERDRIVE = env.HYPERDRIVE;
+      } else if (env.DATABASE_URL) {
+        dbEnv.DATABASE_URL = env.DATABASE_URL;
+      }
+      const db = createDbClient(dbEnv);
       // Use default tenant for single-tenant setup (will be updated for multi-tenancy)
       setDriveFileRepository(new PostgresDriveFileRepository(db, userId, 'default'));
       setDriveFolderRepository(new PostgresDriveFolderRepository(db, userId, 'default'));

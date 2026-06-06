@@ -25,6 +25,7 @@ import { openApiDoc } from './openapi.js';
 type Env = {
   RATE_LIMIT_KV: KVNamespace;
   AUTH_KV: KVNamespace;
+  HYPERDRIVE?: { connectionString: string };
   waitUntil: (promise: Promise<unknown>) => void;
 } & CalendarEnv;
 
@@ -38,8 +39,15 @@ const app = new Hono<{ Variables: Variables; Bindings: Env }>();
 // Create usage repository for monitoring
 let usageRepository: PostgresUsageRepository | null = null;
 app.use('/api/*', async (c, next) => {
-  if (!usageRepository && c.env.DATABASE_URL) {
-    const db = createDbClient({ DATABASE_URL: c.env.DATABASE_URL });
+  if (!usageRepository) {
+    const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
+    if (c.env.HYPERDRIVE) {
+      dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
+    }
+    if (c.env.DATABASE_URL) {
+      dbEnv.DATABASE_URL = c.env.DATABASE_URL;
+    }
+    const db = createDbClient(dbEnv);
     usageRepository = new PostgresUsageRepository(db);
   }
   await next();
@@ -160,7 +168,14 @@ app.use('/api/*', async (c, next) => {
 
 // Middleware to create auth instance per request
 app.use('/api/*', async (c, next) => {
-  const db = getDbOrNull();
+  const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
+  if (c.env.HYPERDRIVE) {
+    dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
+  }
+  if (c.env.DATABASE_URL) {
+    dbEnv.DATABASE_URL = c.env.DATABASE_URL;
+  }
+  const db = createDbClient(dbEnv);
   const auth = createAuth({
     db,
     env: {
@@ -308,19 +323,22 @@ const metrics = {
 };
 
 app.get('/api/v1/health', async (c) => {
-  const db = getDbOrNull();
+  const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
+  if (c.env.HYPERDRIVE) {
+    dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
+  }
+  if (c.env.DATABASE_URL) {
+    dbEnv.DATABASE_URL = c.env.DATABASE_URL;
+  }
+  const db = createDbClient(dbEnv);
   let dbStatus = 'ok';
   let dbLatency: number | undefined;
 
-  if (db) {
-    try {
-      const start = performance.now();
-      await db.execute('SELECT 1');
-      dbLatency = performance.now() - start;
-    } catch (_error) {
-      dbStatus = 'error';
-    }
-  } else {
+  try {
+    const start = performance.now();
+    await db.query('SELECT 1');
+    dbLatency = performance.now() - start;
+  } catch (_error) {
     dbStatus = 'error';
   }
 

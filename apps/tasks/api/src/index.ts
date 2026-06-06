@@ -37,6 +37,7 @@ import { openApiDoc } from './openapi.js';
 type Env = {
   RATE_LIMIT_KV: KVNamespace;
   AUTH_KV: KVNamespace;
+  HYPERDRIVE?: { connectionString: string };
   waitUntil: (promise: Promise<unknown>) => void;
 } & TasksEnv;
 
@@ -64,8 +65,15 @@ app.use('/api/*', async (c, next) => {
 // Create usage repository for monitoring
 let usageRepository: PostgresUsageRepository | null = null;
 app.use('/api/*', async (c, next) => {
-  if (!usageRepository && c.env.DATABASE_URL) {
-    const db = createDbClient({ DATABASE_URL: c.env.DATABASE_URL });
+  if (!usageRepository) {
+    const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
+    if (c.env.HYPERDRIVE) {
+      dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
+    }
+    if (c.env.DATABASE_URL) {
+      dbEnv.DATABASE_URL = c.env.DATABASE_URL;
+    }
+    const db = createDbClient(dbEnv);
     usageRepository = new PostgresUsageRepository(db);
   }
   await next();
@@ -180,7 +188,14 @@ app.use('/api/*', async (c, next) => {
 
 // Middleware to create auth instance per request
 app.use('/api/*', async (c, next) => {
-  const db = c.env.DATABASE_URL ? createDbClient({ DATABASE_URL: c.env.DATABASE_URL }) : null;
+  const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
+  if (c.env.HYPERDRIVE) {
+    dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
+  }
+  if (c.env.DATABASE_URL) {
+    dbEnv.DATABASE_URL = c.env.DATABASE_URL;
+  }
+  const db = Object.keys(dbEnv).length > 0 ? createDbClient(dbEnv) : null;
   const auth = createAuth({
     db,
     env: {
@@ -266,7 +281,14 @@ function readTaskError(error: unknown): { status: 400 | 404 | 500; body: Record<
 }
 
 app.get('/api/v1/health', async (c) => {
-  const db = c.env.DATABASE_URL ? createDbClient({ DATABASE_URL: c.env.DATABASE_URL }) : null;
+  const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
+  if (c.env.HYPERDRIVE) {
+    dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
+  }
+  if (c.env.DATABASE_URL) {
+    dbEnv.DATABASE_URL = c.env.DATABASE_URL;
+  }
+  const db = Object.keys(dbEnv).length > 0 ? createDbClient(dbEnv) : null;
   let dbStatus = 'ok';
   let dbLatency: number | undefined;
 

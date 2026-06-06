@@ -13,3 +13,7 @@ id = "rate-limit-kv"
 [[kv_namespaces]]
 binding = "AUTH_KV"
 id = "auth-kv"
+
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "PLACEHOLDER_HYPERDRIVE_ID"
