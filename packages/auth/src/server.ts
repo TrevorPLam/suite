@@ -151,10 +151,6 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
   return auth;
 }
 
-// Legacy singleton for backward compatibility (will be removed after migration)
-const db = (await import('@suite/db')).getDbOrNull();
-export const auth = createAuth({ db });
-
 export async function getSession(authInstance: ReturnType<typeof createAuth>, headers: Headers) {
   return await authInstance.api.getSession({
     headers,

@@ -4,39 +4,24 @@ import { getSession } from './server.js';
 export async function authMiddleware(c: Context, next: Next) {
   const auth = c.get('auth');
   if (!auth) {
-    // Fallback to legacy singleton if not set (for backward compatibility)
-    const { auth: legacyAuth } = await import('./server.js');
-    const session = await getSession(legacyAuth, c.req.raw.headers);
-    
-    if (session) {
-      c.set('user', session.user);
-      c.set('session', session.session);
-      c.set('userId', session.user.id);
-      // Set organization context if available
-      c.set('organizationId', session.session.activeOrganizationId || null);
-    } else {
-      c.set('user', null);
-      c.set('session', null);
-      c.set('userId', null);
-      c.set('organizationId', null);
-    }
-  } else {
-    const session = await getSession(auth, c.req.raw.headers);
-    
-    if (session) {
-      c.set('user', session.user);
-      c.set('session', session.session);
-      c.set('userId', session.user.id);
-      // Set organization context if available
-      c.set('organizationId', session.session.activeOrganizationId || null);
-    } else {
-      c.set('user', null);
-      c.set('session', null);
-      c.set('userId', null);
-      c.set('organizationId', null);
-    }
+    throw new Error('Auth instance not found in context. Ensure auth middleware is configured.');
   }
-  
+
+  const session = await getSession(auth, c.req.raw.headers);
+
+  if (session) {
+    c.set('user', session.user);
+    c.set('session', session.session);
+    c.set('userId', session.user.id);
+    // Set organization context if available
+    c.set('organizationId', session.session.activeOrganizationId || null);
+  } else {
+    c.set('user', null);
+    c.set('session', null);
+    c.set('userId', null);
+    c.set('organizationId', null);
+  }
+
   await next();
 }
 
