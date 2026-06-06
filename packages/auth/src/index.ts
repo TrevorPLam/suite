@@ -56,6 +56,9 @@ export type { GeolocationData } from './geolocation.js';
 // Session limits for concurrent session enforcement
 export { enforceSessionLimit } from './session-limits.js';
 
+// Step-up authentication for sensitive actions
+export { requireFreshAuth, isAuthFresh, getAuthFreshnessRemaining, type SensitiveAction, StepUpAuthRequiredError } from './step-up-auth.js';
+
 // Organization client is already configured with organizationClient plugin
 // Applications can use authClient.organization.createOrganization, etc.
 
