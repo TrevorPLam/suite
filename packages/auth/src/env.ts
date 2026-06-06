@@ -9,6 +9,7 @@ export const AuthEnvSchema = z.object({
   RATE_LIMIT_WINDOW: z.string().default('60').transform((val) => parseInt(val, 10)),
   RATE_LIMIT_MAX: z.string().default('30').transform((val) => parseInt(val, 10)),
   MAX_SESSIONS: z.string().default('5').transform((val) => parseInt(val, 10)),
+  IP_BINDING_STRICTNESS: z.enum(['exact', 'subnet', 'disabled']).default('subnet'),
 });
 
 export type AuthEnv = z.infer<typeof AuthEnvSchema>;

@@ -1,5 +1,6 @@
 import { Context, Next } from 'hono';
 import { getSession } from './server.js';
+import { validateIPBinding, extractClientIP, type IPBindingStrictness } from './ip-binding.js';
 
 export async function authMiddleware(c: Context, next: Next) {
   const auth = c.get('auth');
@@ -10,6 +11,35 @@ export async function authMiddleware(c: Context, next: Next) {
   const session = await getSession(auth, c.req.raw.headers);
 
   if (session) {
+    // Get IP binding strictness from environment
+    const ipBindingStrictness: IPBindingStrictness = (c.env?.IP_BINDING_STRICTNESS as IPBindingStrictness) || 'subnet';
+
+    // Validate IP binding if enabled
+    if (ipBindingStrictness !== 'disabled') {
+      const sessionIP = session.session.ipAddress as string | undefined;
+      const requestIP = extractClientIP(c.req.raw.headers);
+
+      const bindingResult = validateIPBinding(sessionIP, requestIP, ipBindingStrictness);
+
+      if (!bindingResult.valid) {
+        // IP binding validation failed - clear session to force re-authentication
+        c.set('user', null);
+        c.set('session', null);
+        c.set('userId', null);
+        c.set('organizationId', null);
+        return c.json(
+          {
+            error: {
+              code: 'IP_BINDING_FAILED',
+              message: bindingResult.reason || 'Session IP validation failed',
+              timestamp: new Date().toISOString(),
+            },
+          },
+          401,
+        );
+      }
+    }
+
     c.set('user', session.user);
     c.set('session', session.session);
     c.set('userId', session.user.id);

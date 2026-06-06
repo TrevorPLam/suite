@@ -53,6 +53,10 @@ export { generateDeviceFingerprint, detectAnomalousDevice, logDeviceAnomaly } fr
 export { extractGeolocationFromCF, detectLocationAnomaly, logLocationAnomaly } from './geolocation.js';
 export type { GeolocationData } from './geolocation.js';
 
+// IP-based session binding for enhanced security
+export { validateIPBinding, extractClientIP } from './ip-binding.js';
+export type { IPBindingStrictness, IPBindingResult } from './ip-binding.js';
+
 // Session limits for concurrent session enforcement
 export { enforceSessionLimit } from './session-limits.js';
 

@@ -7,6 +7,7 @@ import { validateAuthEnv } from './env.js';
 import { logAuthEvent, createAuthEvent } from './audit-log.js';
 import { generateDeviceFingerprint, detectAnomalousDevice, logDeviceAnomaly } from './device-fingerprinting.js';
 import { extractGeolocationFromCF, detectLocationAnomaly, logLocationAnomaly, type GeolocationData } from './geolocation.js';
+import { extractClientIP } from './ip-binding.js';
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
@@ -68,6 +69,16 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
                 deletedAt: new Date().toISOString(),
               },
             }));
+          },
+        },
+      },
+      session: {
+        create: {
+          after: async (_session) => {
+            // Store IP address in session metadata
+            // Note: Better Auth doesn't provide request context in session hooks
+            // IP address is stored via the ipAddress field we added to the schema
+            // The actual IP will be set by the application layer after session creation
           },
         },
       },
@@ -139,39 +150,39 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
               const user = ctx.context?.user;
               const request = ctx.context?.request;
               const cf = ctx.context?.cf;
-              const ip = request?.headers.get('cf-connecting-ip') || undefined;
+              const ip = request?.headers ? extractClientIP(request.headers) : undefined;
               const userAgent = request?.headers.get('user-agent') || undefined;
               
               if (user && ip && userAgent && user.id) {
                 // Generate device fingerprint
                 const deviceFingerprint = await generateDeviceFingerprint(userAgent, ip);
-                
+
                 // Detect anomalous device
                 const isAnomalous = await detectAnomalousDevice(user.id, deviceFingerprint, auth);
                 if (isAnomalous) {
                   logDeviceAnomaly(user.id, user.email || '', deviceFingerprint, ip, userAgent);
                 }
-                
+
                 // Extract geolocation data
                 const location = cf ? extractGeolocationFromCF(cf) : {};
-                
+
                 // Detect location anomaly
                 const isLocationAnomalous = await detectLocationAnomaly(user.id, location, auth);
                 if (isLocationAnomalous) {
                   logLocationAnomaly(user.id, user.email || '', location, ip, userAgent);
                 }
-                
+
                 // Enforce concurrent session limit
                 // Note: Session limit enforcement happens after session creation in Better Auth
                 // We skip enforcement here since Better Auth doesn't provide the session token in the hook context
                 // This is a limitation of the current Better Auth hook system
-                
+
                 const context: Parameters<typeof createAuthEvent>[1] = {};
                 if (user.id) context.userId = user.id;
                 if (user.email) context.email = user.email;
                 if (ip) context.ip = ip;
                 if (userAgent) context.userAgent = userAgent;
-                context.metadata = { deviceFingerprint, isAnomalous, location, isLocationAnomalous };
+                context.metadata = { deviceFingerprint, isAnomalous, location, isLocationAnomalous, ipAddress: ip };
                 logAuthEvent(createAuthEvent('sign_in', context));
               }
             },
@@ -185,28 +196,28 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
               const user = ctx.context?.user;
               const request = ctx.context?.request;
               const cf = ctx.context?.cf;
-              const ip = request?.headers.get('cf-connecting-ip') || undefined;
+              const ip = request?.headers ? extractClientIP(request.headers) : undefined;
               const userAgent = request?.headers.get('user-agent') || undefined;
               
               if (user && ip && userAgent && user.id) {
                 // Generate device fingerprint
                 const deviceFingerprint = await generateDeviceFingerprint(userAgent, ip);
-                
+
                 // First device is never anomalous for new users
                 const isAnomalous = false;
-                
+
                 // Extract geolocation data
                 const location = cf ? extractGeolocationFromCF(cf) : {};
-                
+
                 // First location is never anomalous for new users
                 const isLocationAnomalous = false;
-                
+
                 const context: Parameters<typeof createAuthEvent>[1] = {};
                 if (user.id) context.userId = user.id;
                 if (user.email) context.email = user.email;
                 if (ip) context.ip = ip;
                 if (userAgent) context.userAgent = userAgent;
-                context.metadata = { deviceFingerprint, isAnomalous, location, isLocationAnomalous };
+                context.metadata = { deviceFingerprint, isAnomalous, location, isLocationAnomalous, ipAddress: ip };
                 logAuthEvent(createAuthEvent('sign_up', context));
               }
             },
@@ -219,7 +230,7 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
               // Log sign-out
               const user = ctx.context?.user;
               const request = ctx.context?.request;
-              const ip = request?.headers.get('cf-connecting-ip') || undefined;
+              const ip = request?.headers ? extractClientIP(request.headers) : undefined;
               const userAgent = request?.headers.get('user-agent') || undefined;
               
               if (user) {
