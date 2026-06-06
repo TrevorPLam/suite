@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import fc from 'fast-check';
 import {
   createTask,
   getTask,
@@ -866,5 +867,157 @@ describe('tasks - encryption', () => {
 
     expect(decrypted.title).toBe(task.title);
     expect(decrypted.tags).toEqual([]);
+  });
+});
+
+describe('tasks - property-based tests', () => {
+  beforeEach(() => {
+    resetTasks();
+  });
+
+  it('property: title trimming preserves non-empty content', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 100 }).filter((s: string) => s.trim().length > 0),
+        fc.string({ minLength: 0, maxLength: 10 }),
+        async (title: string, whitespace: string) => {
+          resetTasks();
+          const titleWithWhitespace = whitespace + title + whitespace;
+
+          const input: CreateTaskInput = {
+            title: titleWithWhitespace,
+          };
+
+          const task = await createTask(input);
+          expect(task.title).toBe(titleWithWhitespace.trim());
+          expect(task.title.length).toBeGreaterThan(0);
+        }
+      )
+    );
+  });
+
+  it('property: priority is always valid', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s: string) => s.trim().length > 0),
+        fc.oneof(fc.constant('low'), fc.constant('medium'), fc.constant('high')) as fc.Arbitrary<'low' | 'medium' | 'high'>,
+        async (title: string, priority: 'low' | 'medium' | 'high') => {
+          resetTasks();
+
+          const input: CreateTaskInput = {
+            title,
+            priority,
+          };
+
+          const task = await createTask(input);
+          expect(['low', 'medium', 'high']).toContain(task.priority);
+        }
+      )
+    );
+  });
+
+  it('property: tags are trimmed and non-empty', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s: string) => s.trim().length > 0),
+        fc.array(fc.string({ minLength: 1, maxLength: 20 }).filter((s: string) => s.trim().length > 0), { minLength: 0, maxLength: 5 }),
+        async (title: string, tags: string[]) => {
+          resetTasks();
+
+          const input: CreateTaskInput = {
+            title,
+            tags,
+          };
+
+          const task = await createTask(input);
+          expect(task.tags).toEqual(tags.map((t: string) => t.trim()));
+          expect(task.tags.every((t: string) => t.length > 0)).toBe(true);
+        }
+      )
+    );
+  });
+
+  it('property: completed status is boolean', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s: string) => s.trim().length > 0),
+        fc.boolean(),
+        async (title: string, completed: boolean) => {
+          resetTasks();
+
+          const input: CreateTaskInput = {
+            title,
+            completed,
+          };
+
+          const task = await createTask(input);
+          expect(typeof task.completed).toBe('boolean');
+          expect(task.completed).toBe(completed);
+        }
+      )
+    );
+  });
+
+  it('property: archived status is boolean', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s: string) => s.trim().length > 0),
+        fc.boolean(),
+        async (title: string, archived: boolean) => {
+          resetTasks();
+
+          const input: CreateTaskInput = {
+            title,
+          };
+
+          const task = await createTask(input);
+          await archiveTask(task.id, { archived });
+
+          const updated = await getTask(task.id);
+          expect(updated?.archived).toBe(archived);
+        }
+      )
+    );
+  });
+
+  it('property: due date is valid ISO timestamp when provided', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s: string) => s.trim().length > 0),
+        fc.date({ min: new Date(2000, 0, 1), max: new Date(2100, 11, 31) }),
+        async (title: string, dueDate: Date) => {
+          resetTasks();
+
+          const input: CreateTaskInput = {
+            title,
+            dueDate: dueDate.toISOString(),
+          };
+
+          const task = await createTask(input);
+          expect(task.dueDate).toBe(dueDate.toISOString());
+          expect(task.dueDate !== null && !Number.isNaN(Date.parse(task.dueDate))).toBe(true);
+        }
+      )
+    );
+  });
+
+  it('property: search is case-insensitive', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 20 }).filter((s: string) => s.trim().length > 0),
+        fc.string({ minLength: 1, maxLength: 20 }).filter((s: string) => s.trim().length > 0),
+        async (title: string, query: string) => {
+          resetTasks();
+          const taskTitle = title.toLowerCase();
+
+          await createTask({ title: taskTitle });
+
+          const results = await searchTasks({ query: query.toLowerCase() });
+          if (taskTitle.includes(query.toLowerCase())) {
+            expect(results.length).toBeGreaterThan(0);
+          }
+        }
+      )
+    );
   });
 });

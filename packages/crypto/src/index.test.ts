@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import fc from 'fast-check';
 import {
   encryptItem,
   decryptItem,
@@ -321,5 +322,125 @@ describe('End-to-End Encryption Flow', () => {
     const decrypted = await decryptItem(encrypted, aesKey2);
 
     expect(decrypted).toBe(plaintext);
+  });
+});
+
+describe('Crypto - property-based tests', () => {
+  let key: CryptoKey;
+
+  beforeEach(async () => {
+    key = await generateAESKey();
+  });
+
+  it('property: encryption roundtrip preserves data', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 0, maxLength: 1000 }),
+        async (plaintext: string) => {
+          const encrypted = await encryptItem(plaintext, key);
+          const decrypted = await decryptItem(encrypted, key);
+          expect(decrypted).toBe(plaintext);
+        }
+      )
+    );
+  });
+
+  it('property: encryption produces unique IVs', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 100 }),
+        async (plaintext: string) => {
+          const encrypted1 = await encryptItem(plaintext, key);
+          const encrypted2 = await encryptItem(plaintext, key);
+          expect(encrypted1.iv).not.toEqual(encrypted2.iv);
+        }
+      )
+    );
+  });
+
+  it('property: salt generation produces unique values', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 16, max: 64 }),
+        (length: number) => {
+          const salt1 = generateSalt(length);
+          const salt2 = generateSalt(length);
+          expect(new Uint8Array(salt1)).not.toEqual(new Uint8Array(salt2));
+          expect(salt1.byteLength).toBe(length);
+        }
+      )
+    );
+  });
+
+  it('property: key derivation is deterministic with same parameters', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 8, maxLength: 100 }),
+        fc.array(fc.integer({ min: 0, max: 255 }), { minLength: 16, maxLength: 32 }),
+        async (password: string, saltArray: number[]) => {
+          const salt = new Uint8Array(saltArray);
+          const key1 = await deriveKeyFromPassword(password, salt.buffer, 10000, true);
+          const key2 = await deriveKeyFromPassword(password, salt.buffer, 10000, true);
+          
+          const exported1 = await serializeKey(key1);
+          const exported2 = await serializeKey(key2);
+          expect(exported1).toEqual(exported2);
+        }
+      )
+    );
+  });
+
+  it('property: ECDH shared secret is symmetric', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.constant(null),
+        async () => {
+          const keyPair1 = await generateKeyPair(true);
+          const keyPair2 = await generateKeyPair(true);
+
+          const sharedSecret1 = await deriveSharedSecret(keyPair1.privateKey, keyPair2.publicKey);
+          const sharedSecret2 = await deriveSharedSecret(keyPair2.privateKey, keyPair1.publicKey);
+
+          expect(new Uint8Array(sharedSecret1)).toEqual(new Uint8Array(sharedSecret2));
+        }
+      )
+    );
+  });
+
+  it('property: different key pairs produce different shared secrets', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.constant(null),
+        async () => {
+          const keyPair1 = await generateKeyPair(true);
+          const keyPair2 = await generateKeyPair(true);
+          const keyPair3 = await generateKeyPair(true);
+
+          const sharedSecret1 = await deriveSharedSecret(keyPair1.privateKey, keyPair2.publicKey);
+          const sharedSecret2 = await deriveSharedSecret(keyPair1.privateKey, keyPair3.publicKey);
+
+          expect(new Uint8Array(sharedSecret1)).not.toEqual(new Uint8Array(sharedSecret2));
+        }
+      )
+    );
+  });
+
+  it('property: key serialization roundtrip preserves key', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.constant(true),
+        async (extractable: boolean) => {
+          const key = await generateAESKey(extractable);
+          const jwk = await serializeKey(key);
+          const deserializedKey = await deserializeKey(jwk, 'AES-GCM', extractable, ['encrypt', 'decrypt']);
+
+          // Verify the key works by encrypting and decrypting
+          const plaintext = 'test';
+          const encrypted = await encryptItem(plaintext, deserializedKey);
+          const decrypted = await decryptItem(encrypted, deserializedKey);
+          expect(decrypted).toBe(plaintext);
+        }
+      )
+    );
   });
 });

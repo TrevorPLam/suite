@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import fc from 'fast-check';
 import {
   createCalendarEvent,
   updateCalendarEvent,
@@ -12,7 +13,7 @@ import {
 } from './calendar-events.js';
 
 async function assertCalendarEventError(
-  fn: () => Promise<any>,
+  fn: () => Promise<unknown>,
   code: string,
   detail?: string,
 ): Promise<void> {
@@ -386,5 +387,157 @@ describe('calendar-events - query', () => {
     const events = await listCalendarEventsInRange(range);
 
     expect(events).toHaveLength(0);
+  });
+});
+
+describe('calendar-events - property-based tests', () => {
+  beforeEach(() => {
+    resetCalendarEvents();
+  });
+
+  it('property: end time is always after start time for valid events', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 100 }).filter((s: string) => s.trim().length > 0),
+        fc.date({ min: new Date(2000, 0, 1), max: new Date(2100, 11, 31) }),
+        fc.integer({ min: 1, max: 86400000 }), // 1ms to 24 hours in milliseconds
+        async (title: string, startDate: Date, durationMs: number) => {
+          resetCalendarEvents();
+          const startAt = startDate.toISOString();
+          const endDate = new Date(startDate.getTime() + durationMs);
+          const endAt = endDate.toISOString();
+
+          const input: CreateCalendarEventInput = {
+            title,
+            startAt,
+            endAt,
+          };
+
+          const event = await createCalendarEvent(input);
+          expect(Date.parse(event.endAt)).toBeGreaterThan(Date.parse(event.startAt));
+        }
+      )
+    );
+  });
+
+  it('property: title trimming preserves non-empty content', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 100 }).filter((s: string) => s.trim().length > 0),
+        fc.string({ minLength: 0, maxLength: 10 }),
+        async (title: string, whitespace: string) => {
+          resetCalendarEvents();
+          const titleWithWhitespace = whitespace + title + whitespace;
+          const startAt = new Date().toISOString();
+          const endAt = new Date(Date.now() + 3600000).toISOString();
+
+          const input: CreateCalendarEventInput = {
+            title: titleWithWhitespace,
+            startAt,
+            endAt,
+          };
+
+          const event = await createCalendarEvent(input);
+          expect(event.title).toBe(titleWithWhitespace.trim());
+          expect(event.title.length).toBeGreaterThan(0);
+        }
+      )
+    );
+  });
+
+  it('property: valid ISO timestamps are accepted', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 100 }).filter((s: string) => s.trim().length > 0),
+        fc.date({ min: new Date(2000, 0, 1), max: new Date(2100, 11, 31) }),
+        async (title: string, startDate: Date) => {
+          resetCalendarEvents();
+          const startAt = startDate.toISOString();
+          const endAt = new Date(startDate.getTime() + 3600000).toISOString();
+
+          const input: CreateCalendarEventInput = {
+            title,
+            startAt,
+            endAt,
+          };
+
+          const event = await createCalendarEvent(input);
+          expect(event.startAt).toBe(startAt);
+          expect(event.endAt).toBe(endAt);
+        }
+      )
+    );
+  });
+
+  it('property: non-overlapping events can coexist', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s: string) => s.trim().length > 0),
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s: string) => s.trim().length > 0),
+        fc.date({ min: new Date(2000, 0, 1), max: new Date(2100, 11, 31) }),
+        fc.integer({ min: 1, max: 3600000 }),
+        fc.integer({ min: 3600000, max: 7200000 }),
+        async (title1: string, title2: string, startDate: Date, duration1: number, gap: number) => {
+          resetCalendarEvents();
+          const startAt1 = startDate.toISOString();
+          const endAt1 = new Date(startDate.getTime() + duration1).toISOString();
+          const startAt2 = new Date(startDate.getTime() + duration1 + gap).toISOString();
+          const endAt2 = new Date(startDate.getTime() + duration1 + gap + duration1).toISOString();
+
+          const input1: CreateCalendarEventInput = {
+            title: title1,
+            startAt: startAt1,
+            endAt: endAt1,
+          };
+
+          const input2: CreateCalendarEventInput = {
+            title: title2,
+            startAt: startAt2,
+            endAt: endAt2,
+          };
+
+          const event1 = await createCalendarEvent(input1);
+          const event2 = await createCalendarEvent(input2);
+
+          expect(event1.id).not.toBe(event2.id);
+          expect(event1.title).toBe(title1.trim());
+          expect(event2.title).toBe(title2.trim());
+        }
+      )
+    );
+  });
+
+  it('property: overlapping events are rejected', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s: string) => s.trim().length > 0),
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s: string) => s.trim().length > 0),
+        fc.date({ min: new Date(2000, 0, 1), max: new Date(2100, 11, 31) }),
+        fc.integer({ min: 1000, max: 3600000 }),
+        async (title1: string, title2: string, startDate: Date, duration1: number) => {
+          resetCalendarEvents();
+          const startAt1 = startDate.toISOString();
+          const endAt1 = new Date(startDate.getTime() + duration1).toISOString();
+          // Start second event halfway through first event to ensure overlap
+          const startAt2 = new Date(startDate.getTime() + duration1 / 2).toISOString();
+          const endAt2 = new Date(startDate.getTime() + duration1 * 1.5).toISOString();
+
+          const input1: CreateCalendarEventInput = {
+            title: title1,
+            startAt: startAt1,
+            endAt: endAt1,
+          };
+
+          const input2: CreateCalendarEventInput = {
+            title: title2,
+            startAt: startAt2,
+            endAt: endAt2,
+          };
+
+          await createCalendarEvent(input1);
+          await expect(createCalendarEvent(input2)).rejects.toThrow(CalendarEventError);
+        }
+      )
+    );
   });
 });

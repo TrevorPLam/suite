@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import fc from 'fast-check';
 import {
   uploadDriveFile,
   listDriveFiles,
@@ -631,5 +632,116 @@ describe('drive - search', () => {
 
     const results = await searchFiles({ query: 'file' });
     expect(results).toHaveLength(2);
+  });
+});
+
+describe('drive - property-based tests', () => {
+  beforeEach(() => {
+    resetDriveFiles();
+    resetDriveFolders();
+    resetKeyProvider();
+  });
+
+  it('property: file name trimming preserves non-empty content', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(fc.constantFrom('a', 'b', 'c', '1', '2'), { minLength: 1, maxLength: 20 }).map((arr) => arr.join('')),
+        fc.array(fc.constantFrom(' ', '\t'), { minLength: 1, maxLength: 5 }).map((arr) => arr.join('')),
+        fc.integer({ min: 0, max: 10485760 }),
+        async (name: string, whitespace: string, size: number) => {
+          resetDriveFiles();
+          const nameWithWhitespace = whitespace + name + whitespace;
+
+          const input: UploadDriveFileInput = {
+            name: nameWithWhitespace,
+            size,
+          };
+
+          const file = await uploadDriveFile(input);
+          expect(file.name).toBe(nameWithWhitespace.trim());
+          expect(file.name.length).toBeGreaterThan(0);
+        }
+      )
+    );
+  });
+
+  it('property: file size is non-negative', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(fc.constantFrom('a', 'b', 'c', '1', '2'), { minLength: 1, maxLength: 20 }).map((arr) => arr.join('')),
+        fc.integer({ min: 0, max: 104857600 }),
+        async (name: string, size: number) => {
+          resetDriveFiles();
+
+          const input: UploadDriveFileInput = {
+            name,
+            size,
+          };
+
+          const file = await uploadDriveFile(input);
+          expect(file.size).toBeGreaterThanOrEqual(0);
+        }
+      )
+    );
+  });
+
+  it('property: file names with special characters are rejected', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.constantFrom('<', '>', ':', '"', '|', '?', '*'),
+        fc.integer({ min: 0, max: 1000 }),
+        async (specialChar: string, size: number) => {
+          resetDriveFiles();
+
+          const input: UploadDriveFileInput = {
+            name: `file${specialChar}name`,
+            size,
+          };
+
+          await expect(uploadDriveFile(input)).rejects.toThrow(DriveError);
+        }
+      )
+    );
+  });
+
+  it('property: folder name trimming preserves non-empty content', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(fc.constantFrom('a', 'b', 'c', '1', '2'), { minLength: 1, maxLength: 20 }).map((arr) => arr.join('')),
+        fc.array(fc.constantFrom(' ', '\t'), { minLength: 1, maxLength: 5 }).map((arr) => arr.join('')),
+        async (name: string, whitespace: string) => {
+          resetDriveFolders();
+          const nameWithWhitespace = whitespace + name + whitespace;
+
+          const input: CreateFolderInput = {
+            name: nameWithWhitespace,
+          };
+
+          const folder = await createFolder(input);
+          expect(folder.name).toBe(nameWithWhitespace.trim());
+          expect(folder.name.length).toBeGreaterThan(0);
+        }
+      )
+    );
+  });
+
+  it('property: search is case-insensitive', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(fc.constantFrom('a', 'b', 'c', '1', '2'), { minLength: 1, maxLength: 20 }).map((arr) => arr.join('')),
+        fc.array(fc.constantFrom('a', 'b', 'c', '1', '2'), { minLength: 1, maxLength: 10 }).map((arr) => arr.join('')),
+        async (name: string, query: string) => {
+          resetDriveFiles();
+          const fileName = name.toLowerCase();
+
+          await uploadDriveFile({ name: fileName, size: 100 });
+
+          const results = await searchFiles({ query: query.toLowerCase() });
+          if (fileName.includes(query.toLowerCase())) {
+            expect(results.length).toBeGreaterThan(0);
+          }
+        }
+      )
+    );
   });
 });
