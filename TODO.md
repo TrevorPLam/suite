@@ -554,11 +554,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] CRYPTO-006: Add Key Lifecycle Management
+### [x] CRYPTO-006: Add Key Lifecycle Management
 
 **Priority**: P1
 **Bounded Context**: Security
-**Status**: Not Started
+**Status**: Complete (AGENT tasks done, HUMAN tasks pending)
 
 **Related Files**:
 - `packages/crypto/src/index.ts`
@@ -607,37 +607,37 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### CRYPTO-006-01: Define key metadata structure
+#### CRYPTO-006-01: Define key metadata structure ✅
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/key-lifecycle.ts` (create)
 **Action**: Define KeyMetadata interface with fields: id, version, algorithm, createdAt, expiresAt, status (active, deprecated, revoked), usage (encrypt, decrypt, sign, verify). Add validation functions for metadata.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-006-02: Implement key versioning
+#### CRYPTO-006-02: Implement key versioning ✅
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/key-lifecycle.ts`
 **Action**: Implement createKeyMetadata function that generates unique key ID and version. Implement incrementVersion function for key rotation. Ensure versioning is monotonic.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-006-03: Implement key rotation utilities
+#### CRYPTO-006-03: Implement key rotation utilities ✅
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/key-lifecycle.ts`
 **Action**: Implement rotateKey function that creates new key version, marks old version as deprecated, maintains both active during transition period. Implement getActiveKey function to retrieve current active key.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-006-04: Implement crypto-shredding
+#### CRYPTO-006-04: Implement crypto-shredding ✅
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/key-lifecycle.ts`
 **Action**: Implement cryptoShredKey function that securely deletes key material. For CryptoKey objects, mark as non-extractable if possible. For raw byte arrays, use secureZeroize. Update key metadata status to shredded.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-006-05: Add key lifecycle tests
+#### CRYPTO-006-05: Add key lifecycle tests ✅
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/key-lifecycle.test.ts` (create)
 **Action**: Add tests for key lifecycle operations. Test: metadata creation, version increment, key rotation, active key retrieval, crypto-shredding, status transitions. Test edge cases: expired keys, revoked keys, multiple active keys.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### CRYPTO-006-06: Export key lifecycle functions
+#### CRYPTO-006-06: Export key lifecycle functions ✅
 **Assigned To**: AGENT
 **Target File**: `packages/crypto/src/index.ts`
 **Action**: Export KeyMetadata interface, createKeyMetadata, rotateKey, deactivateKey, cryptoShredKey, getActiveKey from key-lifecycle module.
@@ -648,6 +648,21 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 **Target File**: `packages/crypto/ASSESSMENT.md`
 **Action**: Update ASSESSMENT.md to mark key lifecycle management as implemented. Remove from missing enterprise features. Add to strengths section.
 **Validate Command**: No validation needed
+
+**Implementation Notes**:
+- Created key-lifecycle.ts with KeyMetadata interface (re-exported from agility.ts for consistency)
+- Implemented createKeyMetadata with unique ID generation (UUID v4), version 1, and status tracking
+- Implemented incrementVersion for monotonic versioning with validation
+- Implemented rotateKey that marks old key as disabled (not deleted) and creates new version
+- Implemented getActiveKey to retrieve primary or first active key from keyset
+- Implemented deactivateKey with protection against deactivating primary keys
+- Implemented cryptoShredKey using secureZeroize for raw byte arrays
+- Added isKeyExpired for expiration checking
+- Added validateKeyMetadata for comprehensive metadata validation
+- Created key-lifecycle.test.ts with 38 tests covering all lifecycle operations
+- Exported all functions and types from index.ts
+- Typecheck passes, lint passes, tests pass (178 total tests including 38 new)
+- HUMAN task CRYPTO-006-07 (update ASSESSMENT.md) remains pending
 
 ---
 

@@ -33,3 +33,16 @@ export {
   envelopeDecrypt,
 } from './key-wrapping.js';
 export type { EnvelopeEncryptionResult } from './key-wrapping.js';
+
+// Key lifecycle management
+export {
+  createKeyMetadata,
+  incrementVersion,
+  rotateKey,
+  getActiveKey,
+  deactivateKey,
+  cryptoShredKey,
+  isKeyExpired,
+  validateKeyMetadata,
+} from './key-lifecycle.js';
+export type { KeyMetadata, KeyStatus, KeyUsage } from './key-lifecycle.js';
