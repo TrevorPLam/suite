@@ -158,7 +158,7 @@ export function App() {
     setErrorDetails([]);
 
     try {
-      const response = await fetch(`${API_BASE}/api/events?${new URLSearchParams(selectedRange).toString()}`);
+      const response = await fetch(`${API_BASE}/api/v1/events?${new URLSearchParams(selectedRange).toString()}`);
       const payload: unknown = await response.json();
 
       if (!response.ok) {
@@ -206,7 +206,7 @@ export function App() {
     setStatus('');
     setSubmitting(true);
 
-    const endpoint = editingEventId ? `${API_BASE}/api/events/${editingEventId}` : `${API_BASE}/api/events`;
+    const endpoint = editingEventId ? `${API_BASE}/api/v1/events/${editingEventId}` : `${API_BASE}/api/v1/events`;
     const method = editingEventId ? 'PUT' : 'POST';
 
     // Optimistic update: create temporary event with generated ID

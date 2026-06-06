@@ -80,7 +80,7 @@ export function App() {
     setFilesErrorDetails([]);
 
     try {
-      const url = currentFolderId ? `${API_BASE}/api/files?folderId=${currentFolderId}` : `${API_BASE}/api/files`;
+      const url = currentFolderId ? `${API_BASE}/api/v1/files?folderId=${currentFolderId}` : `${API_BASE}/api/v1/files`;
       const response = await fetch(url);
       const payload: unknown = await response.json();
 
@@ -128,7 +128,7 @@ export function App() {
     setFoldersError('');
 
     try {
-      const response = await fetch(`${API_BASE}/api/folders`);
+      const response = await fetch(`${API_BASE}/api/v1/folders`);
       const payload: unknown = await response.json();
 
       if (!response.ok) {
@@ -184,8 +184,8 @@ export function App() {
         setSearchError('');
         try {
           const url = currentFolderId 
-            ? `${API_BASE}/api/files/search?q=${encodeURIComponent(searchQuery)}&folderId=${currentFolderId}`
-            : `${API_BASE}/api/files/search?q=${encodeURIComponent(searchQuery)}`;
+            ? `${API_BASE}/api/v1/files/search?q=${encodeURIComponent(searchQuery)}&folderId=${currentFolderId}`
+            : `${API_BASE}/api/v1/files/search?q=${encodeURIComponent(searchQuery)}`;
           const response = await fetch(url);
           const payload: unknown = await response.json();
 
@@ -266,7 +266,7 @@ export function App() {
         body.folderId = data.folderId;
       }
 
-      const response = await fetch(`${API_BASE}/api/files`, {
+      const response = await fetch(`${API_BASE}/api/v1/files`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -337,7 +337,7 @@ export function App() {
     setRenameError('');
 
     try {
-      const response = await fetch(`${API_BASE}/api/files/${renamingFile.id}`, {
+      const response = await fetch(`${API_BASE}/api/v1/files/${renamingFile.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newName }),
@@ -398,7 +398,7 @@ export function App() {
     setFiles((currentFiles) => currentFiles.filter((f) => f.id !== file.id));
 
     try {
-      const response = await fetch(`${API_BASE}/api/files/${file.id}`, {
+      const response = await fetch(`${API_BASE}/api/v1/files/${file.id}`, {
         method: 'DELETE',
       });
 
@@ -492,7 +492,7 @@ export function App() {
     setRenameFolderError('');
 
     try {
-      const response = await fetch(`${API_BASE}/api/folders/${renamingFolder.id}`, {
+      const response = await fetch(`${API_BASE}/api/v1/folders/${renamingFolder.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: renameFolderName }),
@@ -532,7 +532,7 @@ export function App() {
     setDeleteFolderError('');
 
     try {
-      const response = await fetch(`${API_BASE}/api/folders/${folder.id}`, {
+      const response = await fetch(`${API_BASE}/api/v1/folders/${folder.id}`, {
         method: 'DELETE',
       });
 
@@ -561,7 +561,7 @@ export function App() {
         body.folderId = targetFolderId;
       }
 
-      const response = await fetch(`${API_BASE}/api/files/${file.id}/move`, {
+      const response = await fetch(`${API_BASE}/api/v1/files/${file.id}/move`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

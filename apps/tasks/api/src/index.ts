@@ -43,6 +43,12 @@ const app = new Hono<{ Variables: Variables }>();
 // Mount structured logging middleware
 app.use('/api/*', structuredLogger());
 
+// Add API version header to all responses
+app.use('/api/*', async (c, next) => {
+  await next();
+  c.header('API-Version', '1.0.0');
+});
+
 // Mount CORS middleware
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'];
 app.use('/api/*', cors({
@@ -118,7 +124,7 @@ function readTaskError(error: unknown): { status: 400 | 404 | 500; body: Record<
   };
 }
 
-app.get('/api/health', async (c) => {
+app.get('/api/v1/health', async (c) => {
   const db = getDbOrNull();
   let dbStatus = 'ok';
   let dbLatency: number | undefined;
@@ -146,9 +152,9 @@ app.get('/api/health', async (c) => {
   return c.json(health, statusCode);
 });
 
-app.get('/api/tasks', async (c) => c.json({ tasks: await listTasks() }));
+app.get('/api/v1/tasks', async (c) => c.json({ tasks: await listTasks() }));
 
-app.get('/api/tasks/search', async (c) => {
+app.get('/api/v1/tasks/search', async (c) => {
   const query = c.req.query('q');
   const tagsParam = c.req.query('tags');
   const tags = tagsParam ? tagsParam.split(',').map(t => t.trim()) : undefined;
@@ -165,7 +171,7 @@ app.get('/api/tasks/search', async (c) => {
   return c.json({ tasks: results });
 });
 
-app.post('/api/tasks', requireAuth, async (c) => {
+app.post('/api/v1/tasks', requireAuth, async (c) => {
   let body: unknown;
 
   try {
@@ -193,7 +199,7 @@ app.post('/api/tasks', requireAuth, async (c) => {
   }
 });
 
-app.get('/api/tasks/:id', async (c) => {
+app.get('/api/v1/tasks/:id', async (c) => {
   const task = await getTask(c.req.param('id').trim());
 
   if (!task) {
@@ -203,7 +209,7 @@ app.get('/api/tasks/:id', async (c) => {
   return c.json({ task });
 });
 
-app.put('/api/tasks/:id/completion', requireAuth, async (c) => {
+app.put('/api/v1/tasks/:id/completion', requireAuth, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!id) {
@@ -233,7 +239,7 @@ app.put('/api/tasks/:id/completion', requireAuth, async (c) => {
   }
 });
 
-app.put('/api/tasks/:id', requireAuth, async (c) => {
+app.put('/api/v1/tasks/:id', requireAuth, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!id) {
@@ -263,7 +269,7 @@ app.put('/api/tasks/:id', requireAuth, async (c) => {
   }
 });
 
-app.put('/api/tasks/:id/archive', requireAuth, async (c) => {
+app.put('/api/v1/tasks/:id/archive', requireAuth, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!id) {
@@ -293,7 +299,7 @@ app.put('/api/tasks/:id/archive', requireAuth, async (c) => {
   }
 });
 
-app.delete('/api/tasks/:id', requireAuth, async (c) => {
+app.delete('/api/v1/tasks/:id', requireAuth, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!id) {
@@ -310,7 +316,7 @@ app.delete('/api/tasks/:id', requireAuth, async (c) => {
   }
 });
 
-app.post('/api/tasks/batch/complete', requireAuth, async (c) => {
+app.post('/api/v1/tasks/batch/complete', requireAuth, async (c) => {
   let body: unknown;
 
   try {
@@ -338,7 +344,7 @@ app.post('/api/tasks/batch/complete', requireAuth, async (c) => {
   }
 });
 
-app.post('/api/tasks/batch/archive', requireAuth, async (c) => {
+app.post('/api/v1/tasks/batch/archive', requireAuth, async (c) => {
   let body: unknown;
 
   try {

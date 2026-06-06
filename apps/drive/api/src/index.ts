@@ -50,6 +50,12 @@ const app = new Hono<{ Variables: Variables; Bindings: Env }>();
 // Mount structured logging middleware
 app.use('/api/*', structuredLogger());
 
+// Add API version header to all responses
+app.use('/api/*', async (c, next) => {
+  await next();
+  c.header('API-Version', '1.0.0');
+});
+
 // Mount CORS middleware
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'];
 app.use('/api/*', cors({
@@ -127,7 +133,7 @@ function readDriveError(error: unknown): { status: 400 | 404 | 500; body: Record
   };
 }
 
-app.get('/api/health', async (c) => {
+app.get('/api/v1/health', async (c) => {
   const db = getDbOrNull();
   let dbStatus = 'ok';
   let dbLatency: number | undefined;
@@ -155,12 +161,12 @@ app.get('/api/health', async (c) => {
   return c.json(health, statusCode);
 });
 
-app.get('/api/files', async (c) => {
+app.get('/api/v1/files', async (c) => {
   const files = await listDriveFiles();
   return c.json({ files });
 });
 
-app.post('/api/files', requireAuth, async (c) => {
+app.post('/api/v1/files', requireAuth, async (c) => {
   const contentType = c.req.header('content-type') || '';
 
   // Handle multipart/form-data for file uploads
@@ -253,7 +259,7 @@ app.post('/api/files', requireAuth, async (c) => {
   }
 });
 
-app.put('/api/files/:id', requireAuth, async (c) => {
+app.put('/api/v1/files/:id', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -290,7 +296,7 @@ app.put('/api/files/:id', requireAuth, async (c) => {
   }
 });
 
-app.delete('/api/files/:id', requireAuth, async (c) => {
+app.delete('/api/v1/files/:id', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -306,7 +312,7 @@ app.delete('/api/files/:id', requireAuth, async (c) => {
   return c.json({ success: true });
 });
 
-app.get('/api/files/:id/download', async (c) => {
+app.get('/api/v1/files/:id/download', async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -340,13 +346,13 @@ app.get('/api/files/:id/download', async (c) => {
 });
 
 // Folder endpoints
-app.get('/api/folders', async (c) => {
+app.get('/api/v1/folders', async (c) => {
   const parentId = c.req.query('parentId');
   const folders = await listFolders(parentId);
   return c.json({ folders });
 });
 
-app.post('/api/folders', requireAuth, async (c) => {
+app.post('/api/v1/folders', requireAuth, async (c) => {
   let body: unknown;
 
   try {
@@ -373,7 +379,7 @@ app.post('/api/folders', requireAuth, async (c) => {
   }
 });
 
-app.put('/api/folders/:id', requireAuth, async (c) => {
+app.put('/api/v1/folders/:id', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -410,7 +416,7 @@ app.put('/api/folders/:id', requireAuth, async (c) => {
   }
 });
 
-app.delete('/api/folders/:id', requireAuth, async (c) => {
+app.delete('/api/v1/folders/:id', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -427,7 +433,7 @@ app.delete('/api/folders/:id', requireAuth, async (c) => {
 });
 
 // Move file endpoint
-app.post('/api/files/:id/move', requireAuth, async (c) => {
+app.post('/api/v1/files/:id/move', requireAuth, async (c) => {
   const id = c.req.param('id');
 
   if (!id) {
@@ -468,7 +474,7 @@ app.post('/api/files/:id/move', requireAuth, async (c) => {
 });
 
 // Search endpoint
-app.get('/api/files/search', async (c) => {
+app.get('/api/v1/files/search', async (c) => {
   const query = c.req.query();
   const result = searchFilesQuerySchema.safeParse(query);
 

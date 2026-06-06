@@ -14,7 +14,7 @@ As a Drive user, I want to upload a file so I can store and later retrieve my do
 
 ## API contract
 
-- `POST /api/files`
+- `POST /api/v1/files`
 - Request body:
   - `name: string`
   - `size: number`

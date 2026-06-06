@@ -16,7 +16,7 @@ As a Calendar user, I want to browse events by day or week so I can quickly unde
 
 ## API contract
 
-- `GET /api/events`
+- `GET /api/v1/events`
 - Optional query parameters:
   - `startAt: string` ISO-8601 timestamp
   - `endAt: string` ISO-8601 timestamp

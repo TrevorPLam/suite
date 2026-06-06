@@ -38,21 +38,21 @@ import app from './index.js';
 
 describe('tasks API - health', () => {
   it('should return health check', async () => {
-    const res = await app.request('/api/health');
+    const res = await app.request('/api/v1/health');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toEqual({ ok: true, app: 'tasks' });
   });
 
   it('GET /api/health returns 200 without session', async () => {
-    const res = await app.request('/api/health');
+    const res = await app.request('/api/v1/health');
     expect(res.status).toBe(200);
   });
 });
 
 describe('tasks API - authentication', () => {
   it('POST /api/tasks returns 401 without session', async () => {
-    const res = await app.request('/api/tasks', {
+    const res = await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -66,7 +66,7 @@ describe('tasks API - authentication', () => {
   });
 
   it('PUT /api/tasks/:id/completion returns 401 without session', async () => {
-    const res = await app.request('/api/tasks/some-id/completion', {
+    const res = await app.request('/api/v1/tasks/some-id/completion', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -80,7 +80,7 @@ describe('tasks API - authentication', () => {
   });
 
   it('PUT /api/tasks/:id returns 401 without session', async () => {
-    const res = await app.request('/api/tasks/some-id', {
+    const res = await app.request('/api/v1/tasks/some-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -94,7 +94,7 @@ describe('tasks API - authentication', () => {
   });
 
   it('PUT /api/tasks/:id/archive returns 401 without session', async () => {
-    const res = await app.request('/api/tasks/some-id/archive', {
+    const res = await app.request('/api/v1/tasks/some-id/archive', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -108,7 +108,7 @@ describe('tasks API - authentication', () => {
   });
 
   it('DELETE /api/tasks/:id returns 401 without session', async () => {
-    const res = await app.request('/api/tasks/some-id', {
+    const res = await app.request('/api/v1/tasks/some-id', {
       method: 'DELETE',
     });
 
@@ -118,7 +118,7 @@ describe('tasks API - authentication', () => {
   });
 
   it('POST /api/tasks/batch/complete returns 401 without session', async () => {
-    const res = await app.request('/api/tasks/batch/complete', {
+    const res = await app.request('/api/v1/tasks/batch/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -132,7 +132,7 @@ describe('tasks API - authentication', () => {
   });
 
   it('POST /api/tasks/batch/archive returns 401 without session', async () => {
-    const res = await app.request('/api/tasks/batch/archive', {
+    const res = await app.request('/api/v1/tasks/batch/archive', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -167,7 +167,7 @@ describe('tasks API - create task', () => {
 
   it('should create a valid task', async () => {
     allowAuth = true;
-    const res = await app.request('/api/tasks', {
+    const res = await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -186,7 +186,7 @@ describe('tasks API - create task', () => {
 
   it('should create a task with completed status', async () => {
     allowAuth = true;
-    const res = await app.request('/api/tasks', {
+    const res = await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -202,7 +202,7 @@ describe('tasks API - create task', () => {
   });
 
   it('should reject invalid JSON', async () => {
-    const res = await app.request('/api/tasks', {
+    const res = await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: 'invalid json',
@@ -214,7 +214,7 @@ describe('tasks API - create task', () => {
   });
 
   it('should reject missing title', async () => {
-    const res = await app.request('/api/tasks', {
+    const res = await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -226,7 +226,7 @@ describe('tasks API - create task', () => {
   });
 
   it('should reject empty title', async () => {
-    const res = await app.request('/api/tasks', {
+    const res = await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -258,7 +258,7 @@ describe('tasks API - get task', () => {
     const createJson = await createRes.json();
     const taskId = createJson.task.id;
 
-    const res = await app.request(`/api/tasks/${taskId}`);
+    const res = await app.request(`/api/v1/tasks/${taskId}`);
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('task');
@@ -267,7 +267,7 @@ describe('tasks API - get task', () => {
   });
 
   it('should return 404 for non-existent task', async () => {
-    const res = await app.request('/api/tasks/non-existent-id');
+    const res = await app.request('/api/v1/tasks/non-existent-id');
     expect(res.status).toBe(404);
     const json = await res.json();
     expect(json).toHaveProperty('error');
@@ -292,7 +292,7 @@ describe('tasks API - update completion', () => {
     const createJson = await createRes.json();
     const taskId = createJson.task.id;
 
-    const res = await app.request(`/api/tasks/${taskId}/completion`, {
+    const res = await app.request(`/api/v1/tasks/${taskId}/completion`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -308,7 +308,7 @@ describe('tasks API - update completion', () => {
   });
 
   it('should reject invalid completion payload', async () => {
-    const res = await app.request('/api/tasks/some-id/completion', {
+    const res = await app.request('/api/v1/tasks/some-id/completion', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -340,7 +340,7 @@ describe('tasks API - update task', () => {
     const createJson = await createRes.json();
     const taskId = createJson.task.id;
 
-    const res = await app.request(`/api/tasks/${taskId}`, {
+    const res = await app.request(`/api/v1/tasks/${taskId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -356,7 +356,7 @@ describe('tasks API - update task', () => {
   });
 
   it('should reject empty title', async () => {
-    const res = await app.request('/api/tasks/some-id', {
+    const res = await app.request('/api/v1/tasks/some-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -388,7 +388,7 @@ describe('tasks API - archive task', () => {
     const createJson = await createRes.json();
     const taskId = createJson.task.id;
 
-    const res = await app.request(`/api/tasks/${taskId}/archive`, {
+    const res = await app.request(`/api/v1/tasks/${taskId}/archive`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -422,7 +422,7 @@ describe('tasks API - delete task', () => {
     const createJson = await createRes.json();
     const taskId = createJson.task.id;
 
-    const res = await app.request(`/api/tasks/${taskId}`, {
+    const res = await app.request(`/api/v1/tasks/${taskId}`, {
       method: 'DELETE',
     });
 
@@ -434,7 +434,7 @@ describe('tasks API - delete task', () => {
   });
 
   it('should return 404 for non-existent task', async () => {
-    const res = await app.request('/api/tasks/non-existent-id', {
+    const res = await app.request('/api/v1/tasks/non-existent-id', {
       method: 'DELETE',
     });
 
@@ -451,7 +451,7 @@ describe('tasks API - search tasks', () => {
 
   it('should search tasks by query', async () => {
     allowAuth = true;
-    await app.request('/api/tasks', {
+    await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -460,7 +460,7 @@ describe('tasks API - search tasks', () => {
       }),
     });
 
-    await app.request('/api/tasks', {
+    await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -469,7 +469,7 @@ describe('tasks API - search tasks', () => {
       }),
     });
 
-    const res = await app.request('/api/tasks/search?q=buy');
+    const res = await app.request('/api/v1/tasks/search?q=buy');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('tasks');
@@ -480,7 +480,7 @@ describe('tasks API - search tasks', () => {
 
   it('should search tasks by tags', async () => {
     allowAuth = true;
-    await app.request('/api/tasks', {
+    await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -489,7 +489,7 @@ describe('tasks API - search tasks', () => {
       }),
     });
 
-    await app.request('/api/tasks', {
+    await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -509,7 +509,7 @@ describe('tasks API - search tasks', () => {
 
   it('should search tasks by query and tags', async () => {
     allowAuth = true;
-    await app.request('/api/tasks', {
+    await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -518,7 +518,7 @@ describe('tasks API - search tasks', () => {
       }),
     });
 
-    await app.request('/api/tasks', {
+    await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -527,7 +527,7 @@ describe('tasks API - search tasks', () => {
       }),
     });
 
-    const res = await app.request('/api/tasks/search?q=buy&tags=shopping');
+    const res = await app.request('/api/v1/tasks/search?q=buy&tags=shopping');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('tasks');
@@ -536,7 +536,7 @@ describe('tasks API - search tasks', () => {
   });
 
   it('should return empty array for no matches', async () => {
-    const res = await app.request('/api/tasks/search?q=nonexistent');
+    const res = await app.request('/api/v1/tasks/search?q=nonexistent');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('tasks');
@@ -570,7 +570,7 @@ describe('tasks API - batch complete', () => {
     const task1 = await task1Res.json();
     const task2 = await task2Res.json();
 
-    const res = await app.request('/api/tasks/batch/complete', {
+    const res = await app.request('/api/v1/tasks/batch/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -587,7 +587,7 @@ describe('tasks API - batch complete', () => {
   });
 
   it('should reject invalid task IDs array', async () => {
-    const res = await app.request('/api/tasks/batch/complete', {
+    const res = await app.request('/api/v1/tasks/batch/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -627,7 +627,7 @@ describe('tasks API - batch archive', () => {
     const task1 = await task1Res.json();
     const task2 = await task2Res.json();
 
-    const res = await app.request('/api/tasks/batch/archive', {
+    const res = await app.request('/api/v1/tasks/batch/archive', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -644,7 +644,7 @@ describe('tasks API - batch archive', () => {
   });
 
   it('should reject invalid task IDs array', async () => {
-    const res = await app.request('/api/tasks/batch/archive', {
+    const res = await app.request('/api/v1/tasks/batch/archive', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -665,7 +665,7 @@ describe('tasks API - create with new fields', () => {
 
   it('should create task with due date', async () => {
     allowAuth = true;
-    const res = await app.request('/api/tasks', {
+    const res = await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -682,7 +682,7 @@ describe('tasks API - create with new fields', () => {
 
   it('should create task with priority', async () => {
     allowAuth = true;
-    const res = await app.request('/api/tasks', {
+    const res = await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -699,7 +699,7 @@ describe('tasks API - create with new fields', () => {
 
   it('should create task with tags', async () => {
     allowAuth = true;
-    const res = await app.request('/api/tasks', {
+    const res = await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -716,7 +716,7 @@ describe('tasks API - create with new fields', () => {
 
   it('should create task with all new fields', async () => {
     allowAuth = true;
-    const res = await app.request('/api/tasks', {
+    const res = await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -736,7 +736,7 @@ describe('tasks API - create with new fields', () => {
   });
 
   it('should reject invalid priority', async () => {
-    const res = await app.request('/api/tasks', {
+    const res = await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -751,7 +751,7 @@ describe('tasks API - create with new fields', () => {
   });
 
   it('should reject invalid tags (not array)', async () => {
-    const res = await app.request('/api/tasks', {
+    const res = await app.request('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -784,7 +784,7 @@ describe('tasks API - update with new fields', () => {
     const createJson = await createRes.json();
     const taskId = createJson.task.id;
 
-    const res = await app.request(`/api/tasks/${taskId}`, {
+    const res = await app.request(`/api/v1/tasks/${taskId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -811,7 +811,7 @@ describe('tasks API - update with new fields', () => {
     const createJson = await createRes.json();
     const taskId = createJson.task.id;
 
-    const res = await app.request(`/api/tasks/${taskId}`, {
+    const res = await app.request(`/api/v1/tasks/${taskId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -838,7 +838,7 @@ describe('tasks API - update with new fields', () => {
     const createJson = await createRes.json();
     const taskId = createJson.task.id;
 
-    const res = await app.request(`/api/tasks/${taskId}`, {
+    const res = await app.request(`/api/v1/tasks/${taskId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -866,7 +866,7 @@ describe('tasks API - update with new fields', () => {
     const createJson = await createRes.json();
     const taskId = createJson.task.id;
 
-    const res = await app.request(`/api/tasks/${taskId}`, {
+    const res = await app.request(`/api/v1/tasks/${taskId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -881,7 +881,7 @@ describe('tasks API - update with new fields', () => {
   });
 
   it('should reject update with no fields', async () => {
-    const res = await app.request('/api/tasks/some-id', {
+    const res = await app.request('/api/v1/tasks/some-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),

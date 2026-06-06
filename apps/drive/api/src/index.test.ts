@@ -37,7 +37,7 @@ import app from './index.js';
 
 describe('drive API - health', () => {
   it('should return health check', async () => {
-    const res = await app.request('/api/health');
+    const res = await app.request('/api/v1/health');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toEqual({ ok: true, app: 'drive' });
@@ -50,7 +50,7 @@ describe('drive API - list files', () => {
   });
 
   it('should list all files', async () => {
-    const res = await app.request('/api/files');
+    const res = await app.request('/api/v1/files');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('files');
@@ -64,7 +64,7 @@ describe('drive API - upload file', () => {
   });
 
   it('POST /api/files returns 401 without session', async () => {
-    const res = await app.request('/api/files', {
+    const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -80,7 +80,7 @@ describe('drive API - upload file', () => {
 
   it('should upload a valid file', async () => {
     allowAuth = true;
-    const res = await app.request('/api/files', {
+    const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -102,7 +102,7 @@ describe('drive API - upload file', () => {
 
   it('should upload a file with folderId', async () => {
     allowAuth = true;
-    const res = await app.request('/api/files', {
+    const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -120,7 +120,7 @@ describe('drive API - upload file', () => {
 
   it('should upload a file with mimeType', async () => {
     allowAuth = true;
-    const res = await app.request('/api/files', {
+    const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -140,7 +140,7 @@ describe('drive API - upload file', () => {
   });
 
   it('should reject file exceeding size limit', async () => {
-    const res = await app.request('/api/files', {
+    const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -155,7 +155,7 @@ describe('drive API - upload file', () => {
   });
 
   it('should reject invalid JSON', async () => {
-    const res = await app.request('/api/files', {
+    const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: 'invalid json',
@@ -167,7 +167,7 @@ describe('drive API - upload file', () => {
   });
 
   it('should reject missing name', async () => {
-    const res = await app.request('/api/files', {
+    const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -181,7 +181,7 @@ describe('drive API - upload file', () => {
   });
 
   it('should reject missing size', async () => {
-    const res = await app.request('/api/files', {
+    const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -195,7 +195,7 @@ describe('drive API - upload file', () => {
   });
 
   it('should reject negative size', async () => {
-    const res = await app.request('/api/files', {
+    const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -210,7 +210,7 @@ describe('drive API - upload file', () => {
   });
 
   it('should reject non-integer size', async () => {
-    const res = await app.request('/api/files', {
+    const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -231,7 +231,7 @@ describe('drive API - rename file', () => {
   });
 
   it('PUT /api/files/:id returns 401 without session', async () => {
-    const res = await app.request('/api/files/some-id', {
+    const res = await app.request('/api/v1/files/some-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -258,7 +258,7 @@ describe('drive API - rename file', () => {
     const createJson = await createRes.json();
     const fileId = createJson.file.id;
 
-    const res = await app.request(`/api/files/${fileId}`, {
+    const res = await app.request(`/api/v1/files/${fileId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -276,7 +276,7 @@ describe('drive API - rename file', () => {
   });
 
   it('should reject rename with missing id', async () => {
-    const res = await app.request('/api/files/', {
+    const res = await app.request('/api/v1/files/', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -288,7 +288,7 @@ describe('drive API - rename file', () => {
   });
 
   it('should return 404 for non-existent file', async () => {
-    const res = await app.request('/api/files/non-existent-id', {
+    const res = await app.request('/api/v1/files/non-existent-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -302,7 +302,7 @@ describe('drive API - rename file', () => {
   });
 
   it('should reject rename with missing name', async () => {
-    const res = await app.request('/api/files/some-id', {
+    const res = await app.request('/api/v1/files/some-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -320,7 +320,7 @@ describe('drive API - delete file', () => {
   });
 
   it('DELETE /api/files/:id returns 401 without session', async () => {
-    const res = await app.request('/api/files/some-id', {
+    const res = await app.request('/api/v1/files/some-id', {
       method: 'DELETE',
     });
 
@@ -343,7 +343,7 @@ describe('drive API - delete file', () => {
     const createJson = await createRes.json();
     const fileId = createJson.file.id;
 
-    const res = await app.request(`/api/files/${fileId}`, {
+    const res = await app.request(`/api/v1/files/${fileId}`, {
       method: 'DELETE',
     });
 
@@ -355,7 +355,7 @@ describe('drive API - delete file', () => {
   });
 
   it('should reject delete with missing id', async () => {
-    const res = await app.request('/api/files/', {
+    const res = await app.request('/api/v1/files/', {
       method: 'DELETE',
     });
 
@@ -363,7 +363,7 @@ describe('drive API - delete file', () => {
   });
 
   it('should return 404 for non-existent file', async () => {
-    const res = await app.request('/api/files/non-existent-id', {
+    const res = await app.request('/api/v1/files/non-existent-id', {
       method: 'DELETE',
     });
 
@@ -379,7 +379,7 @@ describe('drive API - list folders', () => {
   });
 
   it('should list all folders', async () => {
-    const res = await app.request('/api/folders');
+    const res = await app.request('/api/v1/folders');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('folders');
@@ -387,7 +387,7 @@ describe('drive API - list folders', () => {
   });
 
   it('should list folders by parentId', async () => {
-    const res = await app.request('/api/folders?parentId=parent-123');
+    const res = await app.request('/api/v1/folders?parentId=parent-123');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('folders');
@@ -401,7 +401,7 @@ describe('drive API - create folder', () => {
   });
 
   it('POST /api/folders returns 401 without session', async () => {
-    const res = await app.request('/api/folders', {
+    const res = await app.request('/api/v1/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -416,7 +416,7 @@ describe('drive API - create folder', () => {
 
   it('should create a valid folder', async () => {
     allowAuth = true;
-    const res = await app.request('/api/folders', {
+    const res = await app.request('/api/v1/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -435,7 +435,7 @@ describe('drive API - create folder', () => {
 
   it('should create a folder with parentId', async () => {
     allowAuth = true;
-    const res = await app.request('/api/folders', {
+    const res = await app.request('/api/v1/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -451,7 +451,7 @@ describe('drive API - create folder', () => {
   });
 
   it('should reject invalid JSON', async () => {
-    const res = await app.request('/api/folders', {
+    const res = await app.request('/api/v1/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: 'invalid json',
@@ -463,7 +463,7 @@ describe('drive API - create folder', () => {
   });
 
   it('should reject missing name', async () => {
-    const res = await app.request('/api/folders', {
+    const res = await app.request('/api/v1/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -481,7 +481,7 @@ describe('drive API - rename folder', () => {
   });
 
   it('PUT /api/folders/:id returns 401 without session', async () => {
-    const res = await app.request('/api/folders/some-id', {
+    const res = await app.request('/api/v1/folders/some-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -507,7 +507,7 @@ describe('drive API - rename folder', () => {
     const createJson = await createRes.json();
     const folderId = createJson.folder.id;
 
-    const res = await app.request(`/api/folders/${folderId}`, {
+    const res = await app.request(`/api/v1/folders/${folderId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -524,7 +524,7 @@ describe('drive API - rename folder', () => {
   });
 
   it('should return 404 for non-existent folder', async () => {
-    const res = await app.request('/api/folders/non-existent-id', {
+    const res = await app.request('/api/v1/folders/non-existent-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -538,7 +538,7 @@ describe('drive API - rename folder', () => {
   });
 
   it('should reject rename with missing name', async () => {
-    const res = await app.request('/api/folders/some-id', {
+    const res = await app.request('/api/v1/folders/some-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -557,7 +557,7 @@ describe('drive API - delete folder', () => {
   });
 
   it('DELETE /api/folders/:id returns 401 without session', async () => {
-    const res = await app.request('/api/folders/some-id', {
+    const res = await app.request('/api/v1/folders/some-id', {
       method: 'DELETE',
     });
 
@@ -579,7 +579,7 @@ describe('drive API - delete folder', () => {
     const createJson = await createRes.json();
     const folderId = createJson.folder.id;
 
-    const res = await app.request(`/api/folders/${folderId}`, {
+    const res = await app.request(`/api/v1/folders/${folderId}`, {
       method: 'DELETE',
     });
 
@@ -591,7 +591,7 @@ describe('drive API - delete folder', () => {
   });
 
   it('should return 404 for non-existent folder', async () => {
-    const res = await app.request('/api/folders/non-existent-id', {
+    const res = await app.request('/api/v1/folders/non-existent-id', {
       method: 'DELETE',
     });
 
@@ -608,7 +608,7 @@ describe('drive API - move file', () => {
   });
 
   it('POST /api/files/:id/move returns 401 without session', async () => {
-    const res = await app.request('/api/files/some-id/move', {
+    const res = await app.request('/api/v1/files/some-id/move', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -633,7 +633,7 @@ describe('drive API - move file', () => {
     const createJson = await createRes.json();
     const fileId = createJson.file.id;
 
-    const res = await app.request(`/api/files/${fileId}/move`, {
+    const res = await app.request(`/api/v1/files/${fileId}/move`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -661,7 +661,7 @@ describe('drive API - move file', () => {
     const createJson = await createRes.json();
     const fileId = createJson.file.id;
 
-    const res = await app.request(`/api/files/${fileId}/move`, {
+    const res = await app.request(`/api/v1/files/${fileId}/move`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -675,7 +675,7 @@ describe('drive API - move file', () => {
   });
 
   it('should return 404 for non-existent file', async () => {
-    const res = await app.request('/api/files/non-existent-id/move', {
+    const res = await app.request('/api/v1/files/non-existent-id/move', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -693,7 +693,7 @@ describe('drive API - search files', () => {
   });
 
   it('should search files by query', async () => {
-    const res = await app.request('/api/files/search?q=doc');
+    const res = await app.request('/api/v1/files/search?q=doc');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('files');
@@ -701,7 +701,7 @@ describe('drive API - search files', () => {
   });
 
   it('should search files by query and folderId', async () => {
-    const res = await app.request('/api/files/search?q=doc&folderId=folder-123');
+    const res = await app.request('/api/v1/files/search?q=doc&folderId=folder-123');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('files');
@@ -709,14 +709,14 @@ describe('drive API - search files', () => {
   });
 
   it('should reject missing query parameter', async () => {
-    const res = await app.request('/api/files/search');
+    const res = await app.request('/api/v1/files/search');
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
 
   it('should reject empty query parameter', async () => {
-    const res = await app.request('/api/files/search?q=');
+    const res = await app.request('/api/v1/files/search?q=');
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json).toHaveProperty('error');

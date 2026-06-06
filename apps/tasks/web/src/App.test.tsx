@@ -106,7 +106,7 @@ describe('Tasks App', () => {
     expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(3);
     
     const postCall = fetchMock.mock.calls[1]!;
-    expect(postCall[0]).toBe('/api/tasks');
+    expect(postCall[0]).toBe('/api/v1/tasks');
     const postOptions = postCall[1] as RequestInit;
     expect(postOptions?.method).toBe('POST');
     const body = JSON.parse(postOptions?.body as string);

@@ -31,6 +31,12 @@ const app = new Hono<{ Variables: Variables }>();
 // Mount structured logging middleware
 app.use('/api/*', structuredLogger());
 
+// Add API version header to all responses
+app.use('/api/*', async (c, next) => {
+  await next();
+  c.header('API-Version', '1.0.0');
+});
+
 // Mount CORS middleware
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'];
 app.use('/api/*', cors({
@@ -156,7 +162,7 @@ async function readRequestBody(c: { req: { json: () => Promise<unknown> } }) {
   }
 }
 
-app.get('/api/health', async (c) => {
+app.get('/api/v1/health', async (c) => {
   const db = getDbOrNull();
   let dbStatus = 'ok';
   let dbLatency: number | undefined;
@@ -184,7 +190,7 @@ app.get('/api/health', async (c) => {
   return c.json(health, statusCode);
 });
 
-app.get('/api/events', async (c) => {
+app.get('/api/v1/events', async (c) => {
   const range = readEventRange(c.req.query());
 
   if (range === null) {
@@ -209,7 +215,7 @@ app.get('/api/events', async (c) => {
   return c.json({ events });
 });
 
-app.post('/api/events', requireAuth, async (c) => {
+app.post('/api/v1/events', requireAuth, async (c) => {
   const body = await readRequestBody(c);
 
   if (body === undefined) {
@@ -238,7 +244,7 @@ app.post('/api/events', requireAuth, async (c) => {
   }
 });
 
-app.put('/api/events/:id', requireAuth, async (c) => {
+app.put('/api/v1/events/:id', requireAuth, async (c) => {
   const id = (c.req.param('id') || '').trim();
 
   if (!isNonEmptyString(id)) {

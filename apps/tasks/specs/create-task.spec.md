@@ -14,7 +14,7 @@ As a Tasks user, I want to create a task so I can track work items and follow th
 
 ## API contract
 
-- `POST /api/tasks`
+- `POST /api/v1/tasks`
 - Request body:
   - `title: string`
   - `completed?: boolean`

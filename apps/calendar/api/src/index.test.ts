@@ -37,14 +37,14 @@ import app from './index.js';
 
 describe('calendar API - health', () => {
   it('should return health check', async () => {
-    const res = await app.request('/api/health');
+    const res = await app.request('/api/v1/health');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toEqual({ ok: true, app: 'calendar' });
   });
 
   it('GET /api/health returns 200 without session', async () => {
-    const res = await app.request('/api/health');
+    const res = await app.request('/api/v1/health');
     expect(res.status).toBe(200);
   });
 });
@@ -55,7 +55,7 @@ describe('calendar API - list events', () => {
   });
 
   it('should list all events', async () => {
-    const res = await app.request('/api/events');
+    const res = await app.request('/api/v1/events');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('events');
@@ -63,7 +63,7 @@ describe('calendar API - list events', () => {
   });
 
   it('should list events in date range', async () => {
-    const res = await app.request('/api/events?startAt=2025-01-15T00:00:00Z&endAt=2025-01-17T00:00:00Z');
+    const res = await app.request('/api/v1/events?startAt=2025-01-15T00:00:00Z&endAt=2025-01-17T00:00:00Z');
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('events');
@@ -71,14 +71,14 @@ describe('calendar API - list events', () => {
   });
 
   it('should reject invalid date range', async () => {
-    const res = await app.request('/api/events?startAt=invalid-date&endAt=2025-01-17T00:00:00Z');
+    const res = await app.request('/api/v1/events?startAt=invalid-date&endAt=2025-01-17T00:00:00Z');
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json).toHaveProperty('error');
   });
 
   it('should reject partial date range', async () => {
-    const res = await app.request('/api/events?startAt=2025-01-15T00:00:00Z');
+    const res = await app.request('/api/v1/events?startAt=2025-01-15T00:00:00Z');
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json).toHaveProperty('error');
@@ -91,7 +91,7 @@ describe('calendar API - create event', () => {
   });
 
   it('POST /api/events returns 401 without session', async () => {
-    const res = await app.request('/api/events', {
+    const res = await app.request('/api/v1/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -108,7 +108,7 @@ describe('calendar API - create event', () => {
 
   it('should create a valid event', async () => {
     allowAuth = true;
-    const res = await app.request('/api/events', {
+    const res = await app.request('/api/v1/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -127,7 +127,7 @@ describe('calendar API - create event', () => {
   });
 
   it('should reject invalid JSON', async () => {
-    const res = await app.request('/api/events', {
+    const res = await app.request('/api/v1/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: 'invalid json',
@@ -139,7 +139,7 @@ describe('calendar API - create event', () => {
   });
 
   it('should reject missing title', async () => {
-    const res = await app.request('/api/events', {
+    const res = await app.request('/api/v1/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -154,7 +154,7 @@ describe('calendar API - create event', () => {
   });
 
   it('should reject invalid time range', async () => {
-    const res = await app.request('/api/events', {
+    const res = await app.request('/api/v1/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -183,7 +183,7 @@ describe('calendar API - create event', () => {
     });
 
     // Try to create conflicting event
-    const res = await app.request('/api/events', {
+    const res = await app.request('/api/v1/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -206,7 +206,7 @@ describe('calendar API - update event', () => {
   });
 
   it('PUT /api/events/:id returns 401 without session', async () => {
-    const res = await app.request('/api/events/some-id', {
+    const res = await app.request('/api/v1/events/some-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -238,7 +238,7 @@ describe('calendar API - update event', () => {
     const eventId = createJson.event.id;
 
     // Update event
-    const res = await app.request(`/api/events/${eventId}`, {
+    const res = await app.request(`/api/v1/events/${eventId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -257,7 +257,7 @@ describe('calendar API - update event', () => {
   });
 
   it('should reject update with missing id', async () => {
-    const res = await app.request('/api/events/', {
+    const res = await app.request('/api/v1/events/', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -271,7 +271,7 @@ describe('calendar API - update event', () => {
   });
 
   it('should reject update for non-existent event', async () => {
-    const res = await app.request('/api/events/non-existent-id', {
+    const res = await app.request('/api/v1/events/non-existent-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -287,7 +287,7 @@ describe('calendar API - update event', () => {
   });
 
   it('should reject update with invalid payload', async () => {
-    const res = await app.request('/api/events/some-id', {
+    const res = await app.request('/api/v1/events/some-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

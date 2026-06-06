@@ -14,10 +14,10 @@ As a Tasks user, I want to toggle a task’s completion state so I can keep trac
 
 ## API contract
 
-- `GET /api/tasks`
-- `GET /api/tasks/:id`
-- `POST /api/tasks`
-- `PUT /api/tasks/:id/completion`
+- `GET /api/v1/tasks`
+- `GET /api/v1/tasks/:id`
+- `POST /api/v1/tasks`
+- `PUT /api/v1/tasks/:id/completion`
 
 ## Validation rules
 
