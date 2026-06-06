@@ -15,7 +15,7 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "graph": "nx graph",
     "clean": "rimraf .nx dist coverage",
-    "ci:test": "nx affected -t test && nx affected -t typecheck",
+    "ci:test": "nx affected -t lint,typecheck,test,build",
     "ci:validate": "pnpm test:run && pnpm typecheck",
     "ci:coverage": "pnpm test:coverage"
   },
