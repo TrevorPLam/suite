@@ -3,6 +3,16 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 
+vi.mock('./auth-provider', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', email: 'test@example.com' },
+    loading: false,
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+  }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 function mockFetchResponse(value: unknown) {
   return Promise.resolve({
     ok: true,
@@ -34,7 +44,8 @@ describe('Drive App', () => {
 
     render(<App />);
 
-    expect(screen.getByText('Loading files from the server…')).toBeInTheDocument();
+    // Check for skeleton loading state
+    expect(screen.getAllByRole('status', { name: /loading/i }).length).toBeGreaterThan(0);
 
     await waitFor(() => {
       expect(screen.getByText('No files yet')).toBeInTheDocument();

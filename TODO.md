@@ -85,9 +85,9 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P1-016: Fix Drive Web Tests Missing AuthProvider
+### [x] P1-016: Fix Drive Web Tests Missing AuthProvider
 
-**Status**: Pending
+**Status**: Complete
 **Priority**: P1
 **Bounded Context**: Testing
 
@@ -130,11 +130,19 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Target File**: `apps/drive/web/src/App.test.tsx`
 **Action**: Wrap all test renders with AuthProvider or create custom render function
 **Validate Command**: `pnpm --filter @suite/drive-web test`
+**Status**: ✅ Complete
 
 **Issue Discovered During P1-015**:
 - Drive web tests fail with "useAuth must be used within AuthProvider"
 - Tests are not wrapped in AuthProvider context
 - This is a pre-existing issue, not caused by focus management changes
+
+**Implementation Notes**:
+- Mocked auth-provider module using vi.mock to provide fake authenticated user
+- Mock provides user object with id and email, loading: false, and mock signIn/signOut functions
+- AuthProvider mocked as a passthrough component that renders children
+- Updated first test to check for skeleton loading state (aria-label="Loading") instead of text loading message
+- All 5 Drive web tests now pass: loading state, upload, rename dialog, delete dialog, validation errors
 
 ---
 
