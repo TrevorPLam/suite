@@ -626,10 +626,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] DB-007 — Add Postgres repository unit tests
+### [x] DB-007 — Add Postgres repository unit tests
 
-**Status:** pending  
-**Depends on:** DB-002, DB-003  
+**Status:** done
+**Depends on:** DB-002, DB-003
 **Blocks:** none
 
 #### Related paths
@@ -669,8 +669,18 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| DB-007-a | `packages/db/src/repositories/tasks.test.ts` | Create test: insert task with tags/priority, findById returns row. Skip if no DATABASE_URL. | `pnpm --filter @suite/db test:run -- src/repositories/tasks.test.ts` |
-| DB-007-b | `packages/db/package.json` | Replace echo test script with vitest. Add devDependency vitest if missing. | `pnpm --filter @suite/db test:run` |
+| DB-007-a | `packages/db/src/repositories/tasks.test.ts` | Create test: insert task with tags/priority, findById returns row. Skip if no DATABASE_URL. | `pnpm --filter @suite/db test:run -- src/repositories/tasks.test.ts` ✅ |
+| DB-007-b | `packages/db/package.json` | Replace echo test script with vitest. Add devDependency vitest if missing. | `pnpm --filter @suite/db test:run` ✅ |
+
+#### Implementation notes
+
+- Created `packages/db/src/repositories/tasks.test.ts` with 16 tests covering create, findById, findAll, update, delete, findWhere, and count methods
+- Tests use `describe.skipIf(!dbUrl)` to skip when DATABASE_URL is not set (local dev without Postgres)
+- Tests cover optional fields (dueDate, priority, tags) added in DB-002
+- Created `packages/db/vitest.config.ts` to configure vitest for the db package
+- Updated `packages/db/package.json` to add vitest devDependency and test:run script
+- All 267 existing tests pass; new tests skip correctly without DATABASE_URL
+- Typecheck passes for all packages
 
 ---
 
