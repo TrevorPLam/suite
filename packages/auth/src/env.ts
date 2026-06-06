@@ -8,6 +8,7 @@ export const AuthEnvSchema = z.object({
   BETTER_AUTH_URL: z.string().url('BETTER_AUTH_URL must be a valid URL'),
   RATE_LIMIT_WINDOW: z.string().default('60').transform((val) => parseInt(val, 10)),
   RATE_LIMIT_MAX: z.string().default('30').transform((val) => parseInt(val, 10)),
+  MAX_SESSIONS: z.string().default('5').transform((val) => parseInt(val, 10)),
 });
 
 export type AuthEnv = z.infer<typeof AuthEnvSchema>;

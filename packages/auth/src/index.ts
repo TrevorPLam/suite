@@ -49,6 +49,9 @@ export { listSessions, revokeSession as revokeSessionWithAudit, revokeAllSession
 // Device fingerprinting for session security
 export { generateDeviceFingerprint, detectAnomalousDevice, logDeviceAnomaly } from './device-fingerprinting.js';
 
+// Session limits for concurrent session enforcement
+export { enforceSessionLimit } from './session-limits.js';
+
 // Organization client is already configured with organizationClient plugin
 // Applications can use authClient.organization.createOrganization, etc.
 

@@ -149,6 +149,11 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
                   logDeviceAnomaly(user.id, user.email || '', deviceFingerprint, ip, userAgent);
                 }
                 
+                // Enforce concurrent session limit
+                // Note: Session limit enforcement happens after session creation in Better Auth
+                // We skip enforcement here since Better Auth doesn't provide the session token in the hook context
+                // This is a limitation of the current Better Auth hook system
+                
                 const context: Parameters<typeof createAuthEvent>[1] = {};
                 if (user.id) context.userId = user.id;
                 if (user.email) context.email = user.email;
