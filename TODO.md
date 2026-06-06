@@ -172,9 +172,9 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P1-006: Update Web Apps to Use VITE_API_URL
+### [x] P1-006: Update Web Apps to Use VITE_API_URL
 
-**Status**: Pending  
+**Status**: Complete  
 **Priority**: P1  
 **Bounded Context**: Web
 
@@ -214,22 +214,28 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Implementation Notes**:
+- Used `import.meta.env.VITE_API_URL || ''` as the correct Vite pattern (not `process.env`)
+- All fetch URLs prefixed with `API_BASE` constant
+- Typecheck passes for all three web apps
+- Build currently blocked by pre-existing `postgres` bundling issue (see INF-001)
+
 **Subtasks**:
 
-#### P1-006-01: Update calendar web to use VITE_API_URL
+#### P1-006-01: Update calendar web to use VITE_API_URL ✅
 **Target File**: `apps/calendar/web/src/App.tsx`
-**Action**: Replace relative fetch URLs with (process.env.VITE_API_URL || '/api') + '/api/...' pattern
-**Validate Command**: `pnpm --filter @suite/calendar-web build`
+**Action**: Replace relative fetch URLs with `import.meta.env.VITE_API_URL || ''` prefix via `API_BASE` constant
+**Validate Command**: `pnpm --filter @suite/calendar-web typecheck` (passed)
 
-#### P1-006-02: Update tasks web to use VITE_API_URL
+#### P1-006-02: Update tasks web to use VITE_API_URL ✅
 **Target File**: `apps/tasks/web/src/App.tsx`
-**Action**: Replace relative fetch URLs with (process.env.VITE_API_URL || '/api') + '/api/...' pattern
-**Validate Command**: `pnpm --filter @suite/tasks-web build`
+**Action**: Replace relative fetch URLs with `import.meta.env.VITE_API_URL || ''` prefix via `API_BASE` constant
+**Validate Command**: `pnpm --filter @suite/tasks-web typecheck` (passed)
 
-#### P1-006-03: Update drive web to use VITE_API_URL
+#### P1-006-03: Update drive web to use VITE_API_URL ✅
 **Target File**: `apps/drive/web/src/App.tsx`
-**Action**: Replace relative fetch URLs with (process.env.VITE_API_URL || '/api') + '/api/...' pattern
-**Validate Command**: `pnpm --filter @suite/drive-web build`
+**Action**: Replace relative fetch URLs with `import.meta.env.VITE_API_URL || ''` prefix via `API_BASE` constant
+**Validate Command**: `pnpm --filter @suite/drive-web typecheck` (passed)
 
 ---
 
@@ -2409,3 +2415,56 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Target File**: `apps/drive/web/src/App.tsx`
 **Action**: Add theme state, toggle button, CSS variables for dark mode colors
 **Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+
+---
+
+### [ ] INF-001: Fix Postgres Bundling in Web Builds
+
+**Status**: Pending  
+**Priority**: P1  
+**Bounded Context**: Infrastructure
+
+**Related Files**:
+- `apps/calendar/web/vite.config.ts`
+- `apps/tasks/web/vite.config.ts`
+- `apps/drive/web/vite.config.ts`
+- `packages/db/package.json`
+
+**Definition of Done**:
+- `pnpm --filter @suite/calendar-web build` succeeds
+- `pnpm --filter @suite/tasks-web build` succeeds
+- `pnpm --filter @suite/drive-web build` succeeds
+- `postgres` module is not included in browser bundles
+
+**Issue Description**:
+Vite build fails for all three web apps with:
+```
+"performance" is not exported by "__vite-browser-external", imported by "postgres/src/connection.js"
+```
+This occurs because `drizzle-orm` or another dependency is pulling the `postgres` Node.js driver into browser bundles. The `postgres` package imports Node-only modules (`perf_hooks`, `crypto`, `stream`).
+
+**Out of Scope**:
+- Replacing drizzle-orm
+- Removing postgres from API packages
+
+**Rules to Follow**:
+- Keep DB code out of browser bundles
+- Use `resolve.alias` or `optimizeDeps.exclude` in Vite config
+
+**Anti-Patterns**:
+- Bundling server-only code into client builds
+- Adding broad `external` arrays that hide real problems
+
+**Depends On**:
+- None
+
+**Blocks**:
+- P1-006 build validation
+- Any web app production builds
+
+**Subtasks**:
+
+#### INF-001-01: Add postgres to Vite externals/alias
+**Target File**: `apps/calendar/web/vite.config.ts`, `apps/tasks/web/vite.config.ts`, `apps/drive/web/vite.config.ts`
+**Action**: Configure Vite to exclude `postgres` from bundling or alias it to an empty module
+**Validate Command**: `pnpm --filter @suite/calendar-web build`

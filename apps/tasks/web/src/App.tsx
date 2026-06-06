@@ -82,6 +82,8 @@ function extractErrorDetails(value: unknown): string[] {
 
 type TaskFilter = 'all' | 'active' | 'completed' | 'archived';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export function App() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
   const [email, setEmail] = useState('');
@@ -174,7 +176,7 @@ export function App() {
       if (searchQuery) params.set('q', searchQuery);
       if (searchTags.length > 0) params.set('tags', searchTags.join(','));
 
-      const response = await fetch(`/api/tasks/search?${params.toString()}`);
+      const response = await fetch(`${API_BASE}/api/tasks/search?${params.toString()}`);
       const payload: unknown = await response.json();
 
       if (!response.ok) {
@@ -216,7 +218,7 @@ export function App() {
     setStatus('');
 
     try {
-      const response = await fetch('/api/tasks/batch/complete', {
+      const response = await fetch(`${API_BASE}/api/tasks/batch/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskIds: Array.from(selectedTaskIds) }),
@@ -251,7 +253,7 @@ export function App() {
     setStatus('');
 
     try {
-      const response = await fetch('/api/tasks/batch/archive', {
+      const response = await fetch(`${API_BASE}/api/tasks/batch/archive`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskIds: Array.from(selectedTaskIds) }),
@@ -283,7 +285,7 @@ export function App() {
     setErrorDetails([]);
 
     try {
-      const response = await fetch('/api/tasks');
+      const response = await fetch(`${API_BASE}/api/tasks`);
       const payload: unknown = await response.json();
 
       if (!response.ok) {
@@ -337,7 +339,7 @@ export function App() {
     setStatus('');
 
     try {
-      const response = await fetch(`/api/tasks/${task.id}`, {
+      const response = await fetch(`${API_BASE}/api/tasks/${task.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: editTitle, dueDate: editDueDate, priority: editPriority, tags: editTags }),
@@ -380,7 +382,7 @@ export function App() {
     setStatus('');
 
     try {
-      const response = await fetch(`/api/tasks/${task.id}/archive`, {
+      const response = await fetch(`${API_BASE}/api/tasks/${task.id}/archive`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ archived }),
@@ -421,7 +423,7 @@ export function App() {
     setStatus('');
 
     try {
-      const response = await fetch(`/api/tasks/${task.id}`, {
+      const response = await fetch(`${API_BASE}/api/tasks/${task.id}`, {
         method: 'DELETE',
       });
 
@@ -466,7 +468,7 @@ export function App() {
     setStatus('');
 
     try {
-      const response = await fetch(`/api/tasks/${task.id}/completion`, {
+      const response = await fetch(`${API_BASE}/api/tasks/${task.id}/completion`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed: !task.completed }),
@@ -504,7 +506,7 @@ export function App() {
     setSubmitting(true);
 
     try {
-      const response = await fetch('/api/tasks', {
+      const response = await fetch(`${API_BASE}/api/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, completed, dueDate, priority, tags }),

@@ -101,6 +101,8 @@ function eventOverlapsRange(event: CalendarEvent, range: { startAt: string; endA
     && Date.parse(event.endAt) > Date.parse(range.startAt);
 }
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export function App() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
   const [email, setEmail] = useState('');
@@ -145,7 +147,7 @@ export function App() {
     setErrorDetails([]);
 
     try {
-      const response = await fetch(`/api/events?${new URLSearchParams(selectedRange).toString()}`);
+      const response = await fetch(`${API_BASE}/api/events?${new URLSearchParams(selectedRange).toString()}`);
       const payload: unknown = await response.json();
 
       if (!response.ok) {
@@ -193,7 +195,7 @@ export function App() {
     setStatus('');
     setSubmitting(true);
 
-    const endpoint = editingEventId ? `/api/events/${editingEventId}` : '/api/events';
+    const endpoint = editingEventId ? `${API_BASE}/api/events/${editingEventId}` : `${API_BASE}/api/events`;
     const method = editingEventId ? 'PUT' : 'POST';
 
     try {
