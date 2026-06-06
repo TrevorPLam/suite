@@ -111,7 +111,10 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
       ...(betterAuthApiKey ? [dash({ apiKey: betterAuthApiKey })] : []),
     ],
     advanced: {
-      cookiePrefix: 'suite',
+      // Use __Host- prefix for production to enforce browser-level security guarantees
+      // Requires: Secure attribute, no Domain attribute, Path=/ (all met by current config)
+      // Falls back to 'suite' prefix in development for HTTP compatibility
+      cookiePrefix: process.env.NODE_ENV === 'production' ? '__Host-suite' : 'suite',
       crossSubDomainCookies: {
         enabled: false,
       },
