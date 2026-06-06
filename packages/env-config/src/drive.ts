@@ -8,6 +8,10 @@ export const driveEnvSchema = z.object({
   PORT: z.coerce.number().min(1).max(65535).default(3003),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   ALLOWED_ORIGINS: z.string().optional(),
+  R2_BUCKET: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_ACCOUNT_ID: z.string().optional(),
 }).refine((data) => {
   if (data.NODE_ENV === 'production' && !data.ENCRYPTION_KEY) {
     return false;
@@ -16,6 +20,16 @@ export const driveEnvSchema = z.object({
 }, {
   message: 'ENCRYPTION_KEY is required in production',
   path: ['ENCRYPTION_KEY'],
+}).refine((data) => {
+  if (data.NODE_ENV === 'production') {
+    if (!data.R2_BUCKET || !data.R2_ACCESS_KEY_ID || !data.R2_SECRET_ACCESS_KEY || !data.R2_ACCOUNT_ID) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: 'R2 configuration (R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID) is required in production',
+  path: ['R2_BUCKET'],
 });
 
 export type DriveEnv = z.infer<typeof driveEnvSchema>;

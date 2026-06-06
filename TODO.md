@@ -1319,10 +1319,10 @@ Target File**: `.github/workflows/deploy.yml`
 
 ---
 
-### [ ] SEC-015: Add R2 Configuration to Drive Env-Config
+### [x] SEC-015: Add R2 Configuration to Drive Env-Config
 
-**Status**: Pending  
-**Priority**: P0  
+**Status**: Complete
+**Priority**: P0
 **Bounded Context**: Configuration
 
 **Related Files**:
@@ -1362,10 +1362,20 @@ Target File**: `.github/workflows/deploy.yml`
 
 **Subtasks**:
 
-#### SEC-015-01: Add R2 configuration to drive env
+#### SEC-015-01: Add R2 configuration to drive env ✅
 **Target File**: `packages/env-config/src/drive.ts`
 **Action**: Add R2_BUCKET: z.string(), R2_ACCESS_KEY_ID: z.string(), R2_SECRET_ACCESS_KEY: z.string(), R2_ACCOUNT_ID: z.string()
 **Validate Command**: `pnpm --filter @suite/env-config test`
+
+**Implementation Notes**:
+- Added R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_ACCOUNT_ID as optional string fields to driveEnvSchema
+- Added refinement to make all R2 configuration fields required in production (NODE_ENV === 'production')
+- Follows Cloudflare R2 best practices using AWS-style credential names (R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)
+- R2_ACCOUNT_ID is required for constructing the R2 endpoint URL (https://<ACCOUNT_ID>.r2.cloudflarestorage.com)
+- Typecheck passed successfully
+- Lint passed successfully
+- All 14 env-config tests passed
+- Fields are optional in development to allow local testing without R2
 
 ---
 
