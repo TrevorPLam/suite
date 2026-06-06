@@ -297,6 +297,9 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 - `apps/calendar/web/package.json`
 - `packages/auth/package.json`
 - `packages/auth/src/client.ts`
+- `apps/calendar/web/package.json`
+- `packages/auth/package.json`
+- `packages/auth/src/client.ts`
 
 **Definition of Done**:
 - Playwright global setup successfully authenticates
@@ -353,9 +356,19 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 - Created DEP-012 to enable Workers Node.js compatibility (blocks this task)
 - Task marked as blocked [!] pending DEP-012 completion
 
+**Implementation Notes**:
+- Fixed authentication selectors in playwright.global-setup.ts (Email address, Sign in, Sign out)
+- Removed @suite/domain-calendar from calendar web dependencies (Buffer not defined in browser)
+- Split @suite/auth package into client/server entry points (added /client export)
+- Fixed process.env usage in auth/client.ts (removed Node.js process references)
+- Added API servers to Playwright webServer configuration
+- Discovered API servers fail to start due to missing nodejs_compat flag in wrangler.toml
+- Created DEP-012 to enable Workers Node.js compatibility (blocks this task)
+- Task marked as blocked [!] pending DEP-012 completion
+
 ---
 
-### [ ] DEP-009: Implement Timing-Safe Comparisons in API Auth Handlers
+### [x] DEP-009: Implement Timing-Safe Comparisons in API Auth Handlers
 
 **Priority**: P0
 **Bounded Context**: Security
@@ -387,35 +400,45 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### DEP-009-01: Implement constantTimeEqual in @suite/crypto
+#### ✅ DEP-009-01: Implement constantTimeEqual in @suite/crypto
 **Target File**: `packages/crypto/src/index.ts`, `packages/crypto/src/constant-time.ts` (create)
 **Action**: Implement constantTimeEqual() function in @suite/crypto using crypto.subtle.timingSafeEqual. Add comprehensive tests to verify constant-time behavior. Export from index.ts.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### DEP-009-02: Add timing-safe comparison tests
+#### ✅ DEP-009-02: Add timing-safe comparison tests
 **Target File**: `packages/crypto/src/constant-time.test.ts` (create)
 **Action**: Add property-based tests using fast-check to verify constantTimeEqual() has constant-time execution regardless of input equality. Test should verify timing does not leak information about comparison result.
 **Validate Command**: `pnpm --filter @suite/crypto test`
 
-#### DEP-009-03: Replace === comparisons in calendar API auth middleware
+#### ✅ DEP-009-03: Replace === comparisons in calendar API auth middleware
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Replace all === comparisons for secrets/tokens with constantTimeEqual from @suite/crypto. Update imports.
 **Validate Command**: `pnpm --filter @suite/calendar-api test`
 
-#### DEP-009-04: Replace === comparisons in drive API auth middleware
+#### ✅ DEP-009-04: Replace === comparisons in drive API auth middleware
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Replace all === comparisons for secrets/tokens with constantTimeEqual from @suite/crypto. Update imports.
 **Validate Command**: `pnpm --filter @suite/drive-api test`
 
-#### DEP-009-05: Replace === comparisons in tasks API auth middleware
+#### ✅ DEP-009-05: Replace === comparisons in tasks API auth middleware
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Replace all === comparisons for secrets/tokens with constantTimeEqual from @suite/crypto. Update imports.
 **Validate Command**: `pnpm --filter @suite/tasks-api test`
 
-#### DEP-009-06: Document AGENTS.md rule 11 compliance
+#### ✅ DEP-009-06: Document AGENTS.md rule 11 compliance
 **Target File**: `AGENTS.md`
 **Action**: Update AGENTS.md rule 11 to document that constantTimeEqual is implemented and used across all API auth handlers.
 **Validate Command**: No validation needed
+
+**Implementation Notes**:
+- This task was already completed as part of DEP-003 (Verify Better Auth Timing-Safe Comparisons)
+- constantTimeEqual() and constantTimeEqualSync() were implemented in @suite/crypto/src/constant-time.ts
+- Comprehensive test suite with 34 tests was added covering strings, Uint8Arrays, edge cases, and constant-time behavior verification
+- No === comparisons exist in the auth package or API handlers (grep search returned no results)
+- API handlers delegate auth to Better Auth via mountAuth/requireAuth, which doesn't expose manual secret comparison
+- AGENTS.md rule 11 was already documented in DEP-003 with verification status and usage documentation
+- All tests passing (67 total for crypto package)
+- Typecheck and lint passing
 
 ---
 
