@@ -8,6 +8,9 @@
  * @module kms
  */
 
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// Optional dependencies are dynamically imported - scope-check violations are intentional
+
 import { createCryptoError, CryptoErrorCode, isCryptoError } from './errors.js';
 
 /**
@@ -111,9 +114,24 @@ class AWSKMSClient implements KMSClient {
     this.keyId = config.aws.keyId;
 
     // Dynamically import AWS SDK (optional dependency)
+    // Store the import promise to be resolved on first use
+    this.client = this.initializeClient(config);
+  }
+
+  private async initializeClient(config: KMSConfig): Promise<unknown> {
     try {
       // @ts-ignore - Optional dependency
-      const { KMSClient } = require('@aws-sdk/client-kms');
+      const { KMSClient } = await import('@aws-sdk/client-kms').catch(() => {
+        throw new Error('AWS SDK v3 is not installed');
+      });
+      
+      if (!config.aws) {
+        throw createCryptoError(
+          CryptoErrorCode.INVALID_ALGORITHM,
+          'AWS configuration is required for AWS KMS client',
+          { operation: 'AWSKMSClient constructor' }
+        );
+      }
       
       const clientConfig: Record<string, unknown> = {
         region: config.aws.region,
@@ -123,7 +141,7 @@ class AWSKMSClient implements KMSClient {
         clientConfig.credentials = config.aws.credentials;
       }
 
-      this.client = new KMSClient(clientConfig);
+      return new KMSClient(clientConfig);
     } catch (_error) {
       throw createCryptoError(
         CryptoErrorCode.INVALID_ALGORITHM,
@@ -135,8 +153,11 @@ class AWSKMSClient implements KMSClient {
 
   async encrypt(plaintext: Uint8Array): Promise<Uint8Array> {
     try {
+      const client = await this.client;
       // @ts-ignore - Optional dependency
-      const { EncryptCommand } = require('@aws-sdk/client-kms');
+      const { EncryptCommand } = await import('@aws-sdk/client-kms').catch(() => {
+        throw new Error('AWS SDK v3 is not installed');
+      });
       
       const command = new EncryptCommand({
         KeyId: this.keyId,
@@ -144,7 +165,7 @@ class AWSKMSClient implements KMSClient {
       });
 
       // @ts-ignore - Client type is unknown due to optional dependency
-      const response = await this.client.send(command);
+      const response = await client.send(command);
       return new Uint8Array(response.CiphertextBlob);
     } catch (error) {
       throw createCryptoError(
@@ -157,15 +178,18 @@ class AWSKMSClient implements KMSClient {
 
   async decrypt(ciphertext: Uint8Array): Promise<Uint8Array> {
     try {
+      const client = await this.client;
       // @ts-ignore - Optional dependency
-      const { DecryptCommand } = require('@aws-sdk/client-kms');
+      const { DecryptCommand } = await import('@aws-sdk/client-kms').catch(() => {
+        throw new Error('AWS SDK v3 is not installed');
+      });
       
       const command = new DecryptCommand({
         CiphertextBlob: ciphertext,
       });
 
       // @ts-ignore - Client type is unknown due to optional dependency
-      const response = await this.client.send(command);
+      const response = await client.send(command);
       return new Uint8Array(response.Plaintext);
     } catch (error) {
       throw createCryptoError(
@@ -178,16 +202,19 @@ class AWSKMSClient implements KMSClient {
 
   async generateKey(keyLength: number): Promise<Uint8Array> {
     try {
+      const client = await this.client;
       // @ts-ignore - Optional dependency
-      const { GenerateDataKeyCommand } = require('@aws-sdk/client-kms');
+      const { GenerateDataKeyCommand } = await import('@aws-sdk/client-kms').catch(() => {
+        throw new Error('AWS SDK v3 is not installed');
+      });
       
       const command = new GenerateDataKeyCommand({
         KeyId: this.keyId,
-        KeyLength: keyLength * 8, // AWS expects bits
+        NumberOfBytes: keyLength, // Use NumberOfBytes instead of KeyLength
       });
 
       // @ts-ignore - Client type is unknown due to optional dependency
-      const response = await this.client.send(command);
+      const response = await client.send(command);
       return new Uint8Array(response.Plaintext);
     } catch (error) {
       throw createCryptoError(
@@ -216,22 +243,29 @@ class AzureKeyVaultClient implements KMSClient {
       );
     }
 
+    const keyIdentifier = config.azure.keyVersion
+      ? `${config.azure.vaultUrl}/keys/${config.azure.keyName}/${config.azure.keyVersion}`
+      : `${config.azure.vaultUrl}/keys/${config.azure.keyName}`;
+
+    // Store the initialization promise to be resolved on first use
+    this.cryptoClient = this.initializeClient(config, keyIdentifier);
+  }
+
+  private async initializeClient(config: KMSConfig, keyIdentifier: string): Promise<unknown> {
     try {
       // @ts-ignore - Optional dependency
-      const { DefaultAzureCredential } = require('@azure/identity');
+      const { DefaultAzureCredential } = await import('@azure/identity').catch(() => {
+        throw new Error('Azure SDK is not installed');
+      });
       // @ts-ignore - Optional dependency
-      const { KeyClient, CryptographyClient } = require('@azure/keyvault-keys');
+      const { CryptographyClient } = await import('@azure/keyvault-keys').catch(() => {
+        throw new Error('Azure SDK is not installed');
+      });
 
       const credential = new DefaultAzureCredential();
-      const _keyClient = new KeyClient(config.azure.vaultUrl, credential);
 
-      const keyIdentifier = config.azure.keyVersion
-        ? `${config.azure.vaultUrl}/keys/${config.azure.keyName}/${config.azure.keyVersion}`
-        : `${config.azure.vaultUrl}/keys/${config.azure.keyName}`;
-
-      // Get the key (async, but we need to handle this synchronously in constructor)
-      // For now, we'll store the identifier and create the crypto client on first use
-      this.cryptoClient = {
+      // Store the identifier and client class for lazy initialization
+      return {
         keyIdentifier,
         credential,
         CryptographyClient,
@@ -246,17 +280,17 @@ class AzureKeyVaultClient implements KMSClient {
   }
 
   private async getClient(): Promise<unknown> {
-    const client = this.cryptoClient as { keyIdentifier: string; credential: unknown; CryptographyClient: unknown };
-    // @ts-ignore - Optional dependency
-    const { CryptographyClient } = require('@azure/keyvault-keys');
-    return new CryptographyClient(client.keyIdentifier, client.credential);
+    const client = await this.cryptoClient as { keyIdentifier: string; credential: unknown; CryptographyClient: new (keyIdentifier: string, credential: unknown) => unknown };
+    return new client.CryptographyClient(client.keyIdentifier, client.credential);
   }
 
   async encrypt(plaintext: Uint8Array): Promise<Uint8Array> {
     try {
       const client = await this.getClient();
       // @ts-ignore - Optional dependency
-      const { KnownEncryptionAlgorithms } = require('@azure/keyvault-keys');
+      const { KnownEncryptionAlgorithms } = await import('@azure/keyvault-keys').catch(() => {
+        throw new Error('Azure SDK is not installed');
+      });
 
       // @ts-ignore - Client type is unknown due to optional dependency
       const result = await client.encrypt({
@@ -278,7 +312,9 @@ class AzureKeyVaultClient implements KMSClient {
     try {
       const client = await this.getClient();
       // @ts-ignore - Optional dependency
-      const { KnownEncryptionAlgorithms } = require('@azure/keyvault-keys');
+      const { KnownEncryptionAlgorithms } = await import('@azure/keyvault-keys').catch(() => {
+        throw new Error('Azure SDK is not installed');
+      });
 
       // @ts-ignore - Client type is unknown due to optional dependency
       const result = await client.decrypt({
@@ -327,10 +363,17 @@ class GCPKMSClient implements KMSClient {
 
     this.keyName = `projects/${config.gcp.projectId}/locations/${config.gcp.location}/keyRings/${config.gcp.keyRing}/cryptoKeys/${config.gcp.keyName}`;
 
+    // Store the initialization promise to be resolved on first use
+    this.client = this.initializeClient();
+  }
+
+  private async initializeClient(): Promise<unknown> {
     try {
       // @ts-ignore - Optional dependency
-      const { KeyManagementServiceClient } = require('@google-cloud/kms');
-      this.client = new KeyManagementServiceClient();
+      const { KeyManagementServiceClient } = await import('@google-cloud/kms').catch(() => {
+        throw new Error('Google Cloud KMS SDK is not installed');
+      });
+      return new KeyManagementServiceClient();
     } catch (_error) {
       throw createCryptoError(
         CryptoErrorCode.INVALID_ALGORITHM,
@@ -342,8 +385,9 @@ class GCPKMSClient implements KMSClient {
 
   async encrypt(plaintext: Uint8Array): Promise<Uint8Array> {
     try {
+      const client = await this.client;
       // @ts-ignore - Client type is unknown due to optional dependency
-      const [response] = await this.client.encrypt({
+      const [response] = await client.encrypt({
         name: this.keyName,
         plaintext: plaintext,
       });
@@ -360,8 +404,9 @@ class GCPKMSClient implements KMSClient {
 
   async decrypt(ciphertext: Uint8Array): Promise<Uint8Array> {
     try {
+      const client = await this.client;
       // @ts-ignore - Client type is unknown due to optional dependency
-      const [response] = await this.client.decrypt({
+      const [response] = await client.decrypt({
         name: this.keyName,
         ciphertext: ciphertext,
       });
