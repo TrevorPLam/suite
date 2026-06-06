@@ -99,3 +99,17 @@ export {
   CustomAuditLogger,
   createCustomAuditLogger,
 } from './audit.js';
+
+// Post-quantum cryptography (future-proofing against quantum attacks)
+export {
+  type PQCKeyPair,
+  type PQCEncapsulationResult,
+  type HybridEncryptionResult,
+  isPQCSupported,
+  kyberKeyPair,
+  kyberEncaps,
+  kyberDecaps,
+  hybridEncrypt,
+  hybridDecrypt,
+  getPQCStatus,
+} from './pqc.js';
