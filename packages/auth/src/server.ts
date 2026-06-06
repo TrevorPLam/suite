@@ -3,6 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { organization, twoFactor } from 'better-auth/plugins';
 import { dash } from '@better-auth/infra';
 import { users, sessions, accounts } from '@suite/db';
+import { validateAuthEnv } from './env.js';
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
@@ -16,15 +17,20 @@ interface AuthEnv {
 
 interface CreateAuthOptions {
   db: Parameters<typeof drizzleAdapter>[0] | null;
-  env?: AuthEnv;
+  env?: AuthEnv & Record<string, string | undefined>;
   waitUntil?: (promise: Promise<unknown>) => void;
   trustedOrigins?: string;
   betterAuthApiKey?: string;
 }
 
 export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKey }: CreateAuthOptions) {
+  // Validate environment variables
+  const validatedEnv = validateAuthEnv(env || process.env);
+
   const auth = betterAuth({
     appName: 'Suite',
+    secret: validatedEnv.BETTER_AUTH_SECRET,
+    baseURL: validatedEnv.BETTER_AUTH_URL,
     database: db ? drizzleAdapter(db, {
       provider: 'pg',
       schema: {
