@@ -40,6 +40,7 @@ Infrastructure packages are integrated into the runtime:
 - **@suite/auth** - Better Auth integration (mounted on all APIs via mountAuth)
 - **@suite/crypto** - E2EE crypto utilities with AES-256-GCM and blind-index search support (encryption activated via ENCRYPTION_KEY)
 - **@suite/env-config** - Environment validation with Zod schemas (called at API startup)
+- **@suite/shared-kernel** - Distributed rate limiting with Cloudflare KV, structured logging, error handling, circuit breaker, and usage monitoring
 - **@suite/ui** - Shared UI component library (Button component used in web apps)
 
 ### Not Started

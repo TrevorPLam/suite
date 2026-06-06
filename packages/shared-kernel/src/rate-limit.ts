@@ -1,7 +1,15 @@
 import type { MiddlewareHandler } from 'hono';
 
+// Cloudflare Workers KV namespace type (for distributed rate limiting)
+// This is available in Workers runtime as env.KV_BINDING
+export interface KVNamespace {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+}
+
 export interface RateLimitOptions {
   requestsPerMinute: number;
+  kv?: KVNamespace; // Cloudflare KV binding for distributed rate limiting
 }
 
 interface RateLimitState {
@@ -10,11 +18,76 @@ interface RateLimitState {
 }
 
 /**
- * In-memory rate limit storage per user.
- * For MVP, this uses a simple Map. In production, this should be
- * replaced with Redis or Cloudflare KV for distributed rate limiting.
+ * In-memory rate limit storage per user (fallback for local development).
+ * Used when KV binding is not available.
+ *
+ * Note: This fallback is for local development only. In production,
+ * rate limit state must be stored in Cloudflare KV for distributed
+ * coordination across multiple Workers instances.
  */
-const rateLimitStore = new Map<string, RateLimitState>();
+const inMemoryRateLimitStore = new Map<string, RateLimitState>();
+
+/**
+ * Serialize rate limit state for KV storage.
+ */
+function serializeState(state: RateLimitState): string {
+  return JSON.stringify(state);
+}
+
+/**
+ * Deserialize rate limit state from KV storage.
+ */
+function deserializeState(value: string | null): RateLimitState | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as RateLimitState;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get rate limit state from KV or in-memory fallback.
+ */
+async function getRateLimitState(
+  userKey: string,
+  kv?: KVNamespace
+): Promise<RateLimitState | null> {
+  if (kv) {
+    try {
+      const value = await kv.get(userKey);
+      return deserializeState(value);
+    } catch (error) {
+      // Fall back to in-memory on KV error
+      console.warn('KV get error, falling back to in-memory:', error);
+      return inMemoryRateLimitStore.get(userKey) || null;
+    }
+  }
+  return inMemoryRateLimitStore.get(userKey) || null;
+}
+
+/**
+ * Set rate limit state in KV or in-memory fallback.
+ * KV stores with TTL for automatic cleanup (60 seconds).
+ */
+async function setRateLimitState(
+  userKey: string,
+  state: RateLimitState,
+  kv?: KVNamespace
+): Promise<void> {
+  if (kv) {
+    try {
+      // Store with 60 second TTL (matches rate limit window)
+      await kv.put(userKey, serializeState(state), { expirationTtl: 60 });
+    } catch (error) {
+      // Fall back to in-memory on KV error
+      console.warn('KV put error, falling back to in-memory:', error);
+      inMemoryRateLimitStore.set(userKey, state);
+    }
+  } else {
+    inMemoryRateLimitStore.set(userKey, state);
+  }
+}
 
 /**
  * Rate limit middleware using sliding window counter algorithm.
@@ -24,11 +97,14 @@ const rateLimitStore = new Map<string, RateLimitState>();
  * This implements per-user rate limiting as specified in SEC-010.
  * The sliding window ensures fair rate limiting over time.
  *
+ * Uses Cloudflare KV for distributed storage when available,
+ * with in-memory fallback for local development.
+ *
  * @param options - Configuration for rate limiting
  * @returns Hono middleware handler
  */
 export function rateLimit(options: RateLimitOptions): MiddlewareHandler {
-  const { requestsPerMinute } = options;
+  const { requestsPerMinute, kv } = options;
   const windowMs = 60 * 1000; // 1 minute window
 
   return async (c, next) => {
@@ -44,7 +120,7 @@ export function rateLimit(options: RateLimitOptions): MiddlewareHandler {
     const userKey = userId;
 
     // Get or create rate limit state for user
-    let state = rateLimitStore.get(userKey);
+    let state = await getRateLimitState(userKey, kv);
 
     // Reset if window has expired
     if (!state || now >= state.resetTime) {
@@ -52,7 +128,7 @@ export function rateLimit(options: RateLimitOptions): MiddlewareHandler {
         count: 0,
         resetTime: now + windowMs,
       };
-      rateLimitStore.set(userKey, state);
+      await setRateLimitState(userKey, state, kv);
     }
 
     // Check if limit exceeded
@@ -77,7 +153,7 @@ export function rateLimit(options: RateLimitOptions): MiddlewareHandler {
 
     // Increment request count
     state.count++;
-    rateLimitStore.set(userKey, state);
+    await setRateLimitState(userKey, state, kv);
 
     // Add rate limit headers to response
     await next();
@@ -92,15 +168,17 @@ export function rateLimit(options: RateLimitOptions): MiddlewareHandler {
 /**
  * Clear rate limit state for a specific user.
  * Useful for testing or manual resets.
+ * Note: Only clears in-memory state. KV state will expire via TTL.
  */
 export function clearRateLimit(userId: string): void {
-  rateLimitStore.delete(userId);
+  inMemoryRateLimitStore.delete(userId);
 }
 
 /**
  * Clear all rate limit state.
  * Useful for testing or memory management.
+ * Note: Only clears in-memory state. KV state will expire via TTL.
  */
 export function clearAllRateLimits(): void {
-  rateLimitStore.clear();
+  inMemoryRateLimitStore.clear();
 }

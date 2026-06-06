@@ -29,7 +29,7 @@ import {
   archiveTaskBodySchema,
   batchOperationBodySchema,
 } from './schemas.js';
-import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import { openApiDoc } from './openapi.js';
 
@@ -39,11 +39,15 @@ validateTasksEnv();
 // Create usage repository for monitoring
 const usageRepository = new PostgresUsageRepository();
 
+type Env = {
+  RATE_LIMIT_KV: KVNamespace;
+};
+
 type Variables = {
   userId: string | null;
 };
 
-const app = new Hono<{ Variables: Variables }>();
+const app = new Hono<{ Variables: Variables; Bindings: Env }>();
 
 // Simple in-memory metrics collector
 const metrics = {
@@ -161,9 +165,10 @@ app.use('/api/*', UsageMonitor({
 }));
 
 // Mount rate limiting middleware (60 requests per minute per user)
-app.use('/api/*', rateLimit({
-  requestsPerMinute: 60,
-}));
+app.use('/api/*', async (c, next) => {
+  const kv = c.env?.RATE_LIMIT_KV;
+  await rateLimit({ requestsPerMinute: 60, kv })(c, next);
+});
 
 // Middleware to wire repositories with userId from auth context
 app.use('/api/*', async (c, next) => {

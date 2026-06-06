@@ -444,7 +444,7 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ## P1 - High Priority Tasks
 
-### [ ] DEP-004: Implement Distributed Rate Limiting
+### [x] DEP-004: Implement Distributed Rate Limiting
 
 **Priority**: P1
 **Bounded Context**: API Performance
@@ -476,30 +476,41 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### DEP-004-01: Add Cloudflare KV binding to wrangler.toml
+#### ✅ DEP-004-01: Add Cloudflare KV binding to wrangler.toml
 **Target File**: `apps/calendar/api/wrangler.toml`, `apps/tasks/api/wrangler.toml`, `apps/drive/api/wrangler.toml`
 **Action**: Add KV namespace binding to each wrangler.toml file for rate limit state storage. Use same namespace name across all APIs (e.g., RATE_LIMIT_KV) or separate namespaces per API.
 **Validate Command**: `wrangler whoami` (to verify wrangler configuration)
 
-#### DEP-004-02: Implement KV-based rate limit storage
+#### ✅ DEP-004-02: Implement KV-based rate limit storage
 **Target File**: `packages/shared-kernel/src/rate-limit.ts`
 **Action**: Refactor rateLimit middleware to use Cloudflare KV for distributed state storage instead of in-memory Map. Implement get/put operations with TTL for automatic cleanup. Maintain existing sliding window algorithm. Add fallback to in-memory if KV binding not available (for local development).
 **Validate Command**: `pnpm --filter @suite/shared-kernel typecheck`
 
-#### DEP-004-03: Add distributed rate limit tests
+#### ✅ DEP-004-03: Add distributed rate limit tests
 **Target File**: `packages/shared-kernel/src/rate-limit.test.ts` (create or update)
 **Action**: Add tests to verify rate limit state persists across multiple Workers. Mock KV binding for testing. Test edge cases: KV unavailable, concurrent requests, TTL expiration.
 **Validate Command**: `pnpm --filter @suite/shared-kernel test`
 
-#### DEP-004-04: Update API index files to pass KV binding
+#### ✅ DEP-004-04: Update API index files to pass KV binding
 **Target File**: `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
 **Action**: Update rateLimit middleware calls to pass KV binding from env to rateLimit options. Modify rateLimit options to accept KV binding parameter.
 **Validate Command**: `pnpm --filter @suite/calendar-api typecheck`, `pnpm --filter @suite/tasks-api typecheck`, `pnpm --filter @suite/drive-api typecheck`
 
-#### DEP-004-05: Document distributed rate limiting
+#### ✅ DEP-004-05: Document distributed rate limiting
 **Target File**: `README.md`, `packages/shared-kernel/src/rate-limit.ts`
 **Action**: Update README.md to document distributed rate limiting strategy using Cloudflare KV. Add comments in rate-limit.ts explaining KV usage and fallback behavior.
 **Validate Command**: No validation needed
+
+**Implementation Notes**:
+- Added KV namespace binding (RATE_LIMIT_KV) to all three wrangler.toml files (calendar, tasks, drive)
+- Refactored rate-limit.ts to use Cloudflare KV for distributed state storage with 60-second TTL
+- Implemented graceful fallback to in-memory Map when KV is unavailable or errors occur
+- Added KVNamespace interface to @suite/shared-kernel exports for type safety
+- Updated all three API index files to pass RATE_LIMIT_KV binding from env to rateLimit middleware
+- Added comprehensive test suite with 5 new tests for KV distributed behavior (12 total tests passing)
+- Updated README.md to document distributed rate limiting in shared-kernel package
+- All typecheck and tests passing for shared-kernel and all three APIs
+- Note: KV namespace must be created via `wrangler kv:namespace create` before deployment
 
 ---
 

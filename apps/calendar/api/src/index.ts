@@ -16,7 +16,7 @@ import {
 import { wireRepositories } from './bootstrap.js';
 import { validateCalendarEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
-import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import { createEventBodySchema, updateEventBodySchema } from './schemas.js';
 import { openApiDoc } from './openapi.js';
@@ -27,11 +27,15 @@ validateCalendarEnv();
 // Create usage repository for monitoring
 const usageRepository = new PostgresUsageRepository();
 
+type Env = {
+  RATE_LIMIT_KV: KVNamespace;
+};
+
 type Variables = {
   userId: string | null;
 };
 
-const app = new Hono<{ Variables: Variables }>();
+const app = new Hono<{ Variables: Variables; Bindings: Env }>();
 
 // Mount request ID middleware (must be before logger to ensure logs include request ID)
 app.use('/api/*', requestId());
@@ -141,9 +145,10 @@ app.use('/api/*', UsageMonitor({
 }));
 
 // Mount rate limiting middleware (60 requests per minute per user)
-app.use('/api/*', rateLimit({
-  requestsPerMinute: 60,
-}));
+app.use('/api/*', async (c, next) => {
+  const kv = c.env?.RATE_LIMIT_KV;
+  await rateLimit({ requestsPerMinute: 60, kv })(c, next);
+});
 
 // Middleware to wire repositories with userId from auth context
 app.use('/api/*', async (c, next) => {

@@ -23,7 +23,7 @@ import {
 import { wireRepositories, getR2Adapter } from './bootstrap.js';
 import { validateDriveEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
-import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
 import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
 import {
   uploadFileBodySchema,
@@ -43,6 +43,7 @@ const usageRepository = process.env.DATABASE_URL ? new PostgresUsageRepository()
 
 type Env = {
   R2: R2Bucket;
+  RATE_LIMIT_KV: KVNamespace;
 };
 
 type Variables = {
@@ -170,9 +171,10 @@ if (usageRepository) {
 }
 
 // Mount rate limiting middleware (60 requests per minute per user)
-app.use('/api/*', rateLimit({
-  requestsPerMinute: 60,
-}));
+app.use('/api/*', async (c, next) => {
+  const kv = c.env?.RATE_LIMIT_KV;
+  await rateLimit({ requestsPerMinute: 60, kv })(c, next);
+});
 
 // Middleware to wire repositories with userId from auth context
 // This runs before route handlers, but we'll wire repos after auth succeeds
