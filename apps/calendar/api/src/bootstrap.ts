@@ -5,11 +5,6 @@ export async function wireRepositories(userId: string): Promise<void> {
   // Set up encryption key provider from environment
   await setCalendarKeyProviderFromEnv();
   
-  const databaseUrl = process.env.DATABASE_URL;
-
-  if (databaseUrl) {
-    // Use Postgres repository when DATABASE_URL is configured
-    setCalendarEventRepository(new PostgresCalendarEventRepository(userId));
-  }
-  // Otherwise, domain uses default in-memory repository (local dev without Postgres)
+  // DATABASE_URL is now required - always use Postgres repository
+  setCalendarEventRepository(new PostgresCalendarEventRepository(userId));
 }

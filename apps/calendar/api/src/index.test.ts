@@ -1,6 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { resetCalendarEvents } from '@suite/domain-calendar';
-import app from './index.js';
+
+// Mock env validation to bypass DATABASE_URL requirement in tests
+vi.mock('@suite/env-config', async () => {
+  const actual = await vi.importActual<any>('@suite/env-config');
+  return {
+    ...actual,
+    validateCalendarEnv: vi.fn(() => ({
+      DATABASE_URL: 'postgresql://localhost:5432/test',
+      ENCRYPTION_KEY: undefined,
+      PORT: 3002,
+      NODE_ENV: 'test',
+    })),
+  };
+});
 
 // Mock requireAuth to return 401 by default, but allow override for authenticated tests
 let allowAuth = false;
@@ -19,6 +32,8 @@ vi.mock('@suite/auth', async () => {
     }),
   };
 });
+
+import app from './index.js';
 
 describe('calendar API - health', () => {
   it('should return health check', async () => {

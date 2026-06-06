@@ -19,14 +19,11 @@ describe('Environment Configuration', () => {
     expect(env.NODE_ENV).toBe('development');
   });
 
-  it('should validate calendar environment with defaults when DATABASE_URL is not set', () => {
+  it('should throw error when DATABASE_URL is not set', () => {
     process.env.PORT = '3000';
     process.env.NODE_ENV = 'development';
 
-    const env = validateCalendarEnv();
-    expect(env.DATABASE_URL).toBeUndefined();
-    expect(env.PORT).toBe(3000);
-    expect(env.NODE_ENV).toBe('development');
+    expect(() => validateCalendarEnv()).toThrow();
   });
 
   it('should throw error for calendar environment with invalid PORT', () => {

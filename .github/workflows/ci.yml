@@ -41,6 +41,19 @@ jobs:
   main-validation:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: suite
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     strategy:
       matrix:
         node-version: [20.x]
@@ -64,9 +77,13 @@ jobs:
 
       - name: Run full test suite
         run: pnpm test:run
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/suite
 
       - name: Run typecheck
         run: pnpm typecheck
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/suite
 
       - name: Run coverage
         run: pnpm test:coverage
