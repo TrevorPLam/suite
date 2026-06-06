@@ -486,10 +486,10 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 **Action**: Created test file with deep import to verify ESLint rule catches violation. Rule correctly detected and blocked deep import from @suite/ui/src/**. Test file removed after verification.
 **Validate Command**: `pnpm --filter @suite/calendar-web lint`
 
-#### ⏳ UI-008-06: Document boundary rules
-**Assigned To**: HUMAN
+#### ✅ UI-008-06: Document boundary rules
+**Assigned To**: AGENT
 **Target File**: `packages/ui/README.md`
-**Action**: Update README.md to document module boundary rules, what imports are allowed, how to add new components to public API, and how to handle boundary violations.
+**Action**: Added Module Boundaries section to README.md documenting import rules, Nx module boundary enforcement, how to add new components to public API, handling boundary violations, and code ownership.
 **Validate Command**: No validation needed
 
 **Implementation Notes**:
@@ -499,7 +499,7 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 - Added @typescript-eslint/no-restricted-imports rule to ban deep imports from @suite/ui/src/**
 - Created .github/CODEOWNERS file with ownership definitions
 - Verified ESLint rule correctly catches deep import violations
-- UI-008-06 (documentation) requires human action (marked as ⏳)
+- Added Module Boundaries section to packages/ui/README.md with import rules, Nx enforcement, and violation handling
 - Lint passes with only pre-existing warnings (unrelated to UI-008)
 - Typecheck fails due to pre-existing i18n errors in packages/ui (unrelated to UI-008)
 - Tests fail due to pre-existing blind-index test timeouts in packages/crypto (unrelated to UI-008)

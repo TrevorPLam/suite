@@ -310,6 +310,81 @@ Element.prototype.scrollIntoView = vi.fn();
 
 This is automatically configured in `vitest.setup.ts`.
 
+## Module Boundaries
+
+The UI package enforces strict module boundaries to maintain a clean architecture and prevent tight coupling between packages.
+
+### Import Rules
+
+**Allowed Imports:**
+- Consume apps MUST import from the public API: `import { Button } from '@suite/ui'`
+- Internal imports within the UI package are allowed: `import { cn } from './lib/utils'`
+
+**Forbidden Imports:**
+- Deep imports from UI package internals are blocked by ESLint:
+  ```tsx
+  // ❌ FORBIDDEN
+  import { Button } from '@suite/ui/src/components/ui/button';
+  ```
+- This is enforced by the `@typescript-eslint/no-restricted-imports` rule in `eslint.config.js`
+
+### Nx Module Boundary Enforcement
+
+The monorepo uses Nx module boundary enforcement to control dependencies between projects:
+
+- **scope:shared** (UI package): Can only depend on other scope:shared packages
+- **scope:calendar** (calendar app): Can depend on scope:shared and scope:calendar
+- **scope:tasks** (tasks app): Can depend on scope:shared and scope:tasks
+- **scope:drive** (drive app): Can depend on scope:shared and scope:drive
+
+This is enforced by the `@nx/enforce-module-boundaries` ESLint rule.
+
+### Adding New Components to Public API
+
+When adding a new component to the UI package:
+
+1. **Create the component** in `src/components/ui/my-component.tsx`
+2. **Export from index.ts** in `src/index.ts`:
+   ```ts
+   export { MyComponent } from './components/ui/my-component';
+   export type { MyComponentProps } from './components/ui/my-component';
+   ```
+3. **Add tests** in `src/components/ui/my-component.test.tsx`
+4. **Add Storybook story** in `src/components/ui/my-component.stories.tsx`
+5. **Update README** with usage example (if component is significant)
+
+The component is now available via the public API: `import { MyComponent } from '@suite/ui'`
+
+### Handling Boundary Violations
+
+If you encounter a boundary violation error:
+
+**Deep Import Error:**
+```
+'@suite/ui/src/components/ui/button' import is restricted from being used by a pattern.
+Use @suite/ui instead of deep imports from @suite/ui/src
+```
+
+**Solution:** Import from the public API instead:
+```tsx
+// ❌ Wrong
+import { Button } from '@suite/ui/src/components/ui/button';
+
+// ✅ Correct
+import { Button } from '@suite/ui';
+```
+
+**Module Boundary Error:**
+```
+A project tagged with "scope:calendar" can only depend on projects tagged with "scope:shared" or "scope:calendar".
+```
+
+**Solution:** Move the shared code to a shared package or use HTTP/Service Bindings for cross-domain communication (per AGENTS.md rule 1).
+
+### Code Ownership
+
+The UI package ownership is defined in `.github/CODEOWNERS`. Changes to `packages/ui/` require review from the assigned maintainers.
+
 ## Development
 
 ```bash
