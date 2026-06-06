@@ -24,6 +24,7 @@
     "postgres": "^3.4.5"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0",
     "@types/node": "^22.10.2",
     "@types/pg": "^8.11.10",
     "drizzle-kit": "catalog:",
