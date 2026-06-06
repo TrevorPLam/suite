@@ -594,11 +594,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [~] CRYPTO-012: Add Post-Quantum Algorithm Support
+### [x] CRYPTO-012: Add Post-Quantum Algorithm Support
 
 **Priority**: P2
 **Bounded Context**: Future-Proofing
-**Status**: In Progress (AGENT subtasks complete, HUMAN subtasks pending)
+**Status**: Complete
 
 **Related Files**:
 - `packages/crypto/src/index.ts`

@@ -1,8 +1,8 @@
 # Post-Quantum Cryptography Migration Strategy
 
-**Version**: 1.0  
+**Version**: 1.1  
 **Date**: 2026-06-06  
-**Status**: Design Document
+**Status**: Implementation In Progress
 
 ---
 
@@ -176,13 +176,65 @@ const combinedSecret = await HKDF(
 
 ## Technical Considerations
 
-### Web Crypto API Limitations
+### Web Crypto API PQC Support Status (June 2026)
 
-The Web Crypto API does not currently support post-quantum algorithms. To address this:
+### Current Status
 
-1. **WebAssembly Backend**: Use libsodium.js compiled to WASM for PQC algorithms
-2. **Feature Detection**: Detect PQC support and fall back to classical if unavailable
-3. **Hybrid Approach**: Combine Web Crypto (classical) + WASM (PQC) for security
+As of June 2026, the Web Crypto API **does not natively support** post-quantum algorithms. Browser vendors are monitoring NIST PQC standardization progress but have not announced implementation timelines.
+
+### Browser Implementation Status
+
+| Browser | PQC Support | Status | Notes |
+|---------|-------------|--------|-------|
+| Chrome | None | Not implemented | No public timeline |
+| Firefox | None | Not implemented | No public timeline |
+| Safari | None | Not implemented | No public timeline |
+| Edge | None | Not implemented | Follows Chrome |
+
+### Web Crypto API Specification
+
+The W3C Web Cryptography Working Group has not yet added PQC algorithms to the specification. The current specification (Level 2) includes:
+- Classical algorithms: AES, RSA, ECDSA, ECDH, HMAC, HKDF, PBKDF2
+- No post-quantum algorithms: Kyber, Dilithium, etc.
+
+### Monitoring Strategy
+
+To track Web Crypto API PQC support:
+
+1. **W3C Working Group**: Monitor Web Cryptography Working Group meetings and specifications
+2. **Browser Vendor Roadmaps**: Track Chrome, Firefox, Safari, Edge platform status
+3. **NIST Standardization**: Monitor FIPS 203 (Kyber) and FIPS 204 (Dilithium) finalization
+4. **Industry Adoption**: Monitor cloud provider PQC support (AWS, Azure, GCP)
+
+### Current Implementation Approach
+
+Since Web Crypto API does not support PQC, the current implementation uses:
+
+1. **WebAssembly Backend**: libsodium.js for PQC algorithms (when available)
+2. **Hybrid Approach**: Classical-only fallback when PQC not available
+3. **Feature Detection**: `isPQCSupported()` checks for WASM backend availability
+4. **Graceful Degradation**: Automatically falls back to classical algorithms
+
+### Implementation Status
+
+**Completed**:
+- ✅ PQC module structure with interfaces (`pqc.ts`)
+- ✅ Hybrid encryption pattern with classical fallback (`hybridEncrypt`, `hybridDecrypt`)
+- ✅ PQC algorithm versioning integration (via `agility.ts`)
+- ✅ Comprehensive tests for PQC support detection and error handling
+- ✅ Export of PQC functions from main index
+
+**Current Limitations**:
+- ⚠️ libsodium.js does not currently support CRYSTALS-Kyber
+- ⚠️ PQC functions throw appropriate errors when PQC is not available
+- ⚠️ Hybrid encryption currently uses classical-only fallback
+- ⚠️ Full hybrid encryption (classical + PQC) pending libsodium.js Kyber support
+
+**Next Steps**:
+- Monitor libsodium.js for CRYSTALS-Kyber support
+- Evaluate alternative PQC WASM libraries (e.g., pqclean, oqs-provider)
+- Implement full hybrid encryption when PQC backend available
+- Update Web Crypto API monitoring process
 
 ### Performance Impact
 
