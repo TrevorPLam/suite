@@ -1299,11 +1299,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] UI-003: Set Up Storybook for Component Documentation
+### [x] UI-003: Set Up Storybook for Component Documentation
 
 **Priority**: P0
 **Bounded Context**: UI Package
-**Status**: Not Started
+**Status**: Complete
 
 **Related Files**:
 - `packages/ui/.storybook/main.ts` (create)
@@ -1355,53 +1355,73 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### UI-003-01: Install Storybook dependencies
+#### ✅ UI-003-01: Install Storybook dependencies
 **Assigned To**: AGENT
 **Target File**: `packages/ui/package.json`
 **Action**: Add Storybook dependencies: @storybook/react, @storybook/addon-essentials, @storybook/addon-interactions, @storybook/testing-library, @storybook/addon-themes. Add Storybook scripts to package.json.
 **Validate Command**: `pnpm --filter @suite/ui typecheck`
 
-#### UI-003-02: Create Storybook main configuration
+#### ✅ UI-003-02: Create Storybook main configuration
 **Assigned To**: AGENT
 **Target File**: `packages/ui/.storybook/main.ts` (create)
 **Action**: Create main.ts Storybook configuration. Configure stories path (./src/components/ui/**/*.stories.tsx), add essential addons (actions, docs, controls, interactions, themes), configure framework (@storybook/react-vite), and set up TypeScript support.
 **Validate Command**: `pnpm --filter @suite/ui storybook`
 
-#### UI-003-03: Create Storybook preview configuration
+#### ✅ UI-003-03: Create Storybook preview configuration
 **Assigned To**: AGENT
-**Target File**: `packages/ui/.storybook/preview.ts` (create)
-**Action**: Create preview.ts with global decorators. Add ThemeProvider decorator for light/dark mode testing. Add global styles import. Configure default parameters for docs and controls.
+**Target File**: `packages/ui/.storybook/preview.tsx` (create)
+**Action**: Create preview.tsx with global decorators. Add ThemeProvider decorator for light/dark mode testing. Add global styles import. Configure default parameters for docs and controls.
 **Validate Command**: `pnpm --filter @suite/ui storybook`
 
-#### UI-003-04: Create Button component story
+#### ✅ UI-003-04: Create Button component story
 **Assigned To**: AGENT
 **Target File**: `packages/ui/src/components/ui/button.stories.tsx` (create)
 **Action**: Create Button.stories.tsx with stories for all variants (primary, secondary, danger). Add MDX documentation with usage examples, accessibility notes, and design guidelines. Test default and disabled states.
 **Validate Command**: `pnpm --filter @suite/ui storybook`
 
-#### UI-003-05: Create Input component story
+#### ✅ UI-003-05: Create Input component story
 **Assigned To**: AGENT
 **Target File**: `packages/ui/src/components/ui/input.stories.tsx` (create)
 **Action**: Create Input.stories.tsx with stories for all variants (default, error, success). Add MDX documentation with form usage examples, validation patterns, and accessibility notes. Test placeholder and disabled states.
 **Validate Command**: `pnpm --filter @suite/ui storybook`
 
-#### UI-003-06: Create Dialog component story
+#### ✅ UI-003-06: Create Dialog component story
 **Assigned To**: AGENT
 **Target File**: `packages/ui/src/components/ui/dialog.stories.tsx` (create)
 **Action**: Create Dialog.stories.tsx with stories demonstrating compound component pattern (Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter). Add MDX documentation with modal usage patterns and accessibility notes.
 **Validate Command**: `pnpm --filter @suite/ui storybook`
 
-#### UI-003-07: Create stories for remaining components
+#### ✅ UI-003-07: Create stories for remaining components
 **Assigned To**: AGENT
 **Target File**: `packages/ui/src/components/ui/` (selective)
 **Action**: Create stories for Card, Badge, Select, Textarea, and Skeleton components. Each story should demonstrate all variants and include MDX documentation with usage examples and accessibility notes.
 **Validate Command**: `pnpm --filter @suite/ui storybook`
 
-#### UI-003-08: Test Storybook build
+#### ✅ UI-003-08: Test Storybook build
 **Assigned To**: AGENT
 **Target File**: `packages/ui/`
 **Action**: Run Storybook build command to verify all stories compile correctly. Check for missing dependencies, TypeScript errors, or configuration issues. Verify Storybook dev server starts successfully.
 **Validate Command**: `pnpm --filter @suite/ui build-storybook`
+
+**Implementation Notes**:
+- Installed Storybook 8.6.18 with essential addons (essentials, interactions, themes)
+- Created .storybook/main.ts with @storybook/react-vite framework configuration
+- Created .storybook/preview.tsx with ThemeProvider decorator for light/dark mode testing
+- Added global styles import and theme toolbar configuration
+- Created stories for all 8 components:
+  - Button (5 stories: Primary, Secondary, Danger, Disabled, AllVariants)
+  - Input (7 stories: Default, Error, Success, Email, Password, Disabled, AllVariants)
+  - Dialog (3 stories: Default, WithLongContent, ConfirmationDialog)
+  - Card (4 stories: Default, WithoutFooter, WithMultipleActions, Grid)
+  - Badge (6 stories: Default, Success, Error, Warning, Outline, AllVariants)
+  - Select (4 stories: Default, WithLabel, WithGroups, Disabled)
+  - Textarea (7 stories: Default, Error, Success, NoResize, HorizontalResize, Disabled, AllVariants)
+  - Skeleton (6 stories: Text, Rectangular, Circular, CustomSize, CardSkeleton, ListSkeleton)
+- All stories include argTypes for interactive controls
+- Storybook build successful (13.56s build time)
+- Typecheck passed successfully
+- Note: @storybook/testing-library is deprecated in favor of @storybook/test, but left as-is for compatibility
+- Note: TypeScript lint error for @storybook/react-vite is a false positive - package is installed and working
 
 ---
 
