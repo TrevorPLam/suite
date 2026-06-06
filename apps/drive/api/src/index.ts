@@ -242,6 +242,17 @@ app.use('/api/*', async (c, next) => {
   await next();
 });
 
+// Middleware to wire repositories with userId and tenantId from auth context
+app.use('/api/*', async (c, next) => {
+  const userId = c.get('userId') as string | undefined;
+  if (userId) {
+    // Use organizationId from auth context as tenantId, fallback to 'default' for single-tenant
+    const organizationId = (c.get('auth') as any)?.session?.organizationId || 'default';
+    await wireRepositories(userId, organizationId, c.env, c.get('r2Bucket') || undefined);
+  }
+  await next();
+});
+
 
 function readDriveError(error: unknown): { status: 400 | 404 | 500; body: Record<string, unknown> } {
   if (error instanceof DriveError) {

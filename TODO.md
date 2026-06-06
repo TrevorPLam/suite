@@ -412,7 +412,7 @@
 
 ## Task: T008 - Implement RLS Context Propagation
 
-- [ ] **T008** [PENDING] Implement RLS Context Propagation
+- [x] **T008** [DONE] Implement RLS Context Propagation
 
 **Files:** `packages/db/src/postgres-database.ts`, `packages/db/src/worker-database.ts`, `packages/db/src/repositories/*.ts`, `apps/*/api/src/index.ts`, `apps/*/api/src/bootstrap.ts`
 
@@ -432,35 +432,46 @@
 
 ### Subtasks
 
-- [ ] **T008.01 [AGENT]** Add `setTenantContext` to Database interface
+- [x] **T008.01 [AGENT]** Add `setTenantContext` to Database interface ✅
   - **File:** `packages/db/src/database.interface.ts`
   - **Action:** Add `setTenantContext(tenantId: string, userId: string): Promise<void>`.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T008.02 [AGENT]** Implement in PostgresDatabase
+- [x] **T008.02 [AGENT]** Implement in PostgresDatabase ✅
   - **File:** `packages/db/src/postgres-database.ts`
   - **Action:** Use `` await this.pool`SET LOCAL app.current_tenant_id = ${tenantId}` `` and same for `userId`.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T008.03 [AGENT]** Implement in WorkerDatabase
+- [x] **T008.03 [AGENT]** Implement in WorkerDatabase ✅
   - **File:** `packages/db/src/worker-database.ts`
   - **Action:** Same as T008.02.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T008.04 [AGENT]** Update repository methods
+- [x] **T008.04 [AGENT]** Update repository methods ✅
   - **Files:** `packages/db/src/repositories/calendar.ts`, `tasks.ts`, `drive.ts`
   - **Action:** Call `await this.db.setTenantContext(this.tenantId, this.userId)` before each Drizzle query.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T008.05 [AGENT]** Update API middleware
+- [x] **T008.05 [AGENT]** Update API middleware ✅
   - **Files:** `apps/*/api/src/index.ts`
   - **Action:** Propagate `organizationId` from auth as tenant context. Pass to `wireRepositories()`.
   - **Validation:** `cd apps/calendar/api && npx tsc -p tsconfig.json --noEmit`.
 
-- [ ] **T008.06 [AGENT]** Update bootstrap signatures
+- [x] **T008.06 [AGENT]** Update bootstrap signatures ✅
   - **Files:** `apps/*/api/src/bootstrap.ts`
   - **Action:** Change `wireRepositories(userId)` to `wireRepositories(userId, tenantId)`. Use actual `organizationId`.
   - **Validation:** Typecheck all three bootstrap files.
+
+### Implementation Notes
+- Database interface already had `setTenantContext` method defined
+- PostgresDatabase and WorkerDatabase already implemented `setTenantContext` using `SET LOCAL`
+- All repository classes (calendar, tasks, drive) already call `setTenantContext` before queries via private `setContext()` method
+- Calendar and Tasks APIs already propagated tenant context from auth middleware
+- Drive API was missing tenant context propagation - added middleware to wire repositories with organizationId from auth context
+- All bootstrap files already accepted tenantId parameter
+- All typechecks pass
+- All tests pass (286 crypto tests, 19 db tests, 9 auth tests, 47 calendar tests, 85 drive tests, 91 tasks tests)
+- Lint passes with pre-existing warnings (unrelated to T008 changes)
 
 ---
 
