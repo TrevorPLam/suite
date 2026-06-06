@@ -32,22 +32,25 @@ The suite currently runs with in-memory repositories for local development. All 
 - API endpoints with validation
 - Web app with folder tree and file management
 
-### Shared Packages (Unwired)
+### Shared Packages (Integrated)
 
-Infrastructure packages exist but are not yet integrated into the runtime. These will be wired in future phases (see TODO.md).
+Infrastructure packages are integrated into the runtime:
 
-- **@suite/db** - Drizzle ORM with PostgreSQL schema definitions (not yet wired to APIs)
-- **@suite/auth** - Better Auth integration (not yet mounted on APIs)
-- **@suite/crypto** - E2EE crypto utilities with AES-256-GCM (not yet applied to user content)
-- **@suite/env-config** - Environment validation with Zod schemas (not yet called at API startup)
-- **@suite/ui** - Shared UI component library (shadcn/ui patterns)
+- **@suite/db** - Drizzle ORM with PostgreSQL schema definitions (PostgresUsageRepository used in APIs)
+- **@suite/auth** - Better Auth integration (mounted on all APIs via mountAuth)
+- **@suite/crypto** - E2EE crypto utilities with AES-256-GCM and blind-index search support
+- **@suite/env-config** - Environment validation with Zod schemas (called at API startup)
+- **@suite/ui** - Shared UI component library (Button component used in web apps)
 
 ### Not Started
 
 - PostgreSQL persistence (domains use in-memory repos by default)
-- Authentication on API routes
 - End-to-end encryption of user content
 - Multi-tenant data isolation
+
+### Authentication Status
+
+Better Auth is mounted on all APIs (calendar, tasks, drive) via `@suite/auth`'s `mountAuth` function. Web app auth integration (login UI, session management) is pending implementation.
 
 ## Architecture
 
@@ -70,7 +73,6 @@ suite/
 │   ├── domain-tasks/      # Tasks bounded context
 │   └── domain-drive/      # Drive bounded context
 ├── docs/                  # Documentation
-└── TODO.md                # Implementation roadmap
 ```
 
 ### Key Principles
@@ -164,15 +166,13 @@ pnpm test:coverage
 - [Schema Reference](.planning/03-data-24-database-schema-reference.md) - Database schema (mandatory for domain work)
 - [Testing Strategy](.planning/02-monorepo-25-testing-strategy.md) - Testing guidelines
 - [Developer Onboarding](.planning/08-execution-36-developer-onboarding.md) - Setup guide
-- [Implementation Roadmap](TODO.md) - Current task list
 
 ## Contributing
 
-1. Check [TODO.md](TODO.md) for the current task list and implementation roadmap
-2. Follow the spec-first development workflow
-3. Adhere to AGENTS.md rules and patterns
-4. Ensure all tests pass before committing
-5. Use conventional commit messages
+1. Follow the spec-first development workflow
+2. Adhere to AGENTS.md rules and patterns
+3. Ensure all tests pass before committing
+4. Use conventional commit messages
 
 ## License
 

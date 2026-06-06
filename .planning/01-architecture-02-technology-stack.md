@@ -1,296 +1,100 @@
----
-
 ## 3. Technology Stack — Final Choices
 
-Each technology in the Sovereign Suite stack is selected for a specific reason: **zero‑knowledge, solo‑founder viability, AI‑friendliness, and operational simplicity**. This section documents the final, frozen decisions for v1 execution.
+### 3.1 Stack Overview
 
----
+| Layer | Technology | Version | Why |
+|-------|-----------|---------|-----|
+| Monorepo | Nx | 22.7+ | Module boundaries, affected commands, AI skills, self‑healing CI |
+| Package manager | pnpm | 11+ | Catalogs, `minimumReleaseAge` (24h), disk efficiency |
+| Backend | Hono | 4.12.21+ | Workers + Node.js parity, 3–5× faster than Express |
+| Database | PostgreSQL | 17 | Self‑hosted, VACUUM improvements, incremental backups |
+| ORM | Drizzle ORM | 0.45.x | Type‑safe SQL, per‑domain migrations, JIT mappers |
+| Auth | Better Auth | 1.6.11+ | Self‑hosted, $0 at 100k MAU, Hono native, passkeys |
+| Encryption | WebCrypto API | Built‑in | No deps, hardware‑accelerated |
+| Real‑time | Durable Objects | Workers | Hibernation API, embedded SQLite |
+| API clients | Orval | 7.19.0+ | OpenAPI → React Query + Zod + MCP |
+| UI | shadcn/ui | v4 | Own the source, Tailwind v4, AI‑friendly |
+| Mobile | Capacitor | 8.x | Shared codebase, native APIs |
+| Frontend host | Cloudflare Pages | Free | Unlimited bandwidth, 500 builds/mo |
+| File storage | Cloudflare R2 | Free | Zero egress, 10 GB, S3‑compatible |
+| Secrets | Doppler | Free (5 users) | Per‑environment, GitHub Actions native |
+| CI/CD | GitHub Actions | Free (2k min/mo) | Affected runs, OIDC |
+| Versioning | Changesets | Latest | Independent package versioning |
 
-### 3.1 Stack Overview Table
+### 3.2 Nx 22.7+
 
-| Layer | Technology | Version | Primary Justification |
-|-------|-----------|---------|----------------------|
-| **Monorepo orchestration** | Nx | 22.7+ | Affected commands, module boundaries, AI‑native skills |
-| **Package manager** | pnpm | 11+ | Catalogs, disk efficiency, supply‑chain security |
-| **Backend framework** | Hono | 4.12.21+ | Workers + Node.js parity, ultra‑fast, TypeScript‑first |
-| **Database** | PostgreSQL | 17 | Battle‑tested, self‑hosted, full feature set |
-| **ORM & migrations** | Drizzle ORM | 0.45.x | Type‑safe, SQL‑like, per‑domain migration support |
-| **Authentication** | Better Auth | 1.6.11+ | Self‑hosted, zero per‑user cost, Hono + Workers native |
-| **Encryption** | WebCrypto API | Built‑in | No external deps, hardware‑accelerated, zero‑trust |
-| **Real‑time** | Cloudflare Durable Objects | Workers platform | WebSocket hibernation, embedded SQLite, per‑room state |
-| **API client generation** | Orval | 7.19.0+ | OpenAPI → React Query + Zod, MCP server generation |
-| **UI components** | shadcn/ui | v4 (Base UI) | You own the source, Tailwind v4, accessible |
-| **Mobile** | Capacitor | 8.x | Wraps web app, shared codebase, native API access |
-| **Frontend host** | Cloudflare Pages | Free tier | Unlimited bandwidth, 500 builds/month, edge global |
-| **File storage** | Cloudflare R2 | Free tier | Zero egress fees, 10 GB free, S3‑compatible |
-| **Secrets management** | Doppler | Free tier (5 users) | Centralised, per‑environment, GitHub Actions native |
-| **CI/CD** | GitHub Actions | Free tier (2,000 min/mo) | Affected‑only runs, OIDC, native monorepo support |
-| **Versioning** | Changesets | Latest | Independent package versioning, automated changelogs |
+Module boundary enforcement via `@nx/enforce-module-boundaries` with `sourceTag`/`depConstraints`. Affected commands run only changed projects. Nx Cloud free tier provides remote caching and self‑healing CI.
 
----
+### 3.3 pnpm 11+
 
-### 3.2 Monorepo Orchestration: Nx 22.7+
+Catalogs centralise versions in `pnpm-workspace.yaml`. `minimumReleaseAge: 1440` blocks packages <24h old. Pure ESM; requires Node.js 22.
 
-Nx is the central nervous system of your monorepo. It understands your project graph, runs only what changed, and enforces architectural boundaries.
+### 3.4 Hono ≥4.12.21
 
-**Why Nx over Turborepo or raw pnpm workspaces:**
-- **AI‑native** — Nx 2026 roadmap makes Nx “infrastructure for autonomous AI agents” with built‑in agent skills that teach AI coding assistants how to navigate and generate code in your monorepo. The `nx import --agentic` command lets you migrate existing apps with AI assistance.
-- **Module boundary enforcement** — Native `@nx/enforce-module-boundaries` lint rule with `sourceTag` and `depConstraints` prevents `packages/domain-*` from importing each other — essential for bounded context integrity.
-- **Affected commands** — `nx affected --target=build` runs only projects changed in a PR, dramatically reducing CI time as you scale to 53 apps.
-- **Task sandboxing** — Nx 22.7 introduces task sandboxing with real I/O tracing, a 7× reduction in daemon memory usage, and worktree‑aware caching.
-- **Self‑Healing CI** — Nx Cloud (free tier) automatically fixes broken PRs; over 50% of generated fixes are useful, saving more time than caching and distributed execution combined.
+Same code runs on Workers and Node.js. CVE‑2026‑24473 (Serve Static Middleware) and CVE‑2026‑47674 (IPv6 bypass in ip‑restriction) are both fixed in 4.12.21. Pin this minimum.
 
-**Version to install:** Nx 22.7 or later (stable releases ≥22.7). The free Nx Cloud tier provides remote caching and self-healing CI; usage is measured in credits, not fixed hours — consult the current Nx Cloud pricing page at time of setup.
+### 3.5 PostgreSQL 17 (Self‑Hosted)
 
----
+Docker on Contabo VPS. WAL streaming to R2 for backups. Logical replication preserves slots across upgrades.
 
-### 3.3 Package Manager: pnpm 11+ (Catalogs + Security)
+### 3.6 Drizzle ORM ≥0.45.x
 
-pnpm is the package manager for TypeScript monorepos in 2026. It is fast, disk‑efficient, and security‑hardened. pnpm 11 requires Node 22 and is a pure-ESM release.
+SQL‑like queries with TypeScript inference. Per‑domain configs with `schemaFilter`/`tablesFilter`. `pgSchema` for domain isolation. Use `drizzle-kit` for migrations.
 
-**Why pnpm over npm or Yarn:**
-- **Catalogs** — Centralised version management in `pnpm-workspace.yaml`. Declare once, use everywhere via `catalog:` protocol. Syncpack 15.0 now has full catalog support for auto‑updating and linting.
-- **`minimumReleaseAge`** — Blocks installation of packages published less than 24 hours ago, mitigating supply‑chain attacks (e.g., the 2025 axios incident). This setting applies globally and is enforced by pnpm. In pnpm 11, this setting moves from `.npmrc` to `pnpm-workspace.yaml`.
-- **Content‑addressable storage** — A single version of a package is stored once globally, then hard‑linked across projects, saving disk space.
-- **Frozen lockfile** — `pnpm install --frozen-lockfile` prevents accidental upgrades in CI.
-- **Pure ESM** — pnpm 11 is distributed as pure ESM and requires Node.js 22 or later. All `.npmrc` settings must be migrated to `pnpm-workspace.yaml` fields; the standalone exe requires glibc 2.27.
+### 3.7 Better Auth ≥1.6.11
 
-**Required configuration:**
+Embedded in each Hono Worker via `@suite/auth`. Plugins: email/password, OAuth, orgs, SSO (SP only), 2FA, passkeys. SAML is SP‑only; suite cannot act as SAML IdP (use Keycloak bridge if needed).
 
-```yaml
-# pnpm-workspace.yaml
-packages:
-  - 'apps/*'
-  - 'packages/*'
-  - 'tooling/*'
+> Full config example: [02-monorepo-04-shared-packages.md](02-monorepo-04-shared-packages.md)
 
-catalog:
-  react: ^19.0.0
-  typescript: ~5.8.0
-  vite: ^7.0.0
-  tailwindcss: ^4.0.0
-  hono: ^4.12.21
-  drizzle-orm: ^0.45.2
-  better-auth: ^1.6.11
+### 3.8 Durable Objects
 
-catalogMode: strict
-minimumReleaseAge: 1440  # 24 hours
-```
+Hibernation API: DOs sleep when idle while keeping WebSocket connections open; billable duration does not accrue. Embedded SQLite: 1 GB free, 10 GB paid. Implement `SQLITE_FULL` handler to archive old records to R2. Use Hibernation WebSocket API (`ctx.acceptWebSocket(server)`), not the Web Standard API.
 
----
+### 3.9 Orval ≥7.19.0
 
-### 3.4 Backend Framework: Hono (≥4.12.21)
+OpenAPI → React Query hooks + Zod + MCP servers. CVE‑2026‑22785 and CVE‑2026‑23947 (code injection via OpenAPI fields) fixed in 7.19.0. Hold on 8.x — React Query v5 type incompatibility unresolved.
 
-Hono is the fastest web framework for Cloudflare Workers and Node.js. It runs identically on both platforms, giving you a clear path to leave Cloudflare if needed.
+### 3.10 shadcn/ui v4 + Tailwind CSS 4
 
-**Why Hono over Express, Fastify, or raw Workers:**
-- **Zero‑cost abstraction** — Hono adds negligible overhead; it is 3–5× faster than Express in Worker environments.
-- **Identical API on Workers and Node** — The same Hono app can run as a Worker or as a Node.js server on your VPS. No code changes required.
-- **Native Cloudflare integration** — The `create-cloudflare` CLI scaffolds full‑stack Hono + React + Vite projects with the Cloudflare Vite plugin for hot‑module replacement and local Worker emulation.
-- **Better Auth integration** — Better Auth provides a `auth.handler` method that accepts a `Request` object, which Hono’s `c.req.raw` supplies. Mounting is one line of code.
+Copy‑paste components into `packages/ui-kit`. No dependency lock‑in. Tailwind v4 default as of shadcn@2.3; mixed v3/v4 setups need separate `globals.css` per app. Radix UI or Base UI primitives selectable at init.
 
-**Critical security note:** Versions of Hono prior to 4.11.7 contain a vulnerability (CVE‑2026‑24473) in the Serve Static Middleware for Cloudflare Workers that could allow attackers to read arbitrary keys from the Workers environment. **You must use ≥4.11.7.**
+### 3.11 Capacitor 8.x
 
-**🔴 CVE-2026-47674 — IPv6 bypass in the ip-restriction middleware.** All versions below 4.12.21 are vulnerable. Attackers can bypass IP allowlists by sending requests with IPv6-mapped IPv4 addresses. Pin to 4.12.21 minimum.
+Shared Vite + React codebase for iOS/Android. Capacitor 6 EOL July 2025; 7 enters maintenance June 2026. Target 8.x for new development. Workflow: `pnpm build` → `npx cap sync` → App Store / Play Console.
 
-**Version to install:** Hono 4.12.21 (minimum safe pin).
+### 3.12 Cloudflare Free Tier Limits
 
----
-
-### 3.5 Database: PostgreSQL 17 (Self‑Hosted on VPS)
-
-PostgreSQL is the only database that gives you full control over encryption, replication, and scaling without vendor lock‑in.
-
-**Why PostgreSQL 17:**
-- **Performance** — New memory management system for VACUUM reduces memory consumption and improves vacuuming performance. Sequential reads now use streaming I/O, and write throughput under high concurrency is improved.
-- **Logical replication** — `pg_createsubscriber` creates logical replicas from physical standbys, and `pg_upgrade` preserves replication slots, allowing major‑version upgrades without full resync.
-- **Incremental backup** — `pg_basebackup` now supports incremental backup, reducing backup time for large databases.
-- **Self‑hosted sovereignty** — Your data never touches a third‑party database provider. You control encryption at rest, backups, and access logs.
-
-**Version to install:** PostgreSQL 17.x (latest minor release as of deployment).
-
-**Operating environment:** Docker container on your Contabo VPS, with persistent volume for data. WAL streaming to R2 for backups (see Section 15).
-
----
-
-### 3.6 ORM & Migrations: Drizzle ORM (≥0.45.x)
-
-Drizzle ORM is the TypeScript‑native ORM that gives you type‑safe SQL, full control over migrations, and zero runtime overhead.
-
-**Why Drizzle over Prisma:**
-- **Type‑safe SQL** — You write SQL‑like queries with full TypeScript inference, not a proprietary DSL.
-- **Zero overhead** — No query engine, no binary dependencies, no runtime schema parsing.
-- **Per‑domain migrations** — Multiple Drizzle config files (`drizzle.calendar.config.ts`) with `schemaFilter` and `tablesFilter` allow each bounded context to own its migrations (see Section 8).
-- **JIT mappers** — Drizzle 0.45.x includes opt‑in JIT‑compiled row mappers, reducing latency by 25–30% and increasing throughput by +800 RPS in benchmarks.
-- **pgSchema support** — Native support for PostgreSQL schemas (`pgSchema('calendar')`), essential for domain isolation.
-
-**Version to install:** Drizzle ORM 0.45.x (latest stable). Use `drizzle-kit` for migration generation.
-
----
-
-### 3.7 Authentication: Better Auth (≥1.6.11)
-
-Better Auth is the only authentication library that lets you self‑host user data while offering enterprise features (OAuth, SSO, organizations, 2FA, passkeys) at zero per‑user cost.
-
-**Why Better Auth over Clerk or Supabase Auth:**
-- **Self‑hosted, zero per‑user cost** — At 100,000 MAU, Clerk costs ~$2,025/month. Better Auth costs your PostgreSQL instance (already paid for). For a privacy‑first product, this difference is existential.
-- **Embedded, not a service** — Better Auth runs inside your Hono Worker, not as a separate service. Each app imports the same `@suite/auth` package and mounts routes via `auth.handler`. This is the “federated, identically configured auth library” pattern — not a central IdP to manage.
-- **Hono + Workers native** — Better Auth integrates seamlessly with Hono on Cloudflare Workers. The official documentation provides a complete example with Drizzle ORM and Neon Postgres.
-- **Plugins for everything** — Email/password, OAuth (Google, GitHub, Microsoft), organizations, SSO (SAML/OIDC), 2FA, passkeys, and admin dashboard.
-- **Active development** — Version 1.6.11 released in 2026 with security hardening, audit logs, and self‑service SSO UI.
-- **Passkey support** — Passkey support is confirmed production-ready in 1.6.x. The @better-auth/passkey plugin requires no additional configuration beyond enabling it in the plugins array.
-
-**Version to install:** Better Auth 1.6.11 or later. Pin exact version to avoid regressions (trustedOrigins handling regressed across 1.3.29–1.4.9; 1.6.x is stable).
-
-**SAML limitation:** The SAML/OIDC SSO plugin provides Service Provider (SP) functionality only — the suite acts as an SP delegating to an external IdP (Okta, Azure AD, Google Workspace). The suite cannot itself act as a SAML IdP. Enterprise customers who need the suite to be the IdP require a bridging layer (e.g., Keycloak).
-
-**Configuration basics:**
-
-```typescript
-// packages/auth/src/index.ts
-import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { createDbClient } from '@suite/db';
-
-export const auth = betterAuth({
-  database: drizzleAdapter(createDbClient(process.env.DATABASE_URL!), { provider: 'pg' }),
-  emailAndPassword: { enabled: true },
-  socialProviders: { google: { clientId, clientSecret } }, // for external users
-  trustedOrigins: [(origin) => origin.endsWith('.yourdomain.com')], // wildcard!
-});
-```
-
----
-
-### 3.8 Real‑Time: Cloudflare Durable Objects + Hibernation API
-
-Durable Objects (DOs) are Cloudflare’s stateful serverless primitive. They run a single thread per object, have embedded SQLite storage, and support WebSocket hibernation — making them perfect for chat rooms, collaborative documents, and live boards.
-
-**Why DOs over PartyKit, Pusher, or self‑hosted Socket.io:**
-- **Hibernation API** — DOs can “sleep” when idle while keeping WebSocket connections open. Billable duration (GB‑s) does not accrue during hibernation. When a message arrives, the DO wakes up automatically.
-- **Embedded SQLite** — Each DO has its own strongly consistent SQLite database — up to 1 GB on the free plan and up to 10 GB on the paid Workers plan. Apps relying on DO SQLite storage must implement a SQLITE_FULL error handler that triggers archival of older records to R2 before the limit is reached.
-- **Thousands of connections per DO** — A single DO can coordinate thousands of concurrent WebSocket clients.
-- **No separate Redis or Kafka** — The DO is the room. No external message broker required.
-
-**Critical implementation detail:** You must use the **Hibernation WebSocket API**, not the Web Standard API. Call `ctx.acceptWebSocket(server)` (not `ws.accept()`) and implement `webSocketMessage`, `webSocketClose`, etc., as class methods. The runtime automatically handles ping/pong frames.
-
-**Version to install:** Durable Objects are a Cloudflare Workers platform feature — no versioning. Use Wrangler to configure bindings and migrations.
-
----
-
-### 3.9 API Client Generation: Orval (≥7.19.0)
-
-Orval transforms your OpenAPI v3 specs into type‑safe TypeScript API clients, React Query hooks, Zod schemas, and even MCP servers.
-
-**Why Orval over manual clients or tRPC:**
-- **Contract‑first** — Your OpenAPI spec is the single source of truth for API contracts. Drizzle schemas → OpenAPI → Orval ensures server and client stay synchronised.
-- **React Query hooks** — Generated `useGetEvents()`, `useCreateEvent()` hooks with built‑in caching, invalidation, and optimistic updates.
-- **Zod schemas** — Generated runtime validators that match the OpenAPI spec exactly.
-- **MCP server generation** — Orval can generate MCP servers directly from OpenAPI specs (new in 7.18.0), making your APIs AI‑discoverable.
-
-**Critical security note:** Versions of Orval prior to 7.18.0 have a vulnerability (CVE‑2026‑22785) where the MCP server generation logic uses unsanitised string manipulation from OpenAPI `summary` fields, allowing code injection. **You must use ≥7.18.0.**
-
-**🔴 CVE-2026-23947 — Additional injection vector.** CVE-2026-23947 is patched in 7.19.0 but not 7.18.0. This vulnerability allows arbitrary code execution via unsanitized x-enumDescriptions in enum generation.
-
-**⚠️ Hold on Orval 8.x** — GitHub issue #2749 (React Query v5 type incompatibility in generated hooks) is unresolved. The 8.x migration is not safe for this stack yet.
-
-**Version to install:** Orval 7.19.0 (minimum safe pin).
-
----
-
-### 3.10 UI Components: shadcn/ui v4 + Tailwind CSS 4
-
-shadcn/ui is not a component library — it’s a copy‑paste platform. You own every line of UI code.
-
-**Why shadcn/ui over Material‑UI, Chakra, or Radix alone:**
-- **You own the source** — Components are copied into your `packages/ui-kit`. No dependency version lock‑in, no forced upgrades.
-- **Tailwind CSS 4 native** — shadcn/ui v4 is built on Tailwind CSS 4, with support for CSS variable theming, OKLCH colour spaces, and `@theme` inline patterns. As of shadcn@2.3, Tailwind v4 is the default when running the init command. If any app in the monorepo still targets Tailwind v3, pin explicitly with `npx shadcn@2.3 init --tailwind-version 3` for that app only. Mixed-version setups require separate globals.css files per app.
-- **Radix UI + Base UI dual support** — As of February 2026, shadcn/ui supports both Radix UI and Base UI as underlying primitives. You choose at `init`.
-- **AI‑friendly** — Component code is straightforward, modular, and easy for AI agents to modify and extend.
-
-**Version to install:** shadcn/ui v4 (latest). Tailwind CSS 4.x.
-
-**Monorepo integration pattern:** Use `packages/ui-kit` to hold all components and Tailwind config. Each app imports the shared styles:
-
-```css
-/* apps/calendar/web/src/index.css */
-@import "tailwindcss";
-@import "@suite/ui-kit/styles.css";
-```
-
----
-
-### 3.11 Mobile: Capacitor 8.x
-
-Capacitor wraps your web app into native iOS and Android applications with full access to device APIs (biometrics, secure storage, push notifications, camera, etc.).
-
-**Why Capacitor over React Native or pure PWAs:**
-- **Shared codebase** — The same Vite + React code that runs in the browser runs in the mobile app. No second codebase to maintain.
-- **Native API access** — Plugins for biometric authentication, encrypted preferences (`@capacitor/preferences`), push notifications, and file system.
-- **Capacitor 8** — Capacitor 6 reached end-of-life July 2025. Capacitor 7 enters maintenance-only mode June 8, 2026 (no new features). The correct target for new development is Capacitor 8, which is the current active release with ongoing feature development.
-
-**Version to install:** Capacitor 8.x. Install `@capacitor/core`, `@capacitor/ios`, and `@capacitor/android`.
-
-**Workflow:** After building the web app (`pnpm build`), run `npx cap sync` to copy the build into `ios/` and `android/` directories. Deploy via App Store Connect and Google Play Console.
-
----
-
-### 3.12 Infrastructure: Cloudflare Services (Free Tier)
-
-**Cloudflare Pages — Frontend hosting**
-- Free: unlimited bandwidth, 500 builds/month, 20,000 files per site.
-- Pages Functions requests count toward Worker free tier (100k/day total).
-
-**Cloudflare Workers — API hosting**
-- Free: 100k requests/day, 10 ms CPU per invocation.
-- Paid (Standard): $5/month + $0.30 per million additional requests.
-
-**Cloudflare R2 — File storage**
-- Free: 10 GB storage, 1M Class A operations (writes/list), 10M Class B operations (reads) per month.
-- Zero egress fees — the killer feature. No charge for bandwidth, regardless of volume.
-
-**Cloudflare Durable Objects — Real‑time**
-- Free tier: 1M requests/month, 400k GB‑seconds of duration.
-- Hibernation dramatically reduces duration costs — idle WebSockets cost almost nothing.
-
-**Cloudflare Hyperdrive — Database acceleration**
-- Free tier: up to 10 Hyperdrive configurations (databases). Each configuration supports approximately 20 concurrent connections to the upstream PostgreSQL instance — this ceiling is the primary scaling constraint, not the number of databases.
-
----
+| Service | Free Tier |
+|---------|-----------|
+| Pages | Unlimited bandwidth, 500 builds/mo |
+| Workers | 100k requests/day, 10 ms CPU |
+| R2 | 10 GB, 1M Class A, 10M Class B ops, **zero egress** |
+| Durable Objects | 1M requests/mo, 400k GB‑s |
+| Hyperdrive | 10 configs (~20 conn each) |
 
 ### 3.13 CI/CD & Secrets
 
-**GitHub Actions — CI/CD**
-- Free tier (private repos): 2,000 minutes/month. Public repos: unlimited.
-- Use `paths-filter` and Nx `affected` to run only changed apps, staying well within limits.
-- Self‑hosted runners on your VPS are free (no minute billing).
+- **GitHub Actions:** 2,000 min/mo private; unlimited public. Use `paths-filter` + Nx `affected`. Self‑hosted runners on VPS are free.
+- **Doppler:** 5 users, 10 projects, 4 environments. Inject via `doppler run --` in CI.
+- **Changesets:** Independent versioning. `pnpm changeset` → auto PR for version bumps + changelog.
 
-**Doppler — Secrets management**
-- Free tier: 5 users, 10 projects, 4 environments, 3 days of activity logs.
-- Inject secrets into GitHub Actions via `doppler run --` prefix. No secrets in your repository.
+### 3.14 Rationale Summary
 
-**Changesets — Versioning and changelogs**
-- Independent versioning for monorepo packages (not fixed‑version).
-- Developers run `pnpm changeset` to describe changes, then automated PR handles version bumps and changelog generation.
-
----
-
-### 3.14 Rationale Summary Table
-
-| Decision | Why This Wins |
-|----------|---------------|
-| Nx over Turborepo | Module boundary enforcement, AI‑native skills, affected commands, self‑healing CI |
-| pnpm 11 over npm | Catalogs, `minimumReleaseAge` security, disk efficiency, pure ESM |
-| Hono 4.12.21 over Express | 3–5× faster, runs on Workers + Node identically, better‑auth integration, CVE‑fixed |
-| PostgreSQL 17 over managed DB | Full control, zero‑knowledge sovereignty, incremental backups |
-| Drizzle 0.45.x over Prisma | Type‑safe SQL, per‑domain migrations, JIT mappers, no query engine |
-| Better Auth 1.6.11 over Clerk | $0 at 100k MAU (vs ~$2k), self‑hosted, embedded in Workers, passkey‑ready |
-| Durable Objects over PartyKit | Hibernation API, embedded SQLite (1GB free/10GB paid), no external dependencies |
-| shadcn/ui over component libraries | You own the source, Tailwind v4 native, AI‑friendly |
-| Cloudflare Pages over Vercel | Unlimited bandwidth free tier, 500 builds/month |
-| Cloudflare R2 over S3 | Zero egress fees, free tier generous |
-| Doppler over .env files | Centralised, audited, injection into CI |
-| Changesets over manual versioning | Independent package versioning, automated changelogs |
+| Decision | Why |
+|----------|-----|
+| Nx over Turborepo | Boundaries, AI skills, affected, self‑healing CI |
+| pnpm 11 over npm | Catalogs, `minimumReleaseAge`, pure ESM |
+| Hono 4.12.21 over Express | 3–5× faster, Workers + Node parity, CVE‑fixed |
+| PostgreSQL 17 over managed | Sovereignty, incremental backups |
+| Drizzle 0.45.x over Prisma | Type‑safe SQL, per‑domain migrations, no query engine |
+| Better Auth over Clerk | $0 at 100k MAU, self‑hosted, passkeys |
+| DOs over PartyKit | Hibernation, embedded SQLite, no external deps |
+| shadcn/ui over libraries | Own source, Tailwind v4, AI‑friendly |
+| Pages over Vercel | Unlimited bandwidth free |
+| R2 over S3 | Zero egress |
+| Doppler over .env | Centralised, audited, CI injection |
+| Changesets over manual | Independent versioning, auto changelogs |
 
 ---
 

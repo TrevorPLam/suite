@@ -239,11 +239,17 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P1-007: Update README to Reflect Current State
+### [x] P1-007: Update README to Reflect Current State
 
-**Status**: Pending  
+**Status**: Complete  
 **Priority**: P1  
 **Bounded Context**: Documentation
+
+**Implementation Notes**:
+- Updated "Shared Packages (Unwired)" to "Shared Packages (Integrated)" with accurate descriptions
+- Removed TODO.md references from repository structure, documentation section, and contributing section
+- Port defaults already documented correctly (Calendar 3001, Tasks 3002, Drive 3003)
+- Added "Authentication Status" section clarifying that Better Auth is mounted on APIs but web auth integration is pending
 
 **Related Files**:
 - `README.md`
@@ -282,22 +288,22 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 **Subtasks**:
 
-#### P1-007-01: Update shared packages section
+#### P1-007-01: Update shared packages section ✅
 **Target File**: `README.md`
 **Action**: Change "Shared Packages (Unwired)" to "Shared Packages (Integrated)"; update descriptions to reflect actual integration state
 **Validate Command**: `grep -A 10 "Shared Packages" README.md`
 
-#### P1-007-02: Remove TODO.md reference
+#### P1-007-02: Remove TODO.md reference ✅
 **Target File**: `README.md`
 **Action**: Remove line referencing TODO.md in architecture section and contributing section
 **Validate Command**: `grep -i "todo" README.md`
 
-#### P1-007-03: Update port defaults documentation
+#### P1-007-03: Update port defaults documentation ✅
 **Target File**: `README.md`
 **Action**: Document correct port defaults: Calendar 3001, Tasks 3002, Drive 3003
 **Validate Command**: `grep -A 5 "proxy" README.md`
 
-#### P1-007-04: Add auth integration note
+#### P1-007-04: Add auth integration note ✅
 **Target File**: `README.md`
 **Action**: Add note that Better Auth is mounted on APIs but web auth integration is pending
 **Validate Command**: `grep -i "auth" README.md`
@@ -2468,3 +2474,54 @@ This occurs because `drizzle-orm` or another dependency is pulling the `postgres
 **Target File**: `apps/calendar/web/vite.config.ts`, `apps/tasks/web/vite.config.ts`, `apps/drive/web/vite.config.ts`
 **Action**: Configure Vite to exclude `postgres` from bundling or alias it to an empty module
 **Validate Command**: `pnpm --filter @suite/calendar-web build`
+
+---
+
+### [ ] INF-002: Fix API Test Type Errors
+
+**Status**: Pending  
+**Priority**: P1  
+**Bounded Context**: Testing
+
+**Related Files**:
+- `apps/drive/api/src/index.test.ts`
+- `apps/tasks/api/src/index.test.ts`
+
+**Definition of Done**:
+- `pnpm --filter @suite/drive-api typecheck` passes
+- `pnpm --filter @suite/tasks-api typecheck` passes
+- `pnpm -r run typecheck` passes
+
+**Issue Description**:
+API test files have TypeScript errors where `json` and `createJson` are typed as `unknown`. This prevents typecheck from passing for drive/api and tasks/api packages.
+
+**Out of Scope**:
+- Modifying production code (only test files)
+- Changing test logic (only type fixes)
+
+**Rules to Follow**:
+- Fix type errors with proper type assertions or type guards
+- Maintain test behavior
+
+**Anti-Patterns**:
+- Using `@ts-ignore` or `@ts-expect-error` without justification
+- Suppressing type errors instead of fixing them
+
+**Depends On**:
+- None
+
+**Blocks**:
+- `pnpm -r run typecheck` workflow validation
+- Any PR requiring full typecheck
+
+**Subtasks**:
+
+#### INF-002-01: Fix drive/api test type errors
+**Target File**: `apps/drive/api/src/index.test.ts`
+**Action**: Add proper type assertions for `json` and `createJson` variables to resolve `unknown` type errors
+**Validate Command**: `pnpm --filter @suite/drive-api typecheck`
+
+#### INF-002-02: Fix tasks/api test type errors
+**Target File**: `apps/tasks/api/src/index.test.ts`
+**Action**: Add proper type assertions for `json` and `createJson` variables to resolve `unknown` type errors
+**Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
