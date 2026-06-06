@@ -1,15 +1,15 @@
 ---
-description: Executes the first open task from TASK.md with research, best practices, QA, and commit
+description: Executes the first open task from TODO.md with research, best practices, QA, and commit
 ---
 
 # Execute Next Task Workflow
 
-This workflow systematically executes the first incomplete task from TASK.md with full research, best practices application, quality assurance, and version control.
+This workflow systematically executes the first incomplete task from TODO.md with full research, best practices application, quality assurance, and version control.
 
 ## Steps
 
-1. **Read TASK.md**
-   - Read the `TASK.md` files at the repository root
+1. **Read TODO.md**
+   - Read the `TODO.md` files at the repository root
    - Identify the first task with status `[ ]` (incomplete)
    - Extract the task ID, description, related file paths, and subtasks
 
@@ -29,7 +29,7 @@ This workflow systematically executes the first incomplete task from TASK.md wit
    - Assess whether the task is still relevant given current codebase state
    - Check if the task description accurately reflects what needs to be done
    - Determine if different actions should be taken instead (e.g., task already completed, approach needs adjustment)
-   - If task needs modification, update TASK.md before proceeding
+   - If task needs modification, update TODO.md before proceeding
 
 5. **Execute the Task**
    - Follow best practices from research
@@ -53,15 +53,15 @@ This workflow systematically executes the first incomplete task from TASK.md wit
    - Make corrections if any issues are found
 
 7. **Mark Task Complete**
-   - Update the task status from `[ ]` to `[x]` in TASK.md
+   - Update the task status from `[ ]` to `[x]` in TODO.md
    - Add implementation notes under the task if needed
    - Mark all subtasks as complete with ✅
    - Add any lessons learned or observations
 
-8. **Verify Issues in TASK.md**
+8. **Verify Issues in TODO.md**
    - Review any issues discovered during the workflow (e.g., pre-existing test failures, typecheck errors, infrastructure problems)
-   - Check if these issues exist as open tasks in TASK.md
-   - If issues do not exist in TASK.md, add them following the current task format
+   - Check if these issues exist as open tasks in TODO.md
+   - If issues do not exist in TODO.md, add them following the current task format
    - Include appropriate status (Pending, Blocked, etc.), priority, and related file paths
    - Document the issue clearly with context for future resolution
 
