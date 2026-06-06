@@ -36,3 +36,4 @@ export {
 export { Textarea, textareaVariants } from './components/ui/textarea.js';
 export { Skeleton, skeletonVariants } from './components/ui/skeleton.js';
 export { cn } from './lib/utils.js';
+export { ThemeProvider, useTheme } from './components/theme-provider.js';

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Button, Input } from '@suite/ui';
+import { Button, Input, useTheme } from '@suite/ui';
 import { type DriveFile, type DriveFolder } from '@suite/domain-drive';
 import { DriveFileList } from './features/DriveFileList';
 import { VirtualizedFileList } from './components/VirtualizedFileList';
@@ -13,6 +13,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export function App() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
+  const { theme, setTheme, effectiveTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
@@ -637,6 +638,16 @@ export function App() {
     await signOut();
   }
 
+  function cycleTheme() {
+    if (theme === 'light') {
+      setTheme('dark');
+    } else if (theme === 'dark') {
+      setTheme('system');
+    } else {
+      setTheme('light');
+    }
+  }
+
   if (authLoading) {
     return (
       <main
@@ -644,8 +655,8 @@ export function App() {
         aria-label="Drive loading"
         style={{
           minHeight: '100%',
-          background: '#050507',
-          color: '#f9fafb',
+          background: 'var(--color-background)',
+          color: 'var(--color-foreground)',
           padding: 24,
           fontFamily: 'system-ui, sans-serif',
           display: 'flex',
@@ -665,8 +676,8 @@ export function App() {
         aria-label="Drive sign in"
         style={{
           minHeight: '100%',
-          background: '#050507',
-          color: '#f9fafb',
+          background: 'var(--color-background)',
+          color: 'var(--color-foreground)',
           padding: 24,
           fontFamily: 'system-ui, sans-serif',
           display: 'flex',
@@ -674,9 +685,9 @@ export function App() {
           justifyContent: 'center',
         }}
       >
-        <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24, maxWidth: 400, width: '100%' }}>
+        <article style={{ border: '1px solid var(--color-border)', borderRadius: 20, background: 'var(--color-card)', padding: 24, maxWidth: 400, width: '100%' }}>
           <h2 style={{ margin: 0, fontSize: 24, marginBottom: 8 }}>Sign in to Drive</h2>
-          <p style={{ margin: '0 0 24', color: 'rgba(249, 250, 251, 0.72)' }}>
+          <p style={{ margin: '0 0 24', color: 'var(--color-muted-foreground)' }}>
             Enter your credentials to access your files.
           </p>
           <form onSubmit={handleSignIn} style={{ display: 'grid', gap: 16 }}>
@@ -706,10 +717,10 @@ export function App() {
                 role="alert"
                 style={{
                   borderRadius: 12,
-                  border: '1px solid rgba(248, 113, 113, 0.35)',
-                  background: 'rgba(127, 29, 29, 0.3)',
+                  border: '1px solid var(--color-destructive)',
+                  background: 'var(--color-destructive)',
                   padding: 16,
-                  color: '#fecaca',
+                  color: 'var(--color-destructive-foreground)',
                 }}
               >
                 <p style={{ margin: 0, fontWeight: 600 }}>{authError}</p>
@@ -727,8 +738,8 @@ export function App() {
       aria-label="Drive"
       style={{
         minHeight: '100%',
-        background: '#050507',
-        color: '#f9fafb',
+        background: 'var(--color-background)',
+        color: 'var(--color-foreground)',
         padding: 24,
         fontFamily: 'system-ui, sans-serif',
       }}
@@ -739,12 +750,23 @@ export function App() {
             <p style={{ margin: 0, color: '#7dd3fc', textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: 12 }}>
               Drive
             </p>
-            <Button type="button" onClick={handleSignOut} className="bg-white/10 text-white" aria-label="Sign out">
-              Sign out
-            </Button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Button
+                type="button"
+                onClick={cycleTheme}
+                className="bg-white/10 text-white"
+                aria-label={`Toggle theme (current: ${theme})`}
+                style={{ fontSize: 14, padding: '8px 12px' }}
+              >
+                {theme === 'system' ? (effectiveTheme === 'dark' ? '🌙 System' : '☀️ System') : theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+              </Button>
+              <Button type="button" onClick={handleSignOut} className="bg-white/10 text-white" aria-label="Sign out">
+                Sign out
+              </Button>
+            </div>
           </div>
           <h1 style={{ margin: 0, fontSize: 40, lineHeight: 1.1 }}>Upload and browse file records</h1>
-          <p style={{ margin: 0, color: 'rgba(249, 250, 251, 0.72)', maxWidth: 720 }}>
+          <p style={{ margin: 0, color: 'var(--color-muted-foreground)', maxWidth: 720 }}>
             Upload a simple file record, then immediately see it in the browsable file list backed by the shared in-memory domain store.
           </p>
         </header>
@@ -757,11 +779,11 @@ export function App() {
             gap: 24,
           }}
         >
-          <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24 }}>
+          <article style={{ border: '1px solid var(--color-border)', borderRadius: 20, background: 'var(--color-card)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 16 }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: 24 }}>Folders</h2>
-                <p style={{ margin: '8px 0 0', color: 'rgba(249, 250, 251, 0.72)' }}>
+                <p style={{ margin: '8px 0 0', color: 'var(--color-muted-foreground)' }}>
                   Navigate and manage your folder structure.
                 </p>
               </div>
@@ -789,15 +811,15 @@ export function App() {
             </div>
 
             <div aria-live="polite" style={{ marginTop: 20, display: 'grid', gap: 12 }}>
-              {status ? <p style={{ margin: 0, color: '#86efac' }}>{status}</p> : null}
+              {status ? <p style={{ margin: 0, color: 'var(--color-success)' }}>{status}</p> : null}
             </div>
           </article>
 
-          <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24 }}>
+          <article style={{ border: '1px solid var(--color-border)', borderRadius: 20, background: 'var(--color-card)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: 24 }}>Files</h2>
-                <p style={{ margin: '8px 0 0', color: 'rgba(249, 250, 251, 0.72)' }}>
+                <p style={{ margin: '8px 0 0', color: 'var(--color-muted-foreground)' }}>
                   {currentFolderId ? `Files in ${folders.find((f) => f.id === currentFolderId)?.name || 'folder'}` : 'All files'}
                 </p>
               </div>
@@ -832,7 +854,7 @@ export function App() {
                 </Button>
                 {getBreadcrumbPath().map((folder, index) => (
                   <>
-                    <span style={{ color: 'rgba(249, 250, 251, 0.5)' }}>/</span>
+                    <span style={{ color: 'var(--color-muted-foreground)' }}>/</span>
                     <Button
                       key={folder.id}
                       type="button"

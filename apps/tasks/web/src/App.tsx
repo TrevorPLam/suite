@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Button, Input, Skeleton } from '@suite/ui';
+import { Button, Input, Skeleton, useTheme } from '@suite/ui';
 import { TaskRow } from './components/TaskRow';
 import { EmptyState } from './components/EmptyState';
 import { VirtualizedTaskList } from './components/VirtualizedTaskList';
@@ -87,6 +87,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export function App() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
+  const { theme, setTheme, effectiveTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
@@ -499,6 +500,16 @@ export function App() {
     setEditTagInput('');
   }
 
+  function cycleTheme() {
+    if (theme === 'light') {
+      setTheme('dark');
+    } else if (theme === 'dark') {
+      setTheme('system');
+    } else {
+      setTheme('light');
+    }
+  }
+
   async function toggleTaskCompletion(task: TaskItem) {
     setSubmitting(true);
     setError('');
@@ -609,8 +620,8 @@ export function App() {
         aria-label="Tasks loading"
         style={{
           minHeight: '100%',
-          background: '#050507',
-          color: '#f9fafb',
+          background: 'var(--color-background)',
+          color: 'var(--color-foreground)',
           padding: 24,
           fontFamily: 'system-ui, sans-serif',
           display: 'flex',
@@ -630,8 +641,8 @@ export function App() {
         aria-label="Tasks sign in"
         style={{
           minHeight: '100%',
-          background: '#050507',
-          color: '#f9fafb',
+          background: 'var(--color-background)',
+          color: 'var(--color-foreground)',
           padding: 24,
           fontFamily: 'system-ui, sans-serif',
           display: 'flex',
@@ -639,9 +650,9 @@ export function App() {
           justifyContent: 'center',
         }}
       >
-        <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24, maxWidth: 400, width: '100%' }}>
+        <article style={{ border: '1px solid var(--color-border)', borderRadius: 20, background: 'var(--color-card)', padding: 24, maxWidth: 400, width: '100%' }}>
           <h2 style={{ margin: 0, fontSize: 24, marginBottom: 8 }}>Sign in to Tasks</h2>
-          <p style={{ margin: '0 0 24', color: 'rgba(249, 250, 251, 0.72)' }}>
+          <p style={{ margin: '0 0 24', color: 'var(--color-muted-foreground)' }}>
             Enter your credentials to access your tasks.
           </p>
           <form onSubmit={handleSignIn} style={{ display: 'grid', gap: 16 }}>
@@ -671,10 +682,10 @@ export function App() {
                 role="alert"
                 style={{
                   borderRadius: 12,
-                  border: '1px solid rgba(248, 113, 113, 0.35)',
-                  background: 'rgba(127, 29, 29, 0.3)',
+                  border: '1px solid var(--color-destructive)',
+                  background: 'var(--color-destructive)',
                   padding: 16,
-                  color: '#fecaca',
+                  color: 'var(--color-destructive-foreground)',
                 }}
               >
                 <p style={{ margin: 0, fontWeight: 600 }}>{authError}</p>
@@ -690,14 +701,25 @@ export function App() {
     <main role="main" aria-label="Tasks" style={{ padding: 24, fontFamily: 'system-ui, sans-serif', maxWidth: 960 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ margin: 0 }}>Tasks</h1>
-        <Button type="button" onClick={handleSignOut} className="bg-white/10 text-white" aria-label="Sign out">
-          Sign out
-        </Button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Button
+            type="button"
+            onClick={cycleTheme}
+            className="bg-white/10 text-white"
+            aria-label={`Toggle theme (current: ${theme})`}
+            style={{ fontSize: 14, padding: '8px 12px' }}
+          >
+            {theme === 'system' ? (effectiveTheme === 'dark' ? '🌙 System' : '☀️ System') : theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+          </Button>
+          <Button type="button" onClick={handleSignOut} className="bg-white/10 text-white" aria-label="Sign out">
+            Sign out
+          </Button>
+        </div>
       </div>
       <p>Create a task, then toggle completion state without leaving the screen.</p>
 
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, marginTop: 24 }}>
-        <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24 }}>
+        <article style={{ border: '1px solid var(--color-border)', borderRadius: 20, background: 'var(--color-card)', padding: 24 }}>
           <h2 style={{ marginTop: 0 }}>Create task</h2>
 
           <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12 }}>
@@ -722,7 +744,7 @@ export function App() {
                 value={priority} 
                 onChange={(event) => setPriority(event.target.value as 'low' | 'medium' | 'high')}
                 aria-label="Task priority"
-                style={{ padding: 8, borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.2)', background: 'rgba(0, 0, 0, 0.3)', color: 'white' }}
+                style={{ padding: 8, borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-accent)', color: 'var(--color-foreground)' }}
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -792,17 +814,17 @@ export function App() {
           </form>
 
           <div aria-live="polite" style={{ marginTop: 16, display: 'grid', gap: 12 }}>
-            {status ? <p style={{ margin: 0, color: '#86efac' }}>{status}</p> : null}
+            {status ? <p style={{ margin: 0, color: 'var(--color-success)' }}>{status}</p> : null}
 
             {error ? (
               <div
                 role="alert"
                 style={{
                   borderRadius: 12,
-                  border: '1px solid rgba(248, 113, 113, 0.35)',
-                  background: 'rgba(127, 29, 29, 0.3)',
+                  border: '1px solid var(--color-destructive)',
+                  background: 'var(--color-destructive)',
                   padding: 16,
-                  color: '#fecaca',
+                  color: 'var(--color-destructive-foreground)',
                 }}
               >
                 <p style={{ margin: 0, fontWeight: 600 }}>{error}</p>
@@ -818,7 +840,7 @@ export function App() {
           </div>
         </article>
 
-        <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24 }}>
+        <article style={{ border: '1px solid var(--color-border)', borderRadius: 20, background: 'var(--color-card)', padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <h2 style={{ margin: 0 }}>Saved tasks</h2>
             <Button type="button" onClick={() => void loadTasks()} className="bg-white/10 text-white" aria-label="Reload tasks">
@@ -836,9 +858,9 @@ export function App() {
               style={{
                 padding: 8,
                 borderRadius: 8,
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                background: 'rgba(0, 0, 0, 0.3)',
-                color: 'white',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-accent)',
+                color: 'var(--color-foreground)',
               }}
             />
 
@@ -853,9 +875,9 @@ export function App() {
                   style={{
                     padding: '6px 12px',
                     borderRadius: 8,
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    background: filter === filterOption ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                    color: 'white',
+                    border: '1px solid var(--color-border)',
+                    background: filter === filterOption ? 'var(--color-primary)' : 'var(--color-accent)',
+                    color: 'var(--color-foreground)',
                     cursor: submitting ? 'not-allowed' : 'pointer',
                     fontSize: 14,
                     textTransform: 'capitalize',

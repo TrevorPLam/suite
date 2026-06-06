@@ -1109,16 +1109,18 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-020: Add Dark Mode Support
+### [x] P2-020: Add Dark Mode Support
 
-**Status**: Pending  
-**Priority**: P2  
+**Status**: Completed
+**Priority**: P2
 **Bounded Context**: Web UX
 
 **Related Files**:
 - `apps/calendar/web/src/App.tsx`
 - `apps/tasks/web/src/App.tsx`
 - `apps/drive/web/src/App.tsx`
+- `packages/ui/src/components/theme-provider.tsx` (create)
+- `packages/ui/src/styles/globals.css`
 
 **Definition of Done**:
 - Dark mode toggle in all apps
@@ -1152,22 +1154,40 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Implementation Notes**:
+- Created shared ThemeProvider in packages/ui with React Context API
+- Theme supports three modes: light, dark, system
+- System preference detected via window.matchMedia('(prefers-color-scheme: dark)')
+- Theme persisted in localStorage with key 'suite-theme'
+- CSS custom properties defined in globals.css for light and dark themes
+- Dark mode overrides: background, foreground, border, muted-foreground, card, card-foreground, popover, popover-foreground, accent, accent-foreground
+- All three web apps (calendar, tasks, drive) now have theme toggle buttons
+- Toggle cycles: light → dark → system → light
+- Toggle button shows current theme with emoji indicator
+- All inline styles updated to use CSS variables (var(--color-*))
+- Typecheck passes for all three web apps
+- Lint passes for UI package
+- CSS lint warnings for @theme and @custom-variant are expected (Tailwind CSS v4 directives)
+
 **Subtasks**:
 
 #### P2-020-01: Add dark mode to calendar web
 **Target File**: `apps/calendar/web/src/App.tsx`
 **Action**: Add theme state, toggle button, CSS variables for dark mode colors
 **Validate Command**: `pnpm --filter @suite/calendar-web typecheck`
+**Status**: ✅ Complete
 
 #### P2-020-02: Add dark mode to tasks web
 **Target File**: `apps/tasks/web/src/App.tsx`
 **Action**: Add theme state, toggle button, CSS variables for dark mode colors
 **Validate Command**: `pnpm --filter @suite/tasks-web typecheck`
+**Status**: ✅ Complete
 
 #### P2-020-03: Add dark mode to drive web
 **Target File**: `apps/drive/web/src/App.tsx`
 **Action**: Add theme state, toggle button, CSS variables for dark mode colors
 **Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+**Status**: ✅ Complete
 
 ---
 
