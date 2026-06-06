@@ -687,19 +687,31 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P1-013: Add Skeleton Loading States
+### [x] P1-013: Add Skeleton Loading States
 
-**Status**: Pending  
-**Priority**: P1  
+**Status**: Complete
+**Priority**: P1
 **Bounded Context**: Web UX
 
+**Implementation Notes**:
+- Created Skeleton component with shimmer animation for all three apps (calendar, tasks, drive)
+- Skeleton uses CSS gradient animation for smooth loading feedback
+- Calendar skeleton matches event list layout with section headers and event cards
+- Tasks skeleton matches task list layout with checkbox, title, and metadata
+- Drive skeleton matches file list layout with name, size, dates, and action buttons
+- FolderTree skeleton matches folder button layout
+- All typechecks pass for calendar-web, tasks-web, and drive-web
+- Lint passes with only pre-existing warnings (any types, non-null assertions)
+- Fixed unused variable lint errors in tasks App.tsx and TaskRow.tsx
+
 **Related Files**:
-- `apps/calendar/web/src/components/Skeleton.tsx` (create)
-- `apps/tasks/web/src/components/Skeleton.tsx` (create)
-- `apps/drive/web/src/components/Skeleton.tsx` (create)
-- `apps/calendar/web/src/App.tsx`
+- `apps/calendar/web/src/components/Skeleton.tsx` (created)
+- `apps/tasks/web/src/components/Skeleton.tsx` (created)
+- `apps/drive/web/src/components/Skeleton.tsx` (created)
+- `apps/calendar/web/src/features/CalendarBrowsePanel.tsx`
 - `apps/tasks/web/src/App.tsx`
-- `apps/drive/web/src/App.tsx`
+- `apps/drive/web/src/features/DriveFileList.tsx`
+- `apps/drive/web/src/features/FolderTree.tsx`
 
 **Definition of Done**:
 - Skeleton component created for each app
@@ -734,35 +746,35 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 **Subtasks**:
 
-#### P1-013-01: Create calendar Skeleton component
+#### P1-013-01: Create calendar Skeleton component ✅
 **Target File**: `apps/calendar/web/src/components/Skeleton.tsx`
 **Action**: Create Skeleton component with height, width, and animation props
-**Validate Command**: `pnpm --filter @suite/calendar-web typecheck`
+**Validate Command**: `pnpm --filter @suite/calendar-web typecheck` (passed)
 
-#### P1-013-02: Add skeleton to calendar loading state
-**Target File**: `apps/calendar/web/src/App.tsx`
+#### P1-013-02: Add skeleton to calendar loading state ✅
+**Target File**: `apps/calendar/web/src/features/CalendarBrowsePanel.tsx`
 **Action**: Replace "Loading..." text with Skeleton components matching event list layout
-**Validate Command**: `pnpm --filter @suite/calendar-web typecheck`
+**Validate Command**: `pnpm --filter @suite/calendar-web typecheck` (passed)
 
-#### P1-013-03: Create tasks Skeleton component
+#### P1-013-03: Create tasks Skeleton component ✅
 **Target File**: `apps/tasks/web/src/components/Skeleton.tsx`
 **Action**: Create Skeleton component with height, width, and animation props
-**Validate Command**: `pnpm --filter @suite/tasks-web typecheck`
+**Validate Command**: `pnpm --filter @suite/tasks-web typecheck` (passed)
 
-#### P1-013-04: Add skeleton to tasks loading state
+#### P1-013-04: Add skeleton to tasks loading state ✅
 **Target File**: `apps/tasks/web/src/App.tsx`
 **Action**: Replace "Loading..." text with Skeleton components matching task list layout
-**Validate Command**: `pnpm --filter @suite/tasks-web typecheck`
+**Validate Command**: `pnpm --filter @suite/tasks-web typecheck` (passed)
 
-#### P1-013-05: Create drive Skeleton component
+#### P1-013-05: Create drive Skeleton component ✅
 **Target File**: `apps/drive/web/src/components/Skeleton.tsx`
 **Action**: Create Skeleton component with height, width, and animation props
-**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+**Validate Command**: `pnpm --filter @suite/drive-web typecheck` (passed)
 
-#### P1-013-06: Add skeleton to drive loading state
-**Target File**: `apps/drive/web/src/App.tsx`
-**Action**: Replace "Loading..." text with Skeleton components matching file list layout
-**Validate Command**: `pnpm --filter @suite/drive-web typecheck`
+#### P1-013-06: Add skeleton to drive loading state ✅
+**Target File**: `apps/drive/web/src/features/DriveFileList.tsx` and `apps/drive/web/src/features/FolderTree.tsx`
+**Action**: Replace "Loading..." text with Skeleton components matching file list and folder tree layout
+**Validate Command**: `pnpm --filter @suite/drive-web typecheck` (passed)
 
 ---
 

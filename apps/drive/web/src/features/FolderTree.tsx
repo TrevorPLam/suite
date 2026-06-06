@@ -1,4 +1,5 @@
 import { Button } from '@suite/ui';
+import { Skeleton } from '../components/Skeleton';
 import type { DriveFolder } from '@suite/domain-drive';
 
 type FolderTreeProps = {
@@ -37,9 +38,13 @@ export function FolderTree({ folders, currentFolderId, onFolderClick, onCreateFo
       </div>
 
       {loading ? (
-        <p role="status" style={{ margin: 0, color: 'rgba(249, 250, 251, 0.72)', fontSize: 14 }}>
-          Loading folders…
-        </p>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Skeleton height={32} width="100%" />
+            </div>
+          ))}
+        </div>
       ) : error ? (
         <div
           role="alert"

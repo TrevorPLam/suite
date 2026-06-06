@@ -21,7 +21,7 @@ interface TaskRowProps {
   onEditTitleChange: (title: string) => void;
   onEditDueDateChange: (dueDate: string) => void;
   onEditPriorityChange: (priority: 'low' | 'medium' | 'high') => void;
-  onEditTagsChange: (tags: string[]) => void;
+  onEditTagsChange: (_tags: string[]) => void;
   onEditTagInputChange: (tagInput: string) => void;
   onAddEditTag: () => void;
   onRemoveEditTag: (tag: string) => void;
@@ -45,7 +45,7 @@ export function TaskRow({
   onEditTitleChange,
   onEditDueDateChange,
   onEditPriorityChange,
-  onEditTagsChange,
+  onEditTagsChange: _onEditTagsChange,
   onEditTagInputChange,
   onAddEditTag,
   onRemoveEditTag,

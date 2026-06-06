@@ -2,6 +2,7 @@ import { Button } from '@suite/ui';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { EventRow } from '../components/EventRow';
+import { Skeleton } from '../components/Skeleton';
 import type { CalendarEvent, ViewMode } from './calendar-types';
 import { getDaySections, getRangeLabel, getViewRange, getWeekSections } from './calendar-helpers';
 
@@ -135,7 +136,24 @@ export function CalendarBrowsePanel({
         </div>
 
         {loading ? (
-          <EmptyState title="Loading events" description="Fetching the current calendar range from the server." />
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <Skeleton height={24} width="40%" />
+              <Skeleton height={18} width="30%" />
+            </div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} style={{ display: 'grid', gap: 12, padding: 16, border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: 16, background: 'rgba(255, 255, 255, 0.03)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <Skeleton height={18} width="60%" />
+                  <Skeleton height={14} width={40} />
+                </div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <Skeleton height={16} width="100%" />
+                  <Skeleton height={16} width="80%" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : error ? (
           <ErrorState title="Unable to load calendar" message={error} details={errorDetails} onRetry={onRefresh} />
         ) : !hasVisibleEvents ? (

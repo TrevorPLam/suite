@@ -1,4 +1,5 @@
 import { Button } from '@suite/ui';
+import { Skeleton } from '../components/Skeleton';
 import type { DriveFile, DriveFolder } from '@suite/domain-drive';
 
 type DriveFileListProps = {
@@ -40,9 +41,39 @@ export function DriveFileList({ files, loading, error, errorDetails, onRefresh, 
         </div>
 
         {loading ? (
-          <p role="status" style={{ margin: 0, color: 'rgba(249, 250, 251, 0.72)' }}>
-            Loading files from the server…
-          </p>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {[1, 2, 3].map((i) => (
+              <article
+                key={i}
+                style={{
+                  borderRadius: 16,
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: '#0a0a0a',
+                  padding: 16,
+                  display: 'grid',
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'start' }}>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <Skeleton height={18} width="60%" />
+                    <Skeleton height={14} width="40%" />
+                    <div style={{ display: 'grid', gap: 2 }}>
+                      <Skeleton height={12} width="80%" />
+                      <Skeleton height={12} width="70%" />
+                      <Skeleton height={12} width="50%" />
+                    </div>
+                  </div>
+                  <Skeleton height={12} width={60} />
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Skeleton height={32} width={80} />
+                  <Skeleton height={32} width={80} />
+                  <Skeleton height={32} width={80} />
+                </div>
+              </article>
+            ))}
+          </div>
         ) : error ? (
           <div
             role="alert"

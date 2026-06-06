@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@suite/ui';
 import { TaskRow } from './components/TaskRow';
 import { EmptyState } from './components/EmptyState';
+import { Skeleton } from './components/Skeleton';
 import { useAuth } from './auth-provider';
 
 type TaskItem = {
@@ -109,7 +110,7 @@ export function App() {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editTagInput, setEditTagInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchTags, setSearchTags] = useState<string[]>([]);
+  const [searchTags, _setSearchTags] = useState<string[]>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -826,7 +827,35 @@ export function App() {
           </div>
 
           <div style={{ marginTop: 16 }}>
-            {loading ? <p>Loading tasks…</p> : null}
+            {loading ? (
+              <div style={{ display: 'grid', gap: 12 }}>
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: 16,
+                      padding: 16,
+                      display: 'grid',
+                      gap: 12,
+                      background: 'rgba(255, 255, 255, 0.03)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
+                      <Skeleton height={20} width={20} variant="circular" />
+                      <div style={{ flex: 1, display: 'grid', gap: 8 }}>
+                        <Skeleton height={20} width="70%" />
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <Skeleton height={14} width={60} />
+                          <Skeleton height={14} width={40} />
+                          <Skeleton height={14} width={50} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
 
             {!loading && getFilteredTasks().length === 0 ? <EmptyState message="No tasks in this view." /> : null}
 
