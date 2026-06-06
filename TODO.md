@@ -1972,9 +1972,9 @@ T008 -> T061 -> T062 -> T063 -> T064
 
 ## Task: T065 - Fix Auth Package KVNamespace Type Incompatibility
 
-- [ ] **T065** [PENDING] Fix Auth Package KVNamespace Type Incompatibility
+- [x] **T065** [DONE] Fix Auth Package KVNamespace Type Incompatibility
 
-**Files:** `packages/auth/src/server.ts`, `apps/*/api/src/index.ts`
+**Files:** `packages/auth/src/server.ts`, `packages/auth/src/env.ts`, `apps/*/api/src/index.ts`
 
 **Definition of done:** Auth package env type accepts KVNamespace without type errors. All API typechecks pass.
 
@@ -1992,15 +1992,23 @@ T008 -> T061 -> T062 -> T063 -> T064
 
 ### Subtasks
 
-- [ ] **T065.01 [AGENT]** Fix AuthEnv type definition
-  - **File:** `packages/auth/src/server.ts`
-  - **Action:** Update AuthEnv interface to properly handle KVNamespace type with Record<string, string | undefined>.
-  - **Validation:** `pnpm --filter @suite/auth typecheck`.
+- [x] **T065.01 [AGENT]** Fix AuthEnv type definition ✅
+  - **File:** `packages/auth/src/server.ts`, `packages/auth/src/env.ts`
+  - **Action:** Updated CreateAuthOptions env type to `AuthEnv & Record<string, unknown>` to allow KVNamespace. Updated validateAuthEnv to accept `Record<string, unknown>`.
+  - **Validation:** `pnpm --filter @suite/auth typecheck` passes.
 
-- [ ] **T065.02 [AGENT]** Verify API typechecks
+- [x] **T065.02 [AGENT]** Verify API typechecks ✅
   - **Files:** `apps/*/api/src/index.ts`
   - **Action:** Run typecheck on calendar, drive, and tasks APIs.
   - **Validation:** All three API typechecks pass.
+
+### Implementation Notes
+- Changed `CreateAuthOptions.env` type from `AuthEnv & Record<string, string | undefined>` to `AuthEnv & Record<string, unknown>` to allow KVNamespace (object with methods) alongside string environment variables
+- Updated `validateAuthEnv` function signature to accept `Record<string, unknown>` instead of `Record<string, string | undefined>` to match the broader env type
+- Zod schema validation still works correctly as it only validates the specific string environment variables it cares about
+- All 358 auth package tests pass
+- All three API typechecks pass (calendar-api, drive-api, tasks-api)
+- Lint passes with pre-existing warnings unrelated to this change
 
 ---
 

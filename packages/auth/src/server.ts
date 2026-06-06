@@ -25,7 +25,7 @@ interface AuthEnv {
 
 interface CreateAuthOptions {
   db: Parameters<typeof drizzleAdapter>[0] | null;
-  env?: AuthEnv & Record<string, string | undefined>;
+  env?: AuthEnv & Record<string, unknown>;
   waitUntil?: (promise: Promise<unknown>) => void;
   trustedOrigins?: string;
   betterAuthApiKey?: string;

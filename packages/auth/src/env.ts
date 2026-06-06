@@ -18,6 +18,6 @@ export type AuthEnv = z.infer<typeof AuthEnvSchema>;
  * Validate auth environment variables
  * @throws {z.ZodError} If validation fails
  */
-export function validateAuthEnv(env: Record<string, string | undefined>): AuthEnv {
+export function validateAuthEnv(env: Record<string, unknown>): AuthEnv {
   return AuthEnvSchema.parse(env);
 }
