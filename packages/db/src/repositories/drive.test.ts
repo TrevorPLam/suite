@@ -17,7 +17,14 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
     }
     client = postgres(dbUrl);
     db = drizzle(client);
-    repository = new PostgresDriveFileRepository('test-user-id', db);
+    // Create a mock Database interface for testing
+    const mockDb = {
+      getDrizzleDb: () => db,
+      query: async () => [],
+      transaction: async () => {},
+      close: async () => {},
+    };
+    repository = new PostgresDriveFileRepository(mockDb as any, 'test-user-id');
   });
 
   afterAll(async () => {
@@ -230,7 +237,14 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
     }
     client = postgres(dbUrl);
     db = drizzle(client);
-    repository = new PostgresDriveFolderRepository('test-user-id', db);
+    // Create a mock Database interface for testing
+    const mockDb = {
+      getDrizzleDb: () => db,
+      query: async () => [],
+      transaction: async () => {},
+      close: async () => {},
+    };
+    repository = new PostgresDriveFolderRepository(mockDb as any, 'test-user-id');
   });
 
   afterAll(async () => {

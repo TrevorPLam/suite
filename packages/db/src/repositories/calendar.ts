@@ -1,7 +1,6 @@
 import { eq, and, lt, gt } from 'drizzle-orm';
-import { getDb } from '../connection.js';
 import { calendarEvents, type CalendarEventSchema, type NewCalendarEventSchema } from '../schema/calendar.js';
-import type { Repository } from '../index.js';
+import type { Repository, Database } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
 
 // Domain type (from @suite/domain-calendar)
@@ -36,12 +35,12 @@ function mapToSchema(domain: Omit<CalendarEvent, 'id'>): Omit<CalendarEventSchem
 }
 
 export class PostgresCalendarEventRepository implements CalendarEventRepository {
-  private db: ReturnType<typeof getDb>;
+  private db: ReturnType<Database['getDrizzleDb']>;
   private userId: string;
 
-  constructor(userId: string, db?: ReturnType<typeof getDb>) {
+  constructor(db: Database, userId: string) {
+    this.db = db.getDrizzleDb();
     this.userId = userId;
-    this.db = db ?? getDb();
   }
 
   async findById(id: string): Promise<CalendarEvent | null> {

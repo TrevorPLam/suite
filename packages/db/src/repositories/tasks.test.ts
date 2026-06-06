@@ -17,7 +17,14 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
     }
     client = postgres(dbUrl);
     db = drizzle(client);
-    repository = new PostgresTaskRepository('test-user-id', db);
+    // Create a mock Database interface for testing
+    const mockDb = {
+      getDrizzleDb: () => db,
+      query: async () => [],
+      transaction: async () => {},
+      close: async () => {},
+    };
+    repository = new PostgresTaskRepository(mockDb as any, 'test-user-id');
   });
 
   afterAll(async () => {

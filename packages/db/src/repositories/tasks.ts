@@ -1,7 +1,6 @@
 import { eq, and } from 'drizzle-orm';
-import { getDb } from '../connection.js';
 import { tasks, type TaskSchema, type NewTaskSchema } from '../schema/tasks.js';
-import type { QueryRepository } from '../index.js';
+import type { QueryRepository, Database } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
 
 // Domain type (from @suite/domain-tasks)
@@ -52,12 +51,12 @@ function mapToSchema(domain: Omit<TaskItem, 'id'>): Omit<TaskSchema, 'id' | 'use
 }
 
 export class PostgresTaskRepository implements TaskRepository {
-  private db: ReturnType<typeof getDb>;
+  private db: ReturnType<Database['getDrizzleDb']>;
   private userId: string;
 
-  constructor(userId: string, db?: ReturnType<typeof getDb>) {
+  constructor(db: Database, userId: string) {
+    this.db = db.getDrizzleDb();
     this.userId = userId;
-    this.db = db ?? getDb();
   }
 
   async findById(id: string): Promise<TaskItem | null> {

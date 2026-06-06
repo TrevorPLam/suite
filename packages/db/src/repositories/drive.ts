@@ -1,7 +1,6 @@
 import { eq, and } from 'drizzle-orm';
-import { getDb } from '../connection.js';
 import { driveFiles, driveFolders, type DriveFileSchema, type NewDriveFileSchema, type DriveFolderSchema, type NewDriveFolderSchema } from '../schema/drive.js';
-import type { QueryRepository } from '../index.js';
+import type { QueryRepository, Database } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
 
 // Domain types (from @suite/domain-drive)
@@ -82,12 +81,12 @@ function mapFolderToSchema(domain: Omit<DriveFolder, 'id'>): Omit<DriveFolderSch
 }
 
 export class PostgresDriveFileRepository implements DriveFileRepository {
-  private db: ReturnType<typeof getDb>;
+  private db: ReturnType<Database['getDrizzleDb']>;
   private userId: string;
 
-  constructor(userId: string, db?: ReturnType<typeof getDb>) {
+  constructor(db: Database, userId: string) {
+    this.db = db.getDrizzleDb();
     this.userId = userId;
-    this.db = db ?? getDb();
   }
 
   async findById(id: string): Promise<DriveFile | null> {
@@ -177,12 +176,12 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
 }
 
 export class PostgresDriveFolderRepository implements DriveFolderRepository {
-  private db: ReturnType<typeof getDb>;
+  private db: ReturnType<Database['getDrizzleDb']>;
   private userId: string;
 
-  constructor(userId: string, db?: ReturnType<typeof getDb>) {
+  constructor(db: Database, userId: string) {
+    this.db = db.getDrizzleDb();
     this.userId = userId;
-    this.db = db ?? getDb();
   }
 
   async findById(id: string): Promise<DriveFolder | null> {

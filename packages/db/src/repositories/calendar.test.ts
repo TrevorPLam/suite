@@ -17,7 +17,14 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
     }
     client = postgres(dbUrl);
     db = drizzle(client);
-    repository = new PostgresCalendarEventRepository('test-user-id', db);
+    // Create a mock Database interface for testing
+    const mockDb = {
+      getDrizzleDb: () => db,
+      query: async () => [],
+      transaction: async () => {},
+      close: async () => {},
+    };
+    repository = new PostgresCalendarEventRepository(mockDb as any, 'test-user-id');
   });
 
   afterAll(async () => {

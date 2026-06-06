@@ -30,7 +30,15 @@ export const dbPackageName = '@suite/db';
 export { drizzle } from 'drizzle-orm/postgres-js';
 export { pgTable, serial, varchar, timestamp, text, integer, boolean } from 'drizzle-orm/pg-core';
 
-// Connection exports
+// Database interface and implementations
+export type { Database, DatabaseEnvironment, TransactionContext, QueryResult } from './database.interface.js';
+export { PostgresDatabase } from './postgres-database.js';
+export { WorkerDatabase } from './worker-database.js';
+
+// Factory function
+export { createDbClient } from './database-factory.js';
+
+// Connection exports (deprecated - use createDbClient instead)
 export { getDb, getDbOrNull, closeDb } from './connection.js';
 
 // Schema exports
