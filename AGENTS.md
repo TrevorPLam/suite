@@ -27,7 +27,7 @@ This repository is a greenfield monorepo for a productivity suite. The initial f
 
 7. **One Durable Object per "room" (chat, doc, board).** Never put multiple coordination units in one DO.
 
-8. **Every PR must pass `pnx affected --target=typecheck,test,lint`.** No exceptions.
+8. **Every PR must pass `nx affected -t typecheck,test,lint`.** No exceptions.
 
 9. **E2EE crypto is non‑negotiable.** All user content must be encrypted with AES‑256‑GCM before storage. Use `@suite/crypto`.
 

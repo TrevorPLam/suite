@@ -34,11 +34,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run affected tests
+      - name: Run affected tests and typecheck
         run: pnpm ci:test
-
-      - name: Run affected typecheck
-        run: nx affected -t typecheck
 
   # Main branch validation: Full test suite with coverage
   main-validation:

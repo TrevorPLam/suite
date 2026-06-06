@@ -187,10 +187,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] CI-003 — Align CI workflow with AGENTS.md gates
+### [x] CI-003 — Align CI workflow with AGENTS.md gates
 
-**Status:** pending  
-**Depends on:** CI-002  
+**Status:** done
+**Depends on:** CI-002
 **Blocks:** LINT-001
 
 #### Related paths
@@ -232,9 +232,9 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| CI-003-a | `.github/workflows/ci.yml` | Remove duplicate typecheck step on PR if `ci:test` already runs it; ensure single clear test + typecheck path. | `type .github\workflows\ci.yml` |
-| CI-003-b | `AGENTS.md` | Replace `pnx affected` with `nx affected`. | `findstr /n "pnx" AGENTS.md` (expect no matches) |
-| CI-003-c | local | Simulate main validation. | `pnpm ci:validate && pnpm test:coverage` |
+| CI-003-a | `.github/workflows/ci.yml` | Remove duplicate typecheck step on PR if `ci:test` already runs it; ensure single clear test + typecheck path. | `type .github\workflows\ci.yml` ✅ |
+| CI-003-b | `AGENTS.md` | Replace `pnx affected` with `nx affected`. | `findstr /n "pnx" AGENTS.md` (expect no matches) ✅ |
+| CI-003-c | local | Simulate main validation. | `pnpm ci:validate && pnpm test:coverage` ✅ |
 
 ---
 
