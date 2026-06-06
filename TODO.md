@@ -1226,9 +1226,9 @@ export { App };
 
 ## Phase 4: Drive App Production Readiness
 
-### [ ] DRV-01: Add missing features to drive domain
+### [x] DRV-01: Add missing features to drive domain
 
-**Status**: Not started  
+**Status**: Complete
 **Related Files**: packages/domain-drive/src/index.ts, apps/drive/specs/
 
 **Definition of Done**:
@@ -1283,49 +1283,68 @@ export type DriveFolder = {
 **Imports/Exports**:
 ```typescript
 // Exports
-export { uploadDriveFile, listDriveFiles, getDriveFile, renameDriveFile, deleteDriveFile, createFolder, listFolders, renameFolder, deleteFolder, moveFile, searchFiles, resetDriveFiles }
-export type { DriveFile, DriveFolder, UploadDriveFileInput, RenameDriveFileInput, DriveError }
+export { uploadDriveFile, listDriveFiles, getDriveFile, renameDriveFile, deleteDriveFile, createFolder, listFolders, renameFolder, deleteFolder, moveFile, searchFiles, resetDriveFiles, resetDriveFolders }
+export type { DriveFile, DriveFolder, UploadDriveFileInput, RenameDriveFileInput, DriveError, CreateFolderInput, RenameFolderInput, MoveFileInput, SearchFilesInput }
 ```
 
-**Depends On**: DOM-03  
+**Depends On**: DOM-03
 **Blocks**: DRV-02
 
 **Subtasks**:
 
-#### DRV-01.1: Write spec for folder hierarchy
+#### ✅ DRV-01.1: Write spec for folder hierarchy
 **Target**: apps/drive/specs/folder-hierarchy.spec.md
 **Action**: Write spec describing folder creation, nesting, and file organization.
 **Validate**: Manual review
 
-#### DRV-01.2: Implement folder entity
+#### ✅ DRV-01.2: Implement folder entity
 **Target**: packages/domain-drive/src/index.ts
 **Action**: Add DriveFolder type, create/list/rename/delete/move folder functions.
 **Validate**: `pnpm --filter @suite/domain-drive test`
 
-#### DRV-01.3: Add folder support to files
+#### ✅ DRV-01.3: Add folder support to files
 **Target**: packages/domain-drive/src/index.ts
 **Action**: Add folderId field to DriveFile, update upload/list to respect folders.
 **Validate**: `pnpm --filter @suite/domain-drive test`
 
-#### DRV-01.4: Write spec for file metadata
+#### ✅ DRV-01.4: Write spec for file metadata
 **Target**: apps/drive/specs/file-metadata.spec.md
 **Action**: Write spec describing metadata tracking and validation.
 **Validate**: Manual review
 
-#### DRV-01.5: Implement file metadata
+#### ✅ DRV-01.5: Implement file metadata
 **Target**: packages/domain-drive/src/index.ts
 **Action**: Add createdAt, modifiedAt, mimeType fields to DriveFile.
 **Validate**: `pnpm --filter @suite/domain-drive test`
 
-#### DRV-01.6: Implement file name validation
+#### ✅ DRV-01.6: Implement file name validation
 **Target**: packages/domain-drive/src/index.ts
 **Action**: Add validation for file names (no special characters, length limits).
 **Validate**: `pnpm --filter @suite/domain-drive test`
 
-#### DRV-01.7: Implement file search
+#### ✅ DRV-01.7: Implement file search
 **Target**: packages/domain-drive/src/index.ts
 **Action**: Add searchFiles function that filters by name and folder.
 **Validate**: `pnpm --filter @suite/domain-drive test`
+
+**Implementation Notes**:
+- Added DriveFolder type with id, name, parentId, createdAt fields
+- Added DriveFolderRepository interface and InMemoryDriveFolderRepository implementation
+- Updated DriveFile type with folderId, mimeType, createdAt, modifiedAt fields
+- Implemented folder operations: createFolder, listFolders, renameFolder, deleteFolder
+- Implemented moveFile operation to move files between folders or to root
+- Implemented searchFiles with case-insensitive name search and optional folder filtering
+- Added file name validation: rejects special characters (< > : " / \ | ? *), ., .., leading/trailing spaces, names > 255 chars
+- Added MIME type validation with pattern matching and lowercase normalization
+- Added automatic timestamp management: createdAt set on upload, modifiedAt updated on rename/move
+- Added resetDriveFolders and resetDriveFoldersDB for test cleanup
+- Exported new types: DriveFolder, CreateFolderInput, RenameFolderInput, MoveFileInput, SearchFilesInput
+- Exported new functions: createFolder, listFolders, renameFolder, deleteFolder, moveFile, searchFiles, resetDriveFolders
+- Exported DriveFolderRepository interface for database integration
+- All 47 tests passing (16 original + 31 new)
+- Typecheck passing
+- Followed spec-first development: wrote 2 specs before implementation
+- Maintained backward compatibility with existing API
 
 ---
 

@@ -74,7 +74,9 @@ export function App() {
 
               return typeof item.id === 'string'
                 && typeof item.name === 'string'
-                && typeof item.size === 'number';
+                && typeof item.size === 'number'
+                && typeof item.createdAt === 'string'
+                && typeof item.modifiedAt === 'string';
             }),
           );
         } else {
@@ -131,6 +133,14 @@ export function App() {
             id: candidate.id,
             name: candidate.name,
             size: candidate.size,
+            createdAt: candidate.createdAt as string || new Date().toISOString(),
+            modifiedAt: candidate.modifiedAt as string || new Date().toISOString(),
+          };
+          if (candidate.folderId !== undefined) {
+            (savedFile as any).folderId = candidate.folderId;
+          }
+          if (candidate.mimeType !== undefined) {
+            (savedFile as any).mimeType = candidate.mimeType;
           };
 
           setFiles((currentFiles) => [savedFile, ...currentFiles.filter((file) => file.id !== savedFile.id)]);
@@ -188,6 +198,14 @@ export function App() {
             id: candidate.id,
             name: candidate.name,
             size: candidate.size,
+            createdAt: candidate.createdAt as string || new Date().toISOString(),
+            modifiedAt: candidate.modifiedAt as string || new Date().toISOString(),
+          };
+          if (candidate.folderId !== undefined) {
+            (updatedFile as any).folderId = candidate.folderId;
+          }
+          if (candidate.mimeType !== undefined) {
+            (updatedFile as any).mimeType = candidate.mimeType;
           };
 
           setFiles((currentFiles) =>
