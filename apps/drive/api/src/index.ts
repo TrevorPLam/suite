@@ -18,6 +18,10 @@ import {
   uploadDriveFile,
   DriveError,
 } from '@suite/domain-drive';
+import { wireRepositories } from './bootstrap.js';
+
+// Wire repositories before mounting routes
+wireRepositories();
 
 const app = new Hono();
 

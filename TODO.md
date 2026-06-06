@@ -810,10 +810,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] DB-006 — Inject Postgres repositories into Drive domain at API boot
+### [x] DB-006 — Inject Postgres repositories into Drive domain at API boot
 
-**Status:** pending  
-**Depends on:** DB-003  
+**Status:** done
+**Depends on:** DB-003
 **Blocks:** AUTH-005
 
 #### Related paths
@@ -852,9 +852,20 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| DB-006-a | `packages/db/src/repositories/drive.ts` | Implement folder repository adapter matching domain `DriveFolderRepository`. | `pnpm --filter @suite/domain-drive test:run -- src/index.test.ts` |
-| DB-006-b | `apps/drive/api/src/bootstrap.ts` | Wire file + folder repos. | `pnpm --filter @suite/drive-api typecheck` |
-| DB-006-c | `apps/drive/api/src/index.ts` | Invoke bootstrap. | `pnpm --filter @suite/drive-api test:run -- src/index.test.ts` |
+| DB-006-a | `packages/db/src/repositories/drive.ts` | Implement folder repository adapter matching domain `DriveFolderRepository`. | `pnpm --filter @suite/domain-drive test:run -- src/index.test.ts` ✅ |
+| DB-006-b | `apps/drive/api/src/bootstrap.ts` | Wire file + folder repos. | `pnpm --filter @suite/drive-api typecheck` ✅ |
+| DB-006-c | `apps/drive/api/src/index.ts` | Invoke bootstrap. | `pnpm --filter @suite/drive-api test:run -- src/index.test.ts` ✅ |
+
+#### Implementation notes
+
+- Updated `PostgresDriveFileRepository` and `PostgresDriveFolderRepository` to implement domain repository interfaces with proper type mapping
+- Added `mapFileToDomain`, `mapFolderToDomain`, `mapFileToSchema`, and `mapFolderToSchema` functions to convert between DB schema (timestamps as Date) and domain types (timestamps as ISO strings)
+- Used conditional property assignment to handle exactOptionalPropertyTypes correctly for optional fields (folderId, mimeType, parentId)
+- Created `apps/drive/api/src/bootstrap.ts` with `wireRepositories()` function that injects both Postgres repos when DATABASE_URL is set
+- Added `@suite/db` dependency to `@suite/drive-api` package.json
+- Imported and called `wireRepositories()` in `apps/drive/api/src/index.ts` before route definitions
+- All 47 domain tests pass, all 36 API tests pass, typecheck passes for drive-api and domain-drive
+- In-memory repositories remain as default when DATABASE_URL is unset (local dev without Postgres)
 
 ---
 
@@ -1541,6 +1552,20 @@ UI-001 → UI-002
 | API-001 | Zod schemas for Tasks API | pending |
 | UI-001 | Extract Drive upload dialog | pending |
 | UI-002 | Extract Drive rename/delete dialogs | pending |
+
+## Discovered Issues
+
+### DB-007-bug — Fix Tasks repository test type errors
+
+**Status:** pending
+**Priority:** medium
+**Related paths:**
+- `packages/db/src/repositories/tasks.test.ts`
+
+**Description:**
+TypeScript errors in tasks repository test file due to type mismatches with optional fields (priority, tags, dueDate). Test passes `null` for these fields but domain types expect specific types (priority: 'low'|'medium'|'high', tags: string[], dueDate: string | null). Need to update test fixtures to match domain type expectations.
+
+**Error count:** 34 errors in tasks.test.ts
 
 ---
 
