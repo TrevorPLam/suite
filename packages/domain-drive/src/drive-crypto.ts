@@ -19,11 +19,16 @@ export type EncryptedDriveFolder = Omit<DriveFolder, 'name'> & {
 export type KeyProvider = () => Promise<CryptoKey>;
 
 // Default key provider for testing - generates a fixed test key
-let currentKeyProvider: KeyProvider = async () => {
+const defaultKeyProvider: KeyProvider = async () => {
   // For testing, generate a new key each time
   // In production, this would be derived from user master key
   return generateAESKey(false);
 };
+
+let currentKeyProvider: KeyProvider = defaultKeyProvider;
+
+// Flag to track if a custom key provider has been set
+let customKeyProviderSet = false;
 
 /**
  * Sets the key provider for encryption operations
@@ -31,6 +36,7 @@ let currentKeyProvider: KeyProvider = async () => {
  */
 export function setDriveKeyProvider(provider: KeyProvider): void {
   currentKeyProvider = provider;
+  customKeyProviderSet = true;
 }
 
 /**
@@ -41,14 +47,51 @@ export function getDriveKeyProvider(): KeyProvider {
 }
 
 /**
- * Checks if encryption is enabled (non-default key provider is set)
+ * Sets the key provider from ENCRYPTION_KEY environment variable
+ * @throws Error if ENCRYPTION_KEY is set but invalid
+ */
+export async function setDriveKeyProviderFromEnv(): Promise<void> {
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+  
+  if (!encryptionKey) {
+    // No key set, keep default provider (encryption disabled)
+    return;
+  }
+  
+  try {
+    // Decode base64 key
+    const keyData = Uint8Array.from(atob(encryptionKey), c => c.charCodeAt(0));
+    
+    // Import as AES-GCM key
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+    
+    // Set provider that returns this key
+    currentKeyProvider = async () => key;
+    customKeyProviderSet = true;
+  } catch (error) {
+    throw new Error(`Invalid ENCRYPTION_KEY: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Checks if encryption is enabled (custom key provider was set)
  */
 export function isEncryptionEnabled(): boolean {
-  // Default key provider generates random keys for testing
-  // In production, a real key provider would be set
-  // For now, we'll consider encryption disabled by default
-  // unless a specific key provider is injected
-  return false;
+  return customKeyProviderSet;
+}
+
+/**
+ * Resets the key provider to default (for testing)
+ */
+export function resetKeyProvider(): void {
+  currentKeyProvider = defaultKeyProvider;
+  customKeyProviderSet = false;
 }
 
 /**

@@ -1,7 +1,10 @@
-import { setCalendarEventRepository } from '@suite/domain-calendar';
+import { setCalendarEventRepository, setCalendarKeyProviderFromEnv } from '@suite/domain-calendar';
 import { PostgresCalendarEventRepository } from '@suite/db';
 
-export function wireRepositories(): void {
+export async function wireRepositories(): Promise<void> {
+  // Set up encryption key provider from environment
+  await setCalendarKeyProviderFromEnv();
+  
   const databaseUrl = process.env.DATABASE_URL;
 
   if (databaseUrl) {

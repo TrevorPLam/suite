@@ -5,7 +5,9 @@ import { generateUUID } from '@suite/shared-kernel';
 export {
   setDriveKeyProvider,
   getDriveKeyProvider,
+  setDriveKeyProviderFromEnv,
   isEncryptionEnabled,
+  resetKeyProvider,
   sealFile,
   unsealFile,
   sealFiles,
@@ -250,7 +252,9 @@ export async function listDriveFiles(): Promise<DriveFile[]> {
   
   // Decrypt names if encryption is enabled
   if (_isEncryptionEnabled()) {
-    return await _unsealFiles(reversed as any);
+    // Convert stored encrypted names to EncryptedDriveFile format
+    const encryptedFiles = reversed.map(f => ({ ...f, encryptedName: f.name } as any));
+    return await _unsealFiles(encryptedFiles);
   }
   
   return reversed;
@@ -264,7 +268,9 @@ export async function getDriveFile(id: string): Promise<DriveFile | null> {
   
   // Decrypt name if encryption is enabled
   if (_isEncryptionEnabled()) {
-    return await _unsealFile(snapped as any);
+    // Convert stored encrypted name to EncryptedDriveFile format
+    const encryptedFile = { ...snapped, encryptedName: snapped.name } as any;
+    return await _unsealFile(encryptedFile);
   }
   
   return snapped;
@@ -405,6 +411,13 @@ export async function uploadDriveFile(input: UploadDriveFileInput): Promise<Driv
   
   const created = await currentFileRepository.create(dataToStore);
 
+  // Decrypt name if encryption is enabled before returning
+  if (_isEncryptionEnabled()) {
+    // The stored name is EncryptedData, convert to EncryptedDriveFile format
+    const encryptedFile: any = { ...created, encryptedName: created.name };
+    return await _unsealFile(encryptedFile);
+  }
+
   return snapshot(created);
 }
 
@@ -435,6 +448,13 @@ export async function renameDriveFile(input: RenameDriveFileInput): Promise<Driv
   }
 
   const updated = await currentFileRepository.update(input.id, updateData);
+
+  // Decrypt name if encryption is enabled before returning
+  if (updated && _isEncryptionEnabled()) {
+    // The stored name is EncryptedData, convert to EncryptedDriveFile format
+    const encryptedFile: any = { ...updated, encryptedName: updated.name };
+    return await _unsealFile(encryptedFile);
+  }
 
   return updated ? snapshot(updated) : null;
 }
@@ -486,6 +506,13 @@ export async function createFolder(input: CreateFolderInput): Promise<DriveFolde
   
   const created = await currentFolderRepository.create(dataToStore);
 
+  // Decrypt name if encryption is enabled before returning
+  if (_isEncryptionEnabled()) {
+    // The stored name is EncryptedData, convert to EncryptedDriveFolder format
+    const encryptedFolder: any = { ...created, encryptedName: created.name };
+    return await _unsealFolder(encryptedFolder);
+  }
+
   return created;
 }
 
@@ -499,7 +526,9 @@ export async function listFolders(parentId?: string): Promise<DriveFolder[]> {
   
   // Decrypt names if encryption is enabled
   if (_isEncryptionEnabled()) {
-    return await _unsealFolders(folders as any);
+    // Convert stored encrypted names to EncryptedDriveFolder format
+    const encryptedFolders = folders.map(f => ({ ...f, encryptedName: f.name } as any));
+    return await _unsealFolders(encryptedFolders);
   }
   
   return folders;
@@ -531,6 +560,13 @@ export async function renameFolder(input: RenameFolderInput): Promise<DriveFolde
   }
 
   const updated = await currentFolderRepository.update(input.id, updateData);
+
+  // Decrypt name if encryption is enabled before returning
+  if (updated && _isEncryptionEnabled()) {
+    // The stored name is EncryptedData, convert to EncryptedDriveFolder format
+    const encryptedFolder: any = { ...updated, encryptedName: updated.name };
+    return await _unsealFolder(encryptedFolder);
+  }
 
   return updated;
 }
@@ -581,7 +617,9 @@ export async function searchFiles(input: SearchFilesInput): Promise<DriveFile[]>
   // Decrypt names if encryption is enabled before searching
   let filesToSearch = allFiles;
   if (_isEncryptionEnabled()) {
-    filesToSearch = await _unsealFiles(allFiles as any);
+    // Convert stored encrypted names to EncryptedDriveFile format
+    const encryptedFiles = allFiles.map(f => ({ ...f, encryptedName: f.name } as any));
+    filesToSearch = await _unsealFiles(encryptedFiles);
   }
   
   const query = input.query.toLowerCase();

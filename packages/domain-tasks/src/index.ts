@@ -20,6 +20,7 @@ export {
 export {
   setTaskKeyProvider,
   getTaskKeyProvider,
+  setTaskKeyProviderFromEnv,
   isEncryptionEnabled,
   sealTask,
   unsealTask,

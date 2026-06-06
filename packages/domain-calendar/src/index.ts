@@ -10,6 +10,17 @@ export {
   updateCalendarEvent,
 } from './lib/calendar-events.js';
 
+export {
+  setCalendarKeyProvider,
+  getCalendarKeyProvider,
+  setCalendarKeyProviderFromEnv,
+  isEncryptionEnabled,
+  sealEvent,
+  unsealEvent,
+  sealEvents,
+  unsealEvents,
+} from './lib/calendar-crypto.js';
+
 export type {
   CalendarEvent,
   CalendarEventErrorCode,

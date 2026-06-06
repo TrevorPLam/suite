@@ -14,6 +14,7 @@ import {
   moveFile,
   searchFiles,
   DriveError,
+  resetKeyProvider,
   type UploadDriveFileInput,
   type RenameDriveFileInput,
   type CreateFolderInput,
@@ -22,6 +23,7 @@ import {
 describe('drive - upload', () => {
   beforeEach(() => {
     resetDriveFiles();
+    resetKeyProvider();
   });
 
   it('should upload a file with a stable ID', async () => {
@@ -210,6 +212,7 @@ describe('drive - upload', () => {
 describe('drive - query', () => {
   beforeEach(() => {
     resetDriveFiles();
+    resetKeyProvider();
   });
 
   it('should list files in reverse upload order', async () => {
@@ -261,6 +264,7 @@ describe('drive - query', () => {
 describe('drive - rename', () => {
   beforeEach(() => {
     resetDriveFiles();
+    resetKeyProvider();
   });
 
   it('should rename a file', async () => {
@@ -377,6 +381,7 @@ describe('drive - rename', () => {
 describe('drive - delete', () => {
   beforeEach(() => {
     resetDriveFiles();
+    resetKeyProvider();
   });
 
   it('should delete a file', async () => {
@@ -419,6 +424,7 @@ describe('drive - folders', () => {
   beforeEach(() => {
     resetDriveFiles();
     resetDriveFolders();
+    resetKeyProvider();
   });
 
   it('should create a folder in root', async () => {
@@ -528,6 +534,7 @@ describe('drive - move file', () => {
   beforeEach(() => {
     resetDriveFiles();
     resetDriveFolders();
+    resetKeyProvider();
   });
 
   it('should move file to folder', async () => {
@@ -580,6 +587,7 @@ describe('drive - move file', () => {
 describe('drive - search', () => {
   beforeEach(() => {
     resetDriveFiles();
+    resetKeyProvider();
   });
 
   it('should search files by name', async () => {

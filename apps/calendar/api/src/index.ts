@@ -13,10 +13,10 @@ import { validateCalendarEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
 
 // Validate environment variables at startup
-const env = validateCalendarEnv();
+validateCalendarEnv();
 
 // Wire repositories (Postgres if DATABASE_URL set, otherwise in-memory)
-wireRepositories();
+await wireRepositories();
 
 const app = new Hono();
 

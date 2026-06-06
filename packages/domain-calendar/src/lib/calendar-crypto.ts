@@ -15,11 +15,13 @@ export type EncryptedCalendarEvent = Omit<CalendarEvent, 'title'> & {
 export type KeyProvider = () => Promise<CryptoKey>;
 
 // Default key provider for testing - generates a fixed test key
-let currentKeyProvider: KeyProvider = async () => {
+const defaultKeyProvider: KeyProvider = async () => {
   // For testing, generate a new key each time
   // In production, this would be derived from user master key
   return generateAESKey(false);
 };
+
+let currentKeyProvider: KeyProvider = defaultKeyProvider;
 
 /**
  * Sets the key provider for encryption operations
@@ -37,14 +39,42 @@ export function getCalendarKeyProvider(): KeyProvider {
 }
 
 /**
+ * Sets the key provider from ENCRYPTION_KEY environment variable
+ * @throws Error if ENCRYPTION_KEY is set but invalid
+ */
+export async function setCalendarKeyProviderFromEnv(): Promise<void> {
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+  
+  if (!encryptionKey) {
+    // No key set, keep default provider (encryption disabled)
+    return;
+  }
+  
+  try {
+    // Decode base64 key
+    const keyData = Uint8Array.from(atob(encryptionKey), c => c.charCodeAt(0));
+    
+    // Import as AES-GCM key
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+    
+    // Set provider that returns this key
+    currentKeyProvider = async () => key;
+  } catch (error) {
+    throw new Error(`Invalid ENCRYPTION_KEY: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
  * Checks if encryption is enabled (non-default key provider is set)
  */
 export function isEncryptionEnabled(): boolean {
-  // Default key provider generates random keys for testing
-  // In production, a real key provider would be set
-  // For now, we'll consider encryption disabled by default
-  // unless a specific key provider is injected
-  return false;
+  return currentKeyProvider !== defaultKeyProvider;
 }
 
 /**

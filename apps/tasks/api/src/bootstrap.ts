@@ -1,7 +1,10 @@
-import { setTaskRepository } from '@suite/domain-tasks';
+import { setTaskRepository, setTaskKeyProviderFromEnv } from '@suite/domain-tasks';
 import { PostgresTaskRepository } from '@suite/db';
 
-export function wireRepositories(): void {
+export async function wireRepositories(): Promise<void> {
+  // Set up encryption key provider from environment
+  await setTaskKeyProviderFromEnv();
+  
   const databaseUrl = process.env.DATABASE_URL;
 
   if (databaseUrl) {

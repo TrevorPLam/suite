@@ -23,10 +23,10 @@ import { validateDriveEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
 
 // Validate environment variables at startup
-const env = validateDriveEnv();
+validateDriveEnv();
 
 // Wire repositories before mounting routes
-wireRepositories();
+await wireRepositories();
 
 const app = new Hono();
 

@@ -1,7 +1,10 @@
-import { setDriveFileRepository, setDriveFolderRepository } from '@suite/domain-drive';
+import { setDriveFileRepository, setDriveFolderRepository, setDriveKeyProviderFromEnv } from '@suite/domain-drive';
 import { PostgresDriveFileRepository, PostgresDriveFolderRepository } from '@suite/db';
 
-export function wireRepositories(): void {
+export async function wireRepositories(): Promise<void> {
+  // Set up encryption key provider from environment
+  await setDriveKeyProviderFromEnv();
+  
   const databaseUrl = process.env.DATABASE_URL;
 
   if (databaseUrl) {

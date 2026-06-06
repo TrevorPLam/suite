@@ -28,7 +28,7 @@ import {
 validateTasksEnv();
 
 // Wire repositories before mounting routes
-wireRepositories();
+await wireRepositories();
 
 const app = new Hono();
 

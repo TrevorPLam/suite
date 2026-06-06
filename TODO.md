@@ -205,9 +205,71 @@ Discovered during SEC-001 validation. better-auth/kysely-adapter imports DEFAULT
 
 ---
 
-### [ ] SEC-003: Wire E2EE End-to-End
+### [x] SEC-031: Add ENCRYPTION_KEY to Env-Config
 
-**Status**: Pending  
+**Status**: Complete
+**Priority**: P0
+**Bounded Context**: Environment Configuration
+
+**Related Files**:
+- `packages/env-config/src/calendar.ts`
+- `packages/env-config/src/tasks.ts`
+- `packages/env-config/src/drive.ts`
+
+**Definition of Done**:
+- ENCRYPTION_KEY added to all three env schemas
+- ENCRYPTION_KEY is optional (for local dev without encryption)
+- ENCRYPTION_KEY validation ensures it's a base64-encoded string if provided
+- Tests pass for all env-config packages
+
+**Out of Scope**:
+- Key rotation mechanism
+- Per-user key derivation
+- Key validation beyond base64 encoding
+
+**Rules to Follow**:
+- AGENTS.md rule: Environment variable validation with Zod schemas
+- ENCRYPTION_KEY should be optional for local dev
+
+**Advanced Pattern**:
+- Base64-encoded key string for easy env var passing
+- Optional field to allow dev without encryption
+
+**Anti-Patterns**:
+- Hardcoding encryption keys
+- Making ENCRYPTION_KEY required (breaks local dev)
+
+**Imports/Exports**:
+- Env-config exports updated schemas with ENCRYPTION_KEY
+
+**Depends On**:
+- SEC-001 (Wrangler configuration for ENCRYPTION_KEY var)
+
+**Blocks**:
+- SEC-003 (Wire E2EE end-to-end)
+
+**Subtasks**:
+
+#### SEC-031-01: Add ENCRYPTION_KEY to calendar env
+**Target File**: `packages/env-config/src/calendar.ts`
+**Action**: Add ENCRYPTION_KEY: z.string().base64().optional() to calendarEnvSchema
+**Validate Command**: `pnpm --filter @suite/env-config test`
+
+#### SEC-031-02: Add ENCRYPTION_KEY to tasks env
+**Target File**: `packages/env-config/src/tasks.ts`
+**Action**: Add ENCRYPTION_KEY: z.string().base64().optional() to tasksEnvSchema
+**Validate Command**: `pnpm --filter @suite/env-config test`
+
+#### SEC-031-03: Add ENCRYPTION_KEY to drive env
+**Target File**: `packages/env-config/src/drive.ts`
+**Action**: Add ENCRYPTION_KEY: z.string().base64().optional() to driveEnvSchema
+**Validate Command**: `pnpm --filter @suite/env-config test`
+
+---
+
+### [x] SEC-003: Wire E2EE End-to-End
+
+**Status**: Complete  
 **Priority**: P0  
 **Bounded Context**: Crypto
 
