@@ -1,0 +1,38 @@
+{
+  "name": "drive-api",
+  "root": "apps/drive/api",
+  "sourceRoot": "apps/drive/api/src",
+  "projectType": "application",
+  "implicitDependencies": ["domain-drive", "auth", "env-config", "db", "shared-kernel"],
+  "tags": ["scope:drive", "type:application", "layer:api"],
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint src",
+        "cwd": "apps/drive/api"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tsconfig.json --noEmit",
+        "cwd": "apps/drive/api"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest",
+        "cwd": "apps/drive/api"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "wrangler deploy --dry-run",
+        "cwd": "apps/drive/api"
+      }
+    }
+  }
+}

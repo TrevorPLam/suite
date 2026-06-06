@@ -4,6 +4,12 @@ This document defines the architecture for the Mail application in the Sovereign
 
 ---
 
+## ⚠️ Docker Tag Warning
+
+🔴 **Never use the `latest` Docker tag for Stalwart in production.** The upgrade from v0.15 to v0.16 requires a multi-step offline migration. Using `latest` risks an unplanned breaking upgrade. Always pin to an explicit version tag (e.g., `stalwartlabs/stalwart:v0.16.x`).
+
+---
+
 ## Overview
 
 The Mail app provides encrypted email storage and sending capabilities while maintaining zero-knowledge guarantees. Unlike other apps in the suite, Mail requires a self-hosted SMTP server on the VPS because Cloudflare Workers cannot maintain persistent TCP connections required for SMTP.
@@ -65,7 +71,7 @@ version: '3.8'
 
 services:
   stalwart-mail:
-    image: stalwartlabs/mail-server:latest
+    image: stalwartlabs/stalwart:v0.16
     container_name: stalwart-mail
     ports:
       - "25:25"    # SMTP
@@ -74,12 +80,10 @@ services:
       - "993:993"  # IMAPS
       - "8080:8080" # JMAP API
     volumes:
-      - ./stalwart-data:/data
       - ./stalwart-config:/etc/stalwart
+      - stalwart-data:/var/lib/stalwart
     environment:
-      - STALWART_DOMAIN=yourdomain.com
-      - STALWART_ADMIN=admin@yourdomain.com
-      - STALWART_ADMIN_PASSWORD=${STALWART_ADMIN_PASSWORD}
+      - STALWART_PUBLIC_URL=https://mail.yourdomain.com
     restart: unless-stopped
 
   postgres:
@@ -94,36 +98,45 @@ services:
     restart: unless-stopped
 ```
 
-### Stalwart Configuration
+### Stalwart Configuration (v0.16+)
 
-```toml
-# /etc/stalwart/stalwart.toml
-[server]
-hostname = "mail.yourdomain.com"
-domain = "yourdomain.com"
+**Breaking Change: Configuration File Structure**
 
-[smtp]
-enable = true
-port = 25
-submission.port = 587
-smtps.port = 465
+Stalwart v0.16 eliminates the TOML configuration file. A minimal `config.json` now lives on disk and describes **only** the datastore connection (database engine and credentials). Every other setting — domains, accounts, routing rules, DKIM keys, rate limits, spam filters — is stored inside that datastore as a JMAP object.
 
-[imap]
-enable = true
-port = 993
-
-[jmap]
-enable = true
-port = 8080
-
-[storage]
-type = "postgresql"
-url = "postgres://stalwart:${STALWART_POSTGRES_PASSWORD}@postgres:5432/stalwart"
-
-[spam.filter]
-enable = true
-rspamd.url = "http://rspamd:11333"
+```json
+{
+  "store": {
+    "type": "rocksdb",
+    "path": "/var/lib/stalwart/data"
+  }
+}
 ```
+
+For PostgreSQL deployments:
+
+```json
+{
+  "store": {
+    "@type": "PostgreSQL",
+    "host": "postgres",
+    "port": 5432,
+    "database": "stalwart",
+    "user": "stalwart",
+    "password": "${STALWART_POSTGRES_PASSWORD}"
+  }
+}
+```
+
+**Declarative Configuration with CLI**
+
+For infrastructure-as-code users (Ansible, Terraform, NixOS), the equivalent of editing the old TOML is now `stalwart-cli apply`, which takes a declarative JSON plan file and idempotently reconciles live server state:
+
+```bash
+stalwart-cli apply --file server-config.json
+```
+
+This follows the same pattern used by CockroachDB, Consul, Elasticsearch, and HashiCorp Vault — infrastructure-as-code tools target the API rather than a configuration file.
 
 ---
 
@@ -289,36 +302,26 @@ v=spf1 mx -all
 
 ### DKIM (DomainKeys Identified Mail)
 
-DKIM adds a cryptographic signature to outgoing emails.
+**Breaking Change: DKIM is now fully automated in v0.16.**
 
-#### Generate DKIM Keys
+DKIM keys are stored directly in the database alongside all other configuration. The server generates keys, rotates them on a configured schedule, and publishes matching DNS TXT records automatically via the new automated DNS management layer.
 
-```bash
-# Generate RSA key pair
-openssl genrsa -out dkim-private.pem 2048
-openssl rsa -in dkim-private.pem -pubout -out dkim-public.pem
+- No manual key generation steps are required
+- No manual DNS TXT record updates are required for rotation
+- In clustered deployments, rotation works natively with no manual coordination between nodes
 
-# Extract public key for DNS
-cat dkim-public.pem
-```
+The only required action is to ensure the server has DNS write access to your zone (configure via the JMAP management API).
 
-#### Add DNS Record
+**DNS Provider Support**
 
-```dns
-TXT record for default._domainkey:
-v=DKIM1; k=rsa; p=<public_key_from_above>
-```
-
-#### Configure Stalwart
-
-```toml
-# /etc/stalwart/stalwart.toml
-[dkim]
-enable = true
-selector = "default"
-domain = "yourdomain.com"
-private_key = "/etc/stalwart/dkim-private.pem"
-```
+v0.16 ships with built-in support for:
+- AWS Route53
+- Google Cloud DNS
+- Bunny
+- Porkbun
+- DNSimple
+- Spaceship
+- RFC 2136 dynamic updates with SIG(0) for self-hosted authoritative DNS
 
 ### DMARC (Domain-based Message Authentication)
 
@@ -407,6 +410,17 @@ carddavApp.propfind('/carddav', async (c) => {
   });
 });
 ```
+
+### Breaking Change: Account Names Are Now Full Email Addresses
+
+Account names must now be full email addresses (`alice@example.com`, not `alice`). The server auto-appends the default domain on SMTP/IMAP login for backward compatibility with existing mail clients, but **CalDAV, CardDAV, and WebDAV client URLs must be manually reconfigured**: the `@` must be percent-encoded.
+
+| Before (v0.15) | After (v0.16) |
+|----------------|---------------|
+| `/dav/cal/alice` | `/dav/cal/alice%40example.com` |
+| `/dav/card/alice` | `/dav/card/alice%40example.com` |
+
+**Migration Impact:** Notify users before upgrading so they can update their calendar and contacts accounts in Apple Calendar, Thunderbird, DAVx⁵, and similar clients.
 
 ### Encryption Considerations
 
@@ -504,15 +518,19 @@ When using a transactional provider (Resend, Postmark):
 
 ## Security Considerations
 
+### Breaking Change: Management API (v0.16+)
+
+The old `/api/...` REST endpoints no longer exist in v0.16. All management operations happen at the single `/jmap` endpoint using the JMAP protocol. The `stalwart-cli` tool is built on this same JMAP API and is the intended scripting surface for all automation that previously called REST endpoints directly.
+
+**Benefits of JMAP-based management:**
+- Dozens of configuration changes can be applied in a single round-trip
+- Any JMAP client library works against the management surface
+- Single authentication flow covers both mail access and administration
+- Configuration is consistent across clustered deployments by definition
+
 ### SMTP Authentication
 
-Stalwart SMTP requires authentication for outbound sending:
-
-```toml
-[smtp.auth]
-enable = true
-mechanisms = ["PLAIN", "LOGIN"]
-```
+Stalwart SMTP requires authentication for outbound sending. In v0.16+, this is configured via the JMAP management API or WebUI rather than TOML configuration files.
 
 ### Rate Limiting
 
@@ -543,15 +561,130 @@ export const mailRateLimit = createMiddleware(async (c, next) => {
 
 ### Spam Filtering
 
-Stalwart integrates with Rspamd for spam filtering:
+Stalwart integrates with Rspamd for spam filtering. In v0.16+, this is configured via the JMAP management API or WebUI rather than TOML configuration files.
 
-```toml
-[spam.filter]
-enable = true
-rspamd.url = "http://rspamd:11333"
-reject_spam = false
-spam_folder = "Spam"
+**Rspamd integration settings:**
+- Enable/disable spam filtering
+- Configure Rspamd endpoint URL
+- Set spam rejection policy
+- Configure spam folder destination
+- Adjust scoring thresholds
+
+---
+
+## Migration from Stalwart v0.15 to v0.16
+
+**This is a multi-step offline migration. It is not a simple `docker pull`.**
+
+### Prerequisites
+
+1. **Backup your database** - This is critical. Do not proceed without a verified backup.
+2. **Plan a maintenance window** - Mail ports (25, 465, 587, 993) remain **closed** during recovery mode.
+3. **For clustered deployments** - Stop every node running v0.15.x before starting migration on any node.
+
+### Migration Steps
+
+**Step 1: Convert existing settings into a configuration snapshot**
+
+This step does not require stopping the server. Run the Python migration script against the live v0.15 server:
+
+```bash
+# Download the migration script
+wget https://raw.githubusercontent.com/stalwartlabs/stalwart/main/resources/scripts/migrate_v016.py
+
+# Create a Python virtual environment
+python3 -m venv venv
+source venv/bin/activate
+pip install requests
+
+# Dump the live v0.15.x settings
+python migrate_v016.py dump \
+  --url https://mail.yourdomain.com \
+  --user admin \
+  --password 'your-password' \
+  --output settings.json
+
+# Convert the dump to the new format
+python migrate_v016.py convert \
+  --settings settings.json \
+  --principals principals.json \
+  --config config.json \
+  --output export.json \
+  --patch-paths /opt/stalwart=/var/lib/stalwart
 ```
+
+The `--patch-paths` flag rewrites old `/opt/stalwart` paths to new `/var/lib/stalwart` paths for Docker deployments.
+
+**Step 2: Back up the database**
+
+For embedded databases (RocksDB, SQLite):
+```bash
+# Stop the server
+docker stop stalwart
+
+# Backup the data directory
+cp -a /opt/stalwart/data /opt/stalwart/data.backup
+```
+
+For PostgreSQL/MySQL backends, use your database's native backup tools (pg_dump, mysqldump).
+
+**Step 3: Perform the migration**
+
+For Docker deployments:
+
+```bash
+# Create new volumes
+docker volume create stalwart-etc
+docker volume create stalwart-data
+
+# Copy old data to new volume (for embedded databases)
+docker run --rm \
+  -v /opt/stalwart:/old \
+  -v stalwart-data:/new \
+  alpine sh -c 'cp -a /old/data/. /new/ && chown -R 2000:2000 /new'
+
+# Install config.json in the new config volume
+docker run --rm \
+  -v /path/to/config.json:/src/config.json:ro \
+  -v stalwart-etc:/dst \
+  alpine sh -c 'cp /src/config.json /dst/config.json && chown 2000:2000 /dst/config.json'
+
+# Start temporary container in recovery mode
+docker run -d --name stalwart-recovery \
+  -p 8080:8080 \
+  -v stalwart-etc:/etc/stalwart \
+  -v stalwart-data:/var/lib/stalwart \
+  -e STALWART_RECOVERY_MODE=1 \
+  stalwartlabs/stalwart:v0.16
+
+# Apply the configuration snapshot
+stalwart-cli apply --file export.json
+
+# Stop the recovery container
+docker stop stalwart-recovery
+docker rm stalwart-recovery
+
+# Start the real container normally
+docker run -d --name stalwart \
+  --restart unless-stopped \
+  -p 25:25 -p 465:465 -p 587:587 -p 993:993 -p 8080:8080 \
+  -v stalwart-etc:/etc/stalwart \
+  -v stalwart-data:/var/lib/stalwart \
+  stalwartlabs/stalwart:v0.16
+```
+
+**Step 4: Post-migration tasks**
+
+1. Log in to the admin panel
+2. Recalculate disk quotas
+3. Recalculate tenant quotas (for multi-tenant deployments)
+4. Create a permanent administrator account
+5. Review the rest of the configuration
+6. Notify users to update CalDAV/CardDAV/WebDAV client URLs with percent-encoded `@` symbols
+
+### Zero-Downtime Migration (Future)
+
+Stalwart plans to release a zero-downtime migration utility and proxy in the coming weeks that will allow account-by-account migration without a maintenance window. If you cannot accept downtime, wait for these tools before upgrading.
 
 ---
 
@@ -560,17 +693,18 @@ spam_folder = "Spam"
 - [ ] Configure MX records
 - [ ] Configure SPF, DKIM, DMARC records
 - [ ] Deploy Stalwart Mail Server on VPS
-- [ ] Configure Stalwart with domain and admin credentials
-- [ ] Generate and configure DKIM keys
+- [ ] Configure Stalwart with domain and admin credentials (v0.16+: via WebUI or JMAP)
+- [ ] Configure automated DKIM key rotation (v0.16+: via JMAP management API)
+- [ ] Configure DNS provider access for automated DNS management (v0.16+)
 - [ ] Configure inbound webhook in Stalwart
 - [ ] Deploy Mail Worker to Cloudflare
 - [ ] Configure service binding between Mail Worker and Stalwart
 - [ ] Test inbound email flow
 - [ ] Test outbound email flow
 - [ ] Configure CalDAV/CardDAV endpoints
-- [ ] Test CalDAV/CardDAV with external clients
+- [ ] Test CalDAV/CardDAV with external clients (note: URLs require percent-encoded @ in v0.16+)
 - [ ] Configure rate limiting
-- [ ] Configure spam filtering
+- [ ] Configure spam filtering (v0.16+: via JMAP management API)
 - [ ] Set up monitoring and alerting
 
 ---

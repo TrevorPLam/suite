@@ -191,4 +191,102 @@ export async function checkBandwidthLimit(
 
 ---
 
+## Post-Quantum Cryptography Posture
+
+WireGuard currently uses classical cryptographic algorithms (Curve25519 for key exchange, ChaCha20-Poly1305 for encryption). While these are secure against classical computers, they are vulnerable to future quantum computers running Shor's algorithm. The Sovereign Suite implements two mitigation paths for post-quantum security.
+
+### Current Limitations
+
+WireGuard does not have native post-quantum cryptography (PQC) support. The WireGuard protocol specification does not include PQC algorithms, and migration to PQC would require a protocol redesign or a separate implementation.
+
+### Mitigation Path 1: Pre-Shared Key (PSK)
+
+WireGuard supports an optional pre-shared key (PSK) that adds an additional layer of encryption to the tunnel. While the PSK itself is not post-quantum, it provides defense-in-depth:
+
+**Configuration with PSK:**
+
+```ini
+# /etc/wireguard/wg0.conf
+[Interface]
+PrivateKey = <server-private-key>
+Address = 10.0.0.1/24
+PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+
+[Peer]
+PublicKey = <client-public-key>
+AllowedIPs = 10.0.0.2/32
+PresharedKey = <base64-encoded-psk>
+```
+
+**PSK generation:**
+
+```bash
+# Generate a 256-bit PSK
+wg genpsk > /etc/wireguard/psk.key
+```
+
+**Limitations:** The PSK protects against passive eavesdropping but does not provide full post-quantum security. An attacker with a quantum computer could still break the Curve25519 key exchange and obtain the session keys.
+
+### Mitigation Path 2: Rosenpass Integration
+
+Rosenpass is a post-quantum secure VPN daemon that implements the WireGuard protocol with PQC algorithms. It uses Kyber (KEM) and Classic McEliece (PKE) for key exchange, providing quantum-resistant security.
+
+**Rosenpass architecture:**
+
+```
+Rosenpass (PQC layer) ←→ WireGuard (transport layer)
+```
+
+Rosenpass handles the key exchange using post-quantum algorithms, then passes the derived keys to WireGuard for the actual data transport. This hybrid approach maintains WireGuard's performance while adding PQC protection.
+
+**Installation on VPS:**
+
+```bash
+# Install Rosenpass (requires Rust)
+cargo install rosenpass
+
+# Or use pre-built binary
+wget https://github.com/rosenpass/rosenpass/releases/latest/download/rosenpass-linux-x86_64
+chmod +x rosenpass-linux-x86_64
+sudo mv rosenpass-linux-x86_64 /usr/local/bin/rosenpass
+```
+
+**Configuration:**
+
+```bash
+# Generate Rosenpass keys
+rosenpass genkey secret-key.pub public-key.pub
+
+# Configure Rosenpass to work with WireGuard
+rosenpass exchange \
+  --secret-key secret-key.pub \
+  --peer-public-key peer-public-key.pub \
+  --wg-device wg0 \
+  --wg-peer <client-public-key>
+```
+
+**Integration with WireGuard:**
+
+Rosenpass continuously updates WireGuard's peer configuration with PQC-derived keys. The WireGuard interface remains unchanged from the client perspective.
+
+**Performance impact:** Rosenpass adds approximately 10-20ms latency to the initial handshake. After the handshake, data transfer uses standard WireGuard with no performance penalty.
+
+### Migration Strategy
+
+The Sovereign Suite's PQC migration for VPN follows this timeline:
+
+| Phase | Timeline | Action |
+|-------|----------|---------|
+| **Phase 1** | Immediate | Deploy PSK for all new VPN connections |
+| **Phase 2** | Q3 2026 | Evaluate Rosenpass in staging environment |
+| **Phase 3** | Q4 2026 | Roll out Rosenpass to enterprise customers |
+| **Phase 4** | 2027+ | Migrate all customers to Rosenpass |
+
+### PQC Compliance Note
+
+The Cyber Resilience Act (CRA) does not currently mandate PQC for VPN products, but NIST has published guidance on preparing for the post-quantum transition. The Sovereign Suite's PQC posture aligns with NIST recommendations for a hybrid migration approach.
+
+---
+
 *This document must be updated when the VPN app architecture changes.*

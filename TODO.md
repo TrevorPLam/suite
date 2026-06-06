@@ -1608,10 +1608,10 @@ Discovered during P1-001 QA. apps/drive/web has 2 lint errors:
 
 ---
 
-### [ ] P1-002: Register All App Workspaces in Nx Graph
+### [x] P1-002: Register All App Workspaces in Nx Graph
 
-**Status**: Pending  
-**Priority**: P1  
+**Status**: Complete
+**Priority**: P1
 **Bounded Context**: Monorepo
 
 **Related Files**:
@@ -1655,35 +1655,47 @@ Discovered during P1-001 QA. apps/drive/web has 2 lint errors:
 
 **Subtasks**:
 
-#### P1-002-01: Create calendar API project.json
+#### P1-002-01: Create calendar API project.json ✅
 **Target File**: `apps/calendar/api/project.json`
 **Action**: Create project.json with name: calendar-api, implicitDependencies: ["@suite/domain-calendar", "@suite/auth", "@suite/env-config", "@suite/db"], targets: lint, typecheck, test, build
 **Validate Command**: `nx show project calendar-api --json`
 
-#### P1-002-02: Create calendar web project.json
+#### P1-002-02: Create calendar web project.json ✅
 **Target File**: `apps/calendar/web/project.json`
 **Action**: Create project.json with name: calendar-web, implicitDependencies: ["@suite/ui"], targets: lint, typecheck, test, build
 **Validate Command**: `nx show project calendar-web --json`
 
-#### P1-002-03: Create tasks API project.json
+#### P1-002-03: Create tasks API project.json ✅
 **Target File**: `apps/tasks/api/project.json`
 **Action**: Create project.json with name: tasks-api, implicitDependencies: ["@suite/domain-tasks", "@suite/auth", "@suite/env-config", "@suite/db"], targets: lint, typecheck, test, build
 **Validate Command**: `nx show project tasks-api --json`
 
-#### P1-002-04: Create tasks web project.json
+#### P1-002-04: Create tasks web project.json ✅
 **Target File**: `apps/tasks/web/project.json`
 **Action**: Create project.json with name: tasks-web, implicitDependencies: ["@suite/ui"], targets: lint, typecheck, test, build
 **Validate Command**: `nx show project tasks-web --json`
 
-#### P1-002-05: Create drive API project.json
+#### P1-002-05: Create drive API project.json ✅
 **Target File**: `apps/drive/api/project.json`
 **Action**: Create project.json with name: drive-api, implicitDependencies: ["@suite/domain-drive", "@suite/auth", "@suite/env-config", "@suite/db"], targets: lint, typecheck, test, build
 **Validate Command**: `nx show project drive-api --json`
 
-#### P1-002-06: Create drive web project.json
+#### P1-002-06: Create drive web project.json ✅
 **Target File**: `apps/drive/web/project.json`
 **Action**: Create project.json with name: drive-web, implicitDependencies: ["@suite/ui"], targets: lint, typecheck, test, build
 **Validate Command**: `nx show project drive-web --json`
+
+**Implementation Notes**:
+- Created project.json files for all 6 app workspaces (calendar-api, calendar-web, tasks-api, tasks-web, drive-api, drive-web)
+- Used correct project names without @suite/ prefix for implicitDependencies (e.g., "domain-calendar" instead of "@suite/domain-calendar")
+- Added projectType: "application" for all apps
+- Added tags for grouping: scope:calendar/tasks/drive, type:application, layer:api/web
+- Defined all required targets (lint, typecheck, test, build) using nx:run-commands executor
+- All targets use cwd to run commands in the correct directory
+- Nx graph successfully recognizes all 6 app projects via `nx show project` commands
+- Typecheck passed successfully across all projects
+- Lint and test failures are pre-existing issues in tasks/web (unused variables, any types) unrelated to project.json configuration
+- Follows Nx best practices with consistent target names and proper dependency declarations
 
 ---
 
@@ -4026,6 +4038,53 @@ Discovered during P1-001 QA. apps/drive/web has 2 lint errors:
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Add Cache-Control: no-cache for authenticated endpoints; Cache-Control: max-age=60 for public health endpoint
 **Validate Command**: `curl -I http://localhost:3003/api/v1/files | grep Cache-Control`
+
+---
+
+### [ ] P2-021: Fix Pre-existing Lint Errors in Tasks Web
+
+**Status**: Pending
+**Priority**: P2
+**Bounded Context**: Code Quality
+
+**Related Files**:
+- `apps/tasks/web/src/App.tsx`
+- `apps/tasks/web/src/components/TaskRow.tsx`
+
+**Definition of Done**:
+- Remove unused variable 'setSearchTags' in App.tsx
+- Remove unused parameter 'onEditTagsChange' in TaskRow.tsx
+- Lint passes for tasks/web with 0 errors
+
+**Out of Scope**:
+- Fixing any warnings (only errors)
+- Changing functionality
+
+**Rules to Follow**:
+- Prefix unused variables/parameters with underscore if needed for interface compatibility
+- Remove truly unused code
+
+**Anti-Patterns**:
+- Commenting out code instead of removing
+- Adding eslint-disable comments
+
+**Depends On**:
+- None
+
+**Blocks**:
+- None
+
+**Subtasks**:
+
+#### P2-021-01: Fix unused setSearchTags in App.tsx
+**Target File**: `apps/tasks/web/src/App.tsx`
+**Action**: Remove unused setSearchTags variable or prefix with underscore if needed
+**Validate Command**: `pnpm --filter @suite/tasks-web lint`
+
+#### P2-021-02: Fix unused onEditTagsChange in TaskRow.tsx
+**Target File**: `apps/tasks/web/src/components/TaskRow.tsx`
+**Action**: Remove unused onEditTagsChange parameter or prefix with underscore if needed
+**Validate Command**: `pnpm --filter @suite/tasks-web lint`
 
 ---
 

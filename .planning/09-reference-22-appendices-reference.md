@@ -18,7 +18,7 @@ Zero‑knowledge productivity suite with 53 planned applications. Built with Hon
 
 - **Repository:** GitHub
 - **Primary language:** TypeScript (strict mode)
-- **Package manager:** pnpm (catalogs, `catalogMode: strict`)
+- **Package manager:** pnpm 11 (catalogs, `catalogMode: strict`)
 - **Build system:** Nx 22+ with Nx Cloud (remote cache + self‑healing CI)
 - **Runtime:** Cloudflare Workers (primary), Node.js (fallback)
 
@@ -523,9 +523,11 @@ The shared theme tokens are defined in `packages/ui‑kit/src/styles/globals.css
 ```
 
 
-### Appendix H: Minimal Capacitor Configuration for Mobile
+### Appendix H: Minimal Capacitor Configuration for Mobile (Capacitor 8)
 
 **File: `apps/calendar/mobile/capacitor.config.ts`**
+
+**Note:** Capacitor 8 is the current stable version. The `capacitor-community/sqlite` plugin is now maintained by a community fork (robingenz fork, v8.1.0+). Evaluate the fork's stability before adopting for local database storage.
 
 ```typescript
 import { CapacitorConfig } from '@capacitor/cli';
@@ -568,11 +570,11 @@ packages:
 catalog:
   frontend:
     react: ^19.0.0
-    vite: ^7.0.0
-    '@vitejs/plugin-react': ^4.3.0
+    vite: ^8.0.0
+    '@vitejs/plugin-react': ^5.0.0
   backend:
-    hono: ^4.11.7
-    drizzle-orm: ^1.0.0-rc.x
+    hono: ^4.12.21
+    drizzle-orm: ^0.45.x
     pg: ^8.13.0
 
 catalogMode: strict
@@ -776,7 +778,7 @@ The `tablesFilter` option is now available in the `pushSchema` API as of PR #3
 
 #### N.3 `create-mf-app` for Micro‑frontends
 
-The `create-mf-app` CLI scaffolds production‑grade micro‑frontend platforms using React 19, Vite 7, and Module Federation. It supports both parent (shell) and child (remote) applications. The Sovereign Suite evaluated this tool but deferred Module Federation (Section 11.3.2) due to operational complexity. However, the tool remains an option for future self‑hosted enterprise deployments that require independently deployable UI modules.
+The `create-mf-app` CLI scaffolds production‑grade micro‑frontend platforms using React 19, Vite 8 (with Rolldown bundler), and Module Federation. It supports both parent (shell) and child (remote) applications. The Sovereign Suite evaluated this tool but deferred Module Federation (Section 11.3.2) due to operational complexity. However, the tool remains an option for future self‑hosted enterprise deployments that require independently deployable UI modules.
 
 #### N.4 Better Auth Email Verification
 

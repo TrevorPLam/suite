@@ -96,16 +96,16 @@ Products used by the public must be accessible to users with disabilities.
 
 For a platform aiming to compete with Google, the developer experience matters.
 
-*   **No API documentation portal** for external developers (OpenAPI‑based).
-*   **No interactive API explorer** (like Swagger UI).
+*   **No API documentation portal** for external developers (OpenAPI‑based). Note: Scalar is recommended over Redoc for Hono-based APIs due to better TypeScript integration and modern UI.
+*   **No interactive API explorer** (like Scalar UI or Swagger UI).
 *   **No changelog / release notes** for breaking changes.
 
 ### 2.10 🏢 Legal agreements beyond compliance
 
 The plan covers GDPR/DPIA/DPA, but lacks many legal instruments:
 
-*   **Terms of Service** (who is liable when a user loses their encryption key?).
-*   **Privacy Policy** (how you collect, use, share data).
+*   **Terms of Service** (who is liable when a user loses their encryption key?). Note: Template exists at `.planning/12-legal-38-terms-of-service-template.md`.
+*   **Privacy Policy** (how you collect, use, share data). Note: Template exists at `.planning/12-legal-37-privacy-policy-template.md`.
 *   **Cookie Policy** (for analytics, login).
 *   **Acceptable Use Policy** (what users cannot do with the suite).
 *   **DMCA / Copyright policy** (for file storage in Drive).
@@ -117,7 +117,7 @@ The plan defines notification timelines but lacks an operational incident respon
 *   **Playbook for database breach** (what to do when compromise detected).
 *   **Playbook for API token leak** (revoke and rotate).
 *   **Playbook for DDoS / abuse** (Cloudflare rate limiting, WAF rules).
-*   **Communication templates** (for users, regulators, press).
+*   **Communication templates** (for users, regulators, press). Note: A dedicated incident response document exists at `.planning/07-business-33-incident-response.md`.
 
 ### 2.12 📦 Third‑party dependency management (SBOM is not enough)
 
@@ -126,6 +126,7 @@ The plan generates SBOMs and scans for CVEs but does not design:
 *   **Dependency update automation** (Dependabot version updates, breaking change detection).
 *   **License compliance** (prevent accidental use of GPL in proprietary parts).
 *   **Malicious package detection** (beyond CVE scanning, e.g., `socket` or `sandworm`).
+*   **GitHub Actions security scanning** (zizmor for workflow security analysis).
 
 ### 2.13 🔁 User feedback loop
 
@@ -189,7 +190,7 @@ Developers cannot safely test schema migrations on a copy of production data.
 The plan defines TanStack Query per app but not cross‑app global state.
 
 *   **No shared global state** (e.g., theme, notifications, unread count across all 53 apps).
-*   **No cross‑app event bus** (when user receives an email, unread count badge on Mail icon in shell updates).
+*   **No cross‑app event bus** (when user receives an email, unread count badge on Mail icon in shell updates). Note: BroadcastChannel API cannot be used for cross-subdomain communication (e.g., between `app.yourdomain.com` and `calendar.yourdomain.com`). Use `window.postMessage` with origin validation, server-side sync, or a Worker-based event bus instead.
 
 ---
 
@@ -224,19 +225,19 @@ The plan defines TanStack Query per app but not cross‑app global state.
 
 ### 3.5 Developer portal & API documentation
 
-*   **OpenAPI spec hosting** (Redoc or Swagger UI) from `packages/api-clients`.
+*   **OpenAPI spec hosting** (Scalar UI recommended over Redoc for Hono-based APIs) from `packages/api-clients`.
 *   **Authentication documentation** for API keys (JWT? Bearer token?).
 *   **Rate limit documentation** (retry‑after headers, quota tracking).
 
 ### 3.6 Legal agreement templates
 
-*   **Terms of Service** for zero‑knowledge services (disclaimers about key loss, data irretrievability).
-*   **Privacy Policy** compliant with GDPR, CCPA, ePrivacy Directive.
+*   **Terms of Service** for zero‑knowledge services (disclaimers about key loss, data irretrievability). Note: Template exists at `.planning/12-legal-38-terms-of-service-template.md`.
+*   **Privacy Policy** compliant with GDPR, CCPA, ePrivacy Directive. Note: Template exists at `.planning/12-legal-37-privacy-policy-template.md`.
 *   **DMCA safe harbor** for Drive.
 
 ### 3.7 Incident response playbooks
 
-*   **Playbook for database compromise** (assume attacker has full copy, can they decrypt?).
+*   **Playbook for database compromise** (assume attacker has full copy, can they decrypt?). Note: Dedicated document exists at `.planning/07-business-33-incident-response.md`.
 *   **Playbook for API credential leak** (Cloudflare API token, Stripe secret key).
 *   **Playbook for DDoS / abuse** (Cloudflare rate limiting + WAF rules).
 
@@ -245,6 +246,7 @@ The plan defines TanStack Query per app but not cross‑app global state.
 *   **Dependabot configuration** for pnpm catalogs.
 *   **License scanning** (use `license-checker` or `license-report`).
 *   **Malicious package detection** (socket.dev or sandworm).
+*   **GitHub Actions security scanning** (zizmor for workflow security analysis).
 
 ### 3.9 User feedback & product roadmap
 
@@ -267,7 +269,7 @@ The plan defines TanStack Query per app but not cross‑app global state.
 
 ### 3.12 Cross‑app frontend state
 
-*   **Cross‑app event bus** using BroadcastChannel API (for same‑origin shell).
+*   **Cross‑app event bus** using `window.postMessage` with origin validation (BroadcastChannel does not work cross-subdomain).
 *   **Shared global state store** (Zustand with persistence to IndexedDB).
 
 ---

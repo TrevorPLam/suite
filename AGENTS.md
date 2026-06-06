@@ -21,7 +21,7 @@ This repository is a greenfield monorepo for a productivity suite. The initial f
 
 4. **Use the shared auth package.** Never implement custom sign‑in logic. Import from `@suite/auth/server` and `@suite/auth/client`.
 
-5. **Migrations run in CI, never in Workers.** Use `APP_DOMAIN=<domain> pnpm db:migrate`. Never call `migrate()` inside a Worker.
+5. **Migrations run in CI, never in Workers.** Use `APP_DOMAIN=<domain> pnpm db:migrate`. Never call `migrate()` inside a Worker. Never run `drizzle-kit push` — use `drizzle-kit migrate` only. `push` is for local schema exploration only and must never touch staging or production databases.
 
 6. **Search uses blind indexing by default.** Implement exact‑match search via HMAC tokens. Defer semantic search until validated.
 
@@ -32,6 +32,8 @@ This repository is a greenfield monorepo for a productivity suite. The initial f
 9. **E2EE crypto is non‑negotiable.** All user content must be encrypted with AES‑256‑GCM before storage. Use `@suite/crypto`.
 
 10. **Free tier limits must be monitored.** Each API must implement `UsageMonitor` middleware that blocks requests when limits approach 80%.
+
+11. **Never use === to compare secrets, tokens, or HMAC outputs.** Always use `constantTimeEqual()` from `@suite/crypto`. CVE-class timing attacks against HMAC token comparisons are a real exploit path. Every secret comparison in Worker auth handlers must use `crypto.subtle.timingSafeEqual`.
 
 ## Commands
 - `pnpm install`

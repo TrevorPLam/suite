@@ -50,6 +50,14 @@ This document defines the global SLI/SLO definitions, Core Web Vitals targets, e
 
 ### Bundle Size Budgets
 
+**📝 Vite 8 Upgrade Note:**
+
+Vite 8.0 introduces Rolldown (Rust-based bundler) for significant build performance improvements. When upgrading to Vite 8:
+- Verify that bundle size budgets remain within limits (Rolldown may produce different bundle sizes)
+- Test the `size-limit` CI checks with the new bundler
+- Update any Vite-specific build optimizations that may not be compatible with Rolldown
+- Monitor build times and bundle sizes in CI after the upgrade
+
 | Metric | Target | Measurement |
 |--------|--------|-------------|
 | **Initial JS bundle** | < 150 KB gzipped | Per app |

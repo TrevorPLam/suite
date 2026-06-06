@@ -1,0 +1,38 @@
+{
+  "name": "tasks-web",
+  "root": "apps/tasks/web",
+  "sourceRoot": "apps/tasks/web/src",
+  "projectType": "application",
+  "implicitDependencies": ["domain-tasks", "auth", "ui"],
+  "tags": ["scope:tasks", "type:application", "layer:web"],
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint src",
+        "cwd": "apps/tasks/web"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tsconfig.json --noEmit",
+        "cwd": "apps/tasks/web"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest",
+        "cwd": "apps/tasks/web"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vite build",
+        "cwd": "apps/tasks/web"
+      }
+    }
+  }
+}

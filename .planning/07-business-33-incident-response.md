@@ -422,6 +422,26 @@ export async function sendSlackAlert(alert: Alert) {
 }
 ```
 
+### Audit Log Retention
+
+**Cloudflare Audit Logs:**
+- Cloudflare retains audit logs for 18 months on all plan types
+- UI queries limited to most recent 90 days for performance
+- Use API or Logpush to access full 18-month history
+- Enterprise customers can use Logpush to store audit logs beyond 18 months
+
+**R2 Export for Long-Term Retention:**
+For GDPR and CRA compliance requiring longer retention (7 years for audit logs), configure an automated R2 export job:
+
+```bash
+# Weekly cron: export Cloudflare audit logs to R2
+curl -H "Authorization: Bearer $CF_API_TOKEN" \
+  "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/audit_logs?since=$(date -d '7 days ago' -u +%Y-%m-%dT%H:%M:%SZ)" \
+  | aws s3 cp - s3://your-bucket/audit-logs/$(date +%Y/%m/%d).json --endpoint-url $R2_ENDPOINT
+```
+
+Set the R2 bucket lifecycle policy to retain audit logs for 7 years (GDPR audit log obligation).
+
 ---
 
 ## Drills and Training
@@ -452,13 +472,57 @@ export async function sendSlackAlert(alert: Alert) {
 ### GDPR
 
 - **Article 33**: Notification to supervisory authority (72 hours)
-- **Article 34**: Communication to data subjects (without undue delay)
+- **Article 34**: Communication to data subjects (without undue delay if high risk)
 - **Article 32**: Security of processing
 
-### CRA (Consumer Reporting Act)
+### CRA (Cyber Resilience Act)
 
-- **Breach notification**: Notify affected individuals within 24 hours
-- **Report to regulator**: File report within 72 hours
+- **Actively exploited vulnerabilities**: Report to ENISA within 24 hours of awareness
+- **Full vulnerability notification**: Within 72 hours
+- **Final report**: Within 14 days after corrective measure is available
+
+---
+
+## CRA Notification Pipeline (Required Before Sep 11, 2026)
+
+The CRA enforcement window opens **September 11, 2026 — 97 days from now.** From that date, failing to report an actively exploited vulnerability to ENISA within 24 hours of awareness is a direct regulatory violation, not just a best-practice miss. The following pipeline must exist before that date:
+
+**Detection → ENISA in under 24 hours:**
+
+1. **Honeytoken or anomaly detection fires** → PagerDuty alert (already exists)
+2. **On-call acknowledges** → automated CRA assessment form opens (pre-fill product metadata: name, version, affected component, CVSS estimate)
+3. **If severity = Critical/High** → automated ENISA submission via the ENISA Single Reporting Platform (SRP) API
+4. **Internal ticket created** in Linear/GitHub Issues with 72-hour detailed report deadline
+5. **14-day final report deadline** tracked in the compliance database
+
+**Registration Requirement:**
+- Register for ENISA's Single Reporting Platform (SRP) now — the registration process itself takes 5–10 business days
+- SRP URL: https://www.enisa.europa.eu/topics/product-security-and-certification/single-reporting-platform-srp
+- The platform will be operational by September 11, 2026 with a testing period before then
+
+---
+
+## Breach Classification — Two-Tier Model
+
+Not all breaches carry the same GDPR notification obligation. Misclassifying a metadata breach as a content breach triggers unnecessary user notification; failing to classify a content breach correctly may under-notify.
+
+| Tier | What Was Breached | GDPR Article 33 (DPA) | GDPR Article 34 (Users) | CRA Notification |
+|------|------------------|-----------------------|-------------------------|-----------------|
+| **A — Content breach** | Ciphertext + keys, or unencrypted personal data | 72 hours | Required if high risk | 24h if exploited vuln |
+| **B — Metadata breach** | Request logs, IP hashes, usage patterns only | 72 hours (assess risk) | Likely NOT required (ZK architecture protects content) | 24h if exploited vuln |
+
+**Tier B Documentation:**
+For Tier B breaches, document in the incident report why Article 34 notification was not required (content was encrypted and keys are not held server-side). This documentation is the regulatory defense.
+
+---
+
+## Rate Limits Reference
+
+| Endpoint | Limit | Rationale |
+|----------|-------|-----------|
+| `/api/auth/recovery` | ≤ 3 requests/hr per IP | Tightest limit in the system — brute-forcing recovery codes is the primary post-passkey attack surface |
+| `/api/auth/login` | ≤ 10 requests/min per IP | Standard |
+| `/api/auth/reset-password` | ≤ 5 requests/hr per email | Enumeration prevention |
 
 ---
 

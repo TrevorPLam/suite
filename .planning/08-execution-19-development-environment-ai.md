@@ -291,7 +291,54 @@ During this entire process, the human is not interrupted. The agent stays in flo
 
 ---
 
-### 20.9 Agent‑First Checklist
+### 20.9 Security Tooling: zizmor for GitHub Actions
+
+The Sovereign Suite uses **zizmor** for GitHub Actions security analysis. Zizmor is a static analysis tool that scans GitHub Actions workflows for security vulnerabilities, misconfigurations, and best practice violations.
+
+**Installation:**
+
+```bash
+# Install zizmor
+cargo install zizmor
+
+# Or use the pre-built binary
+wget https://github.com/woodruffw/zizmor/releases/latest/download/zizmor-x86_64-unknown-linux-gnu
+chmod +x zizmor-x86_64-unknown-linux-gnu
+sudo mv zizmor-x86_64-unknown-linux-gnu /usr/local/bin/zizmor
+```
+
+**Usage:**
+
+```bash
+# Scan all workflows in .github/workflows/
+zizmor .github/workflows/
+
+# Scan with verbose output
+zizmor -v .github/workflows/
+
+# Generate SARIF output for GitHub Security tab
+zizmor --sarif .github/workflows/ > zizmor-results.sarif
+```
+
+**Common issues detected by zizmor:**
+- Untrusted code execution (e.g., `run: curl | sh`)
+- Missing permissions scoping
+- Hardcoded secrets or tokens
+- Self-hosted runner security issues
+- Injection vulnerabilities in workflow expressions
+
+**Integration with CI:**
+
+Add zizmor to the compliance workflow (`.github/workflows/compliance.yml`):
+
+```yaml
+- name: Run zizmor security scan
+  run: zizmor .github/workflows/
+```
+
+---
+
+### 20.10 Agent‑First Checklist
 
 Before committing code to the Sovereign Suite, every developer (including AI agents) should verify the following:
 
@@ -306,7 +353,7 @@ Before committing code to the Sovereign Suite, every developer (including AI age
 
 ---
 
-### 20.10 Summary: Development Environment at a Glance
+### 20.11 Summary: Development Environment at a Glance
 
 | Component | Configuration | Purpose |
 |-----------|---------------|---------|

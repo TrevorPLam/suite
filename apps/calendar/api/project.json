@@ -1,0 +1,38 @@
+{
+  "name": "calendar-api",
+  "root": "apps/calendar/api",
+  "sourceRoot": "apps/calendar/api/src",
+  "projectType": "application",
+  "implicitDependencies": ["domain-calendar", "auth", "env-config", "db", "shared-kernel"],
+  "tags": ["scope:calendar", "type:application", "layer:api"],
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint src",
+        "cwd": "apps/calendar/api"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tsconfig.json --noEmit",
+        "cwd": "apps/calendar/api"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest",
+        "cwd": "apps/calendar/api"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "wrangler deploy --dry-run",
+        "cwd": "apps/calendar/api"
+      }
+    }
+  }
+}

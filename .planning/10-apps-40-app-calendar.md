@@ -138,6 +138,59 @@ export function convertToICal(events: Event[]): string {
 
 ---
 
+## Browser Compatibility: Temporal API Polyfill
+
+The Calendar app uses the JavaScript Temporal API for robust date/time handling. As of June 2026, browser support is partial:
+
+| Browser | Native Support | Polyfill Required |
+|---------|----------------|------------------|
+| Chrome 144+ | ✅ Yes | ❌ No |
+| Firefox 139+ | ✅ Yes | ❌ No |
+| Safari | ❌ No | ✅ Yes |
+
+### Conditional Polyfill Loading
+
+The frontend loads the Temporal polyfill only when needed:
+
+```typescript
+// apps/calendar/web/src/lib/temporal-polyfill.ts
+export async function loadTemporalPolyfill() {
+  // Check if Temporal is natively available
+  if (typeof Temporal !== 'undefined') {
+    return;
+  }
+
+  // Load polyfill for browsers without native support
+  await import('@js-temporal/polyfill');
+}
+```
+
+**Usage in app initialization:**
+
+```typescript
+// apps/calendar/web/src/main.tsx
+import { loadTemporalPolyfill } from './lib/temporal-polyfill';
+
+async function init() {
+  await loadTemporalPolyfill();
+  // Render app
+}
+
+init();
+```
+
+**Package.json dependency:**
+
+```json
+{
+  "dependencies": {
+    "@js-temporal/polyfill": "^0.4.0"
+  }
+}
+```
+
+---
+
 ## API Endpoints
 
 | Endpoint | Method | Description |

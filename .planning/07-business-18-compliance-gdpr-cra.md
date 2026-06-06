@@ -510,6 +510,73 @@ The dashboard is read‑only and is intended to speed up auditor evidence collec
 
 ---
 
+---
+
+## 20. European Accessibility Act (EAA)
+
+The European Accessibility Act (EAA) is an EU directive that requires digital products and services to be accessible to persons with disabilities. It entered into force in 2019, and EU member states must enforce it by June 2025.
+
+### 20.1 EAA Requirements
+
+The EAA requires that digital products and services meet accessibility standards equivalent to WCAG 2.1 AA. For the Sovereign Suite, this means:
+
+- **Web applications** must be perceivable, operable, understandable, and robust for users with disabilities
+- **Mobile applications** (iOS/Android) must meet the same accessibility standards
+- **Documentation and support** must be accessible
+
+### 20.2 Microenterprise Exemption
+
+The EAA includes a microenterprise exemption that may apply to the Sovereign Suite during its initial growth phase:
+
+**Microenterprise criteria:**
+- Fewer than 10 employees
+- Annual turnover under €2 million
+- Annual balance sheet total under €2 million
+
+If the Sovereign Suite meets these criteria at the time of EAA enforcement (June 2025), it may be exempt from EAA requirements. However, this exemption is not automatic—it must be claimed in accordance with national implementation rules in each EU member state where the service is offered.
+
+**Important considerations:**
+- The exemption is temporary. Once the business grows beyond the microenterprise thresholds, EAA compliance becomes mandatory.
+- Even if exempt, accessibility is a core value and should be pursued proactively.
+- Some EU member states may have stricter national rules that do not recognize the microenterprise exemption.
+
+### 20.3 EAA Compliance Strategy
+
+Regardless of exemption status, the Sovereign Suite will implement accessibility as a core design principle:
+
+1. **WCAG 2.1 AA conformance** for all web and mobile applications
+2. **Automated a11y testing** using Axe-Core in CI
+3. **Manual a11y audits** for each new feature
+4. **Screen reader testing** with VoiceOver (iOS) and NVDA (Windows)
+5. **Keyboard navigation** for all interactive components
+6. **High-contrast theme** beyond standard dark/light modes
+7. **Accessibility statement** published for each app (template at `.planning/12-legal-39-accessibility-statement-template.md`)
+
+### 20.4 EAA Enforcement Timeline
+
+| Date | Milestone |
+|------|-----------|
+| **June 2025** | EAA enforcement begins in EU member states |
+| **Q3 2025** | Assess microenterprise exemption eligibility |
+| **Q4 2025** | If exempt, file exemption claims in relevant member states |
+| **2026+** | Pursue WCAG 2.1 AA conformance regardless of exemption |
+
+### 20.5 AI Agent Rules for EAA
+
+```markdown
+## EAA Compliance Rules (AI Agents Must Follow)
+
+1. All new components must pass Axe-Core automated a11y tests before merging.
+2. All interactive elements must be keyboard-navigable (no mouse-only interactions).
+3. All images must have alt text or be marked as decorative.
+4. Color contrast must meet WCAG 2.1 AA standards (4.5:1 for normal text, 3:1 for large text).
+5. Forms must have proper labels and error messages associated with inputs.
+6. Dynamic content updates must be announced to screen readers (ARIA live regions).
+7. Accessibility must be considered during spec creation, not as an afterthought.
+```
+
+---
+
 ### 19.13 Summary: Compliance by Design
 
 | Framework | Key Obligation | Sovereign Suite Implementation | Audit Evidence |

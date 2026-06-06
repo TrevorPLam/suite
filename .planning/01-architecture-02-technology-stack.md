@@ -11,16 +11,16 @@ Each technology in the Sovereign Suite stack is selected for a specific reason: 
 | Layer | Technology | Version | Primary Justification |
 |-------|-----------|---------|----------------------|
 | **Monorepo orchestration** | Nx | 22.7+ | Affected commands, module boundaries, AI‑native skills |
-| **Package manager** | pnpm | 9+ (v11 compatible) | Catalogs, disk efficiency, supply‑chain security |
-| **Backend framework** | Hono | 4.11.7+ | Workers + Node.js parity, ultra‑fast, TypeScript‑first |
+| **Package manager** | pnpm | 11+ | Catalogs, disk efficiency, supply‑chain security |
+| **Backend framework** | Hono | 4.12.21+ | Workers + Node.js parity, ultra‑fast, TypeScript‑first |
 | **Database** | PostgreSQL | 17 | Battle‑tested, self‑hosted, full feature set |
-| **ORM & migrations** | Drizzle ORM | 1.0.0‑rc.x | Type‑safe, SQL‑like, per‑domain migration support |
-| **Authentication** | Better Auth | 1.6.2+ | Self‑hosted, zero per‑user cost, Hono + Workers native |
+| **ORM & migrations** | Drizzle ORM | 0.45.x | Type‑safe, SQL‑like, per‑domain migration support |
+| **Authentication** | Better Auth | 1.6.11+ | Self‑hosted, zero per‑user cost, Hono + Workers native |
 | **Encryption** | WebCrypto API | Built‑in | No external deps, hardware‑accelerated, zero‑trust |
 | **Real‑time** | Cloudflare Durable Objects | Workers platform | WebSocket hibernation, embedded SQLite, per‑room state |
-| **API client generation** | Orval | 7.18.0+ | OpenAPI → React Query + Zod, MCP server generation |
+| **API client generation** | Orval | 7.19.0+ | OpenAPI → React Query + Zod, MCP server generation |
 | **UI components** | shadcn/ui | v4 (Base UI) | You own the source, Tailwind v4, accessible |
-| **Mobile** | Capacitor | 6.x | Wraps web app, shared codebase, native API access |
+| **Mobile** | Capacitor | 8.x | Wraps web app, shared codebase, native API access |
 | **Frontend host** | Cloudflare Pages | Free tier | Unlimited bandwidth, 500 builds/month, edge global |
 | **File storage** | Cloudflare R2 | Free tier | Zero egress fees, 10 GB free, S3‑compatible |
 | **Secrets management** | Doppler | Free tier (5 users) | Centralised, per‑environment, GitHub Actions native |
@@ -40,19 +40,20 @@ Nx is the central nervous system of your monorepo. It understands your project g
 - **Task sandboxing** — Nx 22.7 introduces task sandboxing with real I/O tracing, a 7× reduction in daemon memory usage, and worktree‑aware caching.
 - **Self‑Healing CI** — Nx Cloud (free tier) automatically fixes broken PRs; over 50% of generated fixes are useful, saving more time than caching and distributed execution combined.
 
-**Version to install:** Nx 22.7 or later (stable releases ≥22.7). The free Nx Cloud tier includes 500 hours/month of remote cache.
+**Version to install:** Nx 22.7 or later (stable releases ≥22.7). The free Nx Cloud tier provides remote caching and self-healing CI; usage is measured in credits, not fixed hours — consult the current Nx Cloud pricing page at time of setup.
 
 ---
 
-### 3.3 Package Manager: pnpm 9+ (Catalogs + Security)
+### 3.3 Package Manager: pnpm 11+ (Catalogs + Security)
 
-pnpm is the package manager for TypeScript monorepos in 2026. It is fast, disk‑efficient, and security‑hardened.
+pnpm is the package manager for TypeScript monorepos in 2026. It is fast, disk‑efficient, and security‑hardened. pnpm 11 requires Node 22 and is a pure-ESM release.
 
 **Why pnpm over npm or Yarn:**
 - **Catalogs** — Centralised version management in `pnpm-workspace.yaml`. Declare once, use everywhere via `catalog:` protocol. Syncpack 15.0 now has full catalog support for auto‑updating and linting.
-- **`minimumReleaseAge`** — Blocks installation of packages published less than 24 hours ago, mitigating supply‑chain attacks (e.g., the 2025 axios incident). This setting applies globally and is enforced by pnpm.
+- **`minimumReleaseAge`** — Blocks installation of packages published less than 24 hours ago, mitigating supply‑chain attacks (e.g., the 2025 axios incident). This setting applies globally and is enforced by pnpm. In pnpm 11, this setting moves from `.npmrc` to `pnpm-workspace.yaml`.
 - **Content‑addressable storage** — A single version of a package is stored once globally, then hard‑linked across projects, saving disk space.
 - **Frozen lockfile** — `pnpm install --frozen-lockfile` prevents accidental upgrades in CI.
+- **Pure ESM** — pnpm 11 is distributed as pure ESM and requires Node.js 22 or later. All `.npmrc` settings must be migrated to `pnpm-workspace.yaml` fields; the standalone exe requires glibc 2.27.
 
 **Required configuration:**
 
@@ -68,9 +69,9 @@ catalog:
   typescript: ~5.8.0
   vite: ^7.0.0
   tailwindcss: ^4.0.0
-  hono: ^4.11.7
-  drizzle-orm: ^1.0.0-rc.x
-  better-auth: ^1.6.0
+  hono: ^4.12.21
+  drizzle-orm: ^0.45.2
+  better-auth: ^1.6.11
 
 catalogMode: strict
 minimumReleaseAge: 1440  # 24 hours
@@ -78,7 +79,7 @@ minimumReleaseAge: 1440  # 24 hours
 
 ---
 
-### 3.4 Backend Framework: Hono (≥4.11.7)
+### 3.4 Backend Framework: Hono (≥4.12.21)
 
 Hono is the fastest web framework for Cloudflare Workers and Node.js. It runs identically on both platforms, giving you a clear path to leave Cloudflare if needed.
 
@@ -90,7 +91,9 @@ Hono is the fastest web framework for Cloudflare Workers and Node.js. It runs id
 
 **Critical security note:** Versions of Hono prior to 4.11.7 contain a vulnerability (CVE‑2026‑24473) in the Serve Static Middleware for Cloudflare Workers that could allow attackers to read arbitrary keys from the Workers environment. **You must use ≥4.11.7.**
 
-**Version to install:** Hono 4.11.7 or later.
+**🔴 CVE-2026-47674 — IPv6 bypass in the ip-restriction middleware.** All versions below 4.12.21 are vulnerable. Attackers can bypass IP allowlists by sending requests with IPv6-mapped IPv4 addresses. Pin to 4.12.21 minimum.
+
+**Version to install:** Hono 4.12.21 (minimum safe pin).
 
 ---
 
@@ -110,7 +113,7 @@ PostgreSQL is the only database that gives you full control over encryption, rep
 
 ---
 
-### 3.6 ORM & Migrations: Drizzle ORM (≥1.0.0‑rc.x)
+### 3.6 ORM & Migrations: Drizzle ORM (≥0.45.x)
 
 Drizzle ORM is the TypeScript‑native ORM that gives you type‑safe SQL, full control over migrations, and zero runtime overhead.
 
@@ -118,14 +121,14 @@ Drizzle ORM is the TypeScript‑native ORM that gives you type‑safe SQL, full 
 - **Type‑safe SQL** — You write SQL‑like queries with full TypeScript inference, not a proprietary DSL.
 - **Zero overhead** — No query engine, no binary dependencies, no runtime schema parsing.
 - **Per‑domain migrations** — Multiple Drizzle config files (`drizzle.calendar.config.ts`) with `schemaFilter` and `tablesFilter` allow each bounded context to own its migrations (see Section 8).
-- **JIT mappers** — Drizzle 1.0.0‑rc.1 introduces opt‑in JIT‑compiled row mappers, reducing latency by 25–30% and increasing throughput by +800 RPS in benchmarks.
+- **JIT mappers** — Drizzle 0.45.x includes opt‑in JIT‑compiled row mappers, reducing latency by 25–30% and increasing throughput by +800 RPS in benchmarks.
 - **pgSchema support** — Native support for PostgreSQL schemas (`pgSchema('calendar')`), essential for domain isolation.
 
-**Version to install:** Drizzle ORM 1.0.0‑rc.x (release candidate) or the stable version when released. Use `drizzle-kit` for migration generation.
+**Version to install:** Drizzle ORM 0.45.x (latest stable). Use `drizzle-kit` for migration generation.
 
 ---
 
-### 3.7 Authentication: Better Auth (≥1.6.2)
+### 3.7 Authentication: Better Auth (≥1.6.11)
 
 Better Auth is the only authentication library that lets you self‑host user data while offering enterprise features (OAuth, SSO, organizations, 2FA, passkeys) at zero per‑user cost.
 
@@ -134,9 +137,12 @@ Better Auth is the only authentication library that lets you self‑host user da
 - **Embedded, not a service** — Better Auth runs inside your Hono Worker, not as a separate service. Each app imports the same `@suite/auth` package and mounts routes via `auth.handler`. This is the “federated, identically configured auth library” pattern — not a central IdP to manage.
 - **Hono + Workers native** — Better Auth integrates seamlessly with Hono on Cloudflare Workers. The official documentation provides a complete example with Drizzle ORM and Neon Postgres.
 - **Plugins for everything** — Email/password, OAuth (Google, GitHub, Microsoft), organizations, SSO (SAML/OIDC), 2FA, passkeys, and admin dashboard.
-- **Active development** — Version 1.6.2 released in 2026 with security hardening, audit logs, and self‑service SSO UI.
+- **Active development** — Version 1.6.11 released in 2026 with security hardening, audit logs, and self‑service SSO UI.
+- **Passkey support** — Passkey support is confirmed production-ready in 1.6.x. The @better-auth/passkey plugin requires no additional configuration beyond enabling it in the plugins array.
 
-**Version to install:** Better Auth 1.6.2 or later. Pin exact version to avoid regressions (trustedOrigins handling regressed across 1.3.29–1.4.9; 1.6.x is stable).
+**Version to install:** Better Auth 1.6.11 or later. Pin exact version to avoid regressions (trustedOrigins handling regressed across 1.3.29–1.4.9; 1.6.x is stable).
+
+**SAML limitation:** The SAML/OIDC SSO plugin provides Service Provider (SP) functionality only — the suite acts as an SP delegating to an external IdP (Okta, Azure AD, Google Workspace). The suite cannot itself act as a SAML IdP. Enterprise customers who need the suite to be the IdP require a bridging layer (e.g., Keycloak).
 
 **Configuration basics:**
 
@@ -162,7 +168,7 @@ Durable Objects (DOs) are Cloudflare’s stateful serverless primitive. They run
 
 **Why DOs over PartyKit, Pusher, or self‑hosted Socket.io:**
 - **Hibernation API** — DOs can “sleep” when idle while keeping WebSocket connections open. Billable duration (GB‑s) does not accrue during hibernation. When a message arrives, the DO wakes up automatically.
-- **Embedded SQLite** — Each DO has its own strongly consistent SQLite database (up to 10 GB). Great for ephemeral state like chat message history.
+- **Embedded SQLite** — Each DO has its own strongly consistent SQLite database — up to 1 GB on the free plan and up to 10 GB on the paid Workers plan. Apps relying on DO SQLite storage must implement a SQLITE_FULL error handler that triggers archival of older records to R2 before the limit is reached.
 - **Thousands of connections per DO** — A single DO can coordinate thousands of concurrent WebSocket clients.
 - **No separate Redis or Kafka** — The DO is the room. No external message broker required.
 
@@ -172,7 +178,7 @@ Durable Objects (DOs) are Cloudflare’s stateful serverless primitive. They run
 
 ---
 
-### 3.9 API Client Generation: Orval (≥7.18.0)
+### 3.9 API Client Generation: Orval (≥7.19.0)
 
 Orval transforms your OpenAPI v3 specs into type‑safe TypeScript API clients, React Query hooks, Zod schemas, and even MCP servers.
 
@@ -184,7 +190,11 @@ Orval transforms your OpenAPI v3 specs into type‑safe TypeScript API clients, 
 
 **Critical security note:** Versions of Orval prior to 7.18.0 have a vulnerability (CVE‑2026‑22785) where the MCP server generation logic uses unsanitised string manipulation from OpenAPI `summary` fields, allowing code injection. **You must use ≥7.18.0.**
 
-**Version to install:** Orval 7.18.0 or later (8.x also acceptable, but verify breaking changes).
+**🔴 CVE-2026-23947 — Additional injection vector.** CVE-2026-23947 is patched in 7.19.0 but not 7.18.0. This vulnerability allows arbitrary code execution via unsanitized x-enumDescriptions in enum generation.
+
+**⚠️ Hold on Orval 8.x** — GitHub issue #2749 (React Query v5 type incompatibility in generated hooks) is unresolved. The 8.x migration is not safe for this stack yet.
+
+**Version to install:** Orval 7.19.0 (minimum safe pin).
 
 ---
 
@@ -194,7 +204,7 @@ shadcn/ui is not a component library — it’s a copy‑paste platform. You own
 
 **Why shadcn/ui over Material‑UI, Chakra, or Radix alone:**
 - **You own the source** — Components are copied into your `packages/ui-kit`. No dependency version lock‑in, no forced upgrades.
-- **Tailwind CSS 4 native** — shadcn/ui v4 is built on Tailwind CSS 4, with support for CSS variable theming, OKLCH colour spaces, and `@theme` inline patterns.
+- **Tailwind CSS 4 native** — shadcn/ui v4 is built on Tailwind CSS 4, with support for CSS variable theming, OKLCH colour spaces, and `@theme` inline patterns. As of shadcn@2.3, Tailwind v4 is the default when running the init command. If any app in the monorepo still targets Tailwind v3, pin explicitly with `npx shadcn@2.3 init --tailwind-version 3` for that app only. Mixed-version setups require separate globals.css files per app.
 - **Radix UI + Base UI dual support** — As of February 2026, shadcn/ui supports both Radix UI and Base UI as underlying primitives. You choose at `init`.
 - **AI‑friendly** — Component code is straightforward, modular, and easy for AI agents to modify and extend.
 
@@ -210,16 +220,16 @@ shadcn/ui is not a component library — it’s a copy‑paste platform. You own
 
 ---
 
-### 3.11 Mobile: Capacitor 6.x
+### 3.11 Mobile: Capacitor 8.x
 
 Capacitor wraps your web app into native iOS and Android applications with full access to device APIs (biometrics, secure storage, push notifications, camera, etc.).
 
 **Why Capacitor over React Native or pure PWAs:**
 - **Shared codebase** — The same Vite + React code that runs in the browser runs in the mobile app. No second codebase to maintain.
 - **Native API access** — Plugins for biometric authentication, encrypted preferences (`@capacitor/preferences`), push notifications, and file system.
-- **Capacitor 6** — Support ends 2026; target v7 for ongoing maintenance.
+- **Capacitor 8** — Capacitor 6 reached end-of-life July 2025. Capacitor 7 enters maintenance-only mode June 8, 2026 (no new features). The correct target for new development is Capacitor 8, which is the current active release with ongoing feature development.
 
-**Version to install:** Capacitor 6.x (or v7 if stable at time of mobile build). Install `@capacitor/core`, `@capacitor/ios`, and `@capacitor/android`.
+**Version to install:** Capacitor 8.x. Install `@capacitor/core`, `@capacitor/ios`, and `@capacitor/android`.
 
 **Workflow:** After building the web app (`pnpm build`), run `npx cap sync` to copy the build into `ios/` and `android/` directories. Deploy via App Store Connect and Google Play Console.
 
@@ -244,7 +254,7 @@ Capacitor wraps your web app into native iOS and Android applications with full 
 - Hibernation dramatically reduces duration costs — idle WebSockets cost almost nothing.
 
 **Cloudflare Hyperdrive — Database acceleration**
-- Free tier: 1 database. Connection pooling + query caching for PostgreSQL.
+- Free tier: up to 10 Hyperdrive configurations (databases). Each configuration supports approximately 20 concurrent connections to the upstream PostgreSQL instance — this ceiling is the primary scaling constraint, not the number of databases.
 
 ---
 
@@ -270,12 +280,12 @@ Capacitor wraps your web app into native iOS and Android applications with full 
 | Decision | Why This Wins |
 |----------|---------------|
 | Nx over Turborepo | Module boundary enforcement, AI‑native skills, affected commands, self‑healing CI |
-| pnpm over npm | Catalogs, `minimumReleaseAge` security, disk efficiency |
-| Hono over Express | 3–5× faster, runs on Workers + Node identically, better‑auth integration |
+| pnpm 11 over npm | Catalogs, `minimumReleaseAge` security, disk efficiency, pure ESM |
+| Hono 4.12.21 over Express | 3–5× faster, runs on Workers + Node identically, better‑auth integration, CVE‑fixed |
 | PostgreSQL 17 over managed DB | Full control, zero‑knowledge sovereignty, incremental backups |
-| Drizzle over Prisma | Type‑safe SQL, per‑domain migrations, JIT mappers, no query engine |
-| Better Auth over Clerk | $0 at 100k MAU (vs ~$2k), self‑hosted, embedded in Workers |
-| Durable Objects over PartyKit | Hibernation API, embedded SQLite, no external dependencies |
+| Drizzle 0.45.x over Prisma | Type‑safe SQL, per‑domain migrations, JIT mappers, no query engine |
+| Better Auth 1.6.11 over Clerk | $0 at 100k MAU (vs ~$2k), self‑hosted, embedded in Workers, passkey‑ready |
+| Durable Objects over PartyKit | Hibernation API, embedded SQLite (1GB free/10GB paid), no external dependencies |
 | shadcn/ui over component libraries | You own the source, Tailwind v4 native, AI‑friendly |
 | Cloudflare Pages over Vercel | Unlimited bandwidth free tier, 500 builds/month |
 | Cloudflare R2 over S3 | Zero egress fees, free tier generous |

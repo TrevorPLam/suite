@@ -1,0 +1,38 @@
+{
+  "name": "calendar-web",
+  "root": "apps/calendar/web",
+  "sourceRoot": "apps/calendar/web/src",
+  "projectType": "application",
+  "implicitDependencies": ["domain-calendar", "auth", "ui"],
+  "tags": ["scope:calendar", "type:application", "layer:web"],
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint src",
+        "cwd": "apps/calendar/web"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tsconfig.json --noEmit",
+        "cwd": "apps/calendar/web"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest",
+        "cwd": "apps/calendar/web"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vite build",
+        "cwd": "apps/calendar/web"
+      }
+    }
+  }
+}

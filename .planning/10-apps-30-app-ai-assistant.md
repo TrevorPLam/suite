@@ -16,22 +16,22 @@ The AI Assistant app provides AI-powered assistance across the Sovereign Suite w
 
 | Model | Parameters | VRAM Required | RAM Required | Performance | Recommendation |
 |-------|-----------|---------------|--------------|-------------|----------------|
-| Llama 3.2 3B | 3B | 2 GB | 4 GB | Fast, good quality | ✅ Recommended |
+| Phi-4 Mini | 3.8B | 2.5 GB | 4.5 GB | Fast, excellent quality | ✅ Recommended |
+| Llama 3.2 3B | 3B | 2 GB | 4 GB | Fast, good quality | ⚠️ Fallback |
 | Mistral 7B | 7B | 4 GB | 6 GB | Slower, better quality | ⚠️ Borderline |
-| Phi-4 | 3.8B | 2.5 GB | 4.5 GB | Fast, excellent quality | ✅ Recommended |
 
-### Recommended Model: Llama 3.2 3B
+### Recommended Model: Phi-4 Mini
 
-- **Reason**: Fits comfortably in 8 GB RAM with room for context
+- **Reason**: Superior quality to Llama 3.2 at similar size, with strong math and reasoning performance
 - **Performance**: Fast inference (< 500ms per token)
-- **Quality**: Good enough for productivity tasks
-- **License**: Apache 2.0 (commercial use allowed)
-
-### Alternative: Phi-4
-
-- **Reason**: Better quality than Llama 3.2 at similar size
-- **Performance**: Slightly slower but still acceptable
+- **Quality**: Excellent for productivity tasks, outperforms similar-sized models
 - **License**: MIT (commercial use allowed)
+
+### Alternative: Llama 3.2 3B
+
+- **Reason**: Fallback option if Phi-4 Mini is unavailable
+- **Performance**: Slightly faster but lower quality
+- **License**: Apache 2.0 (commercial use allowed)
 
 ---
 
@@ -43,7 +43,7 @@ The AI Assistant app provides AI-powered assistance across the Sovereign Suite w
 # docker-compose.yml
 services:
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.30.5
     container_name: ollama
     ports:
       - "11434:11434"
@@ -64,14 +64,14 @@ services:
 ### Pull and Run Model
 
 ```bash
-# Pull Llama 3.2 3B
-docker exec -it ollama ollama pull llama3.2:3b
+# Pull Phi-4 Mini
+docker exec -it ollama ollama pull phi4-mini
 
 # Verify model is loaded
 docker exec -it ollama ollama list
 
 # Test inference
-docker exec -it ollama ollama run llama3.2:3b "Hello, world!"
+docker exec -it ollama ollama run phi4-mini "Hello, world!"
 ```
 
 ### Ollama API
@@ -80,7 +80,7 @@ Ollama provides a REST API for inference:
 
 ```bash
 curl http://localhost:11434/api/generate -d '{
-  "model": "llama3.2:3b",
+  "model": "phi4-mini",
   "prompt": "Hello, world!",
   "stream": false
 }'
@@ -174,7 +174,7 @@ export async function queryLLM(prompt: string): Promise<string> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'llama3.2:3b',
+      model: 'phi4-mini',
       prompt,
       stream: true,
     }),
@@ -231,7 +231,7 @@ app.post('/api/ai/query', async (c) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'llama3.2:3b',
+      model: 'phi4-mini',
       prompt: assemblePrompt(query, context),
       stream: true,
     }),
@@ -389,8 +389,8 @@ export async function queryAI(query: string, context: string): Promise<string> {
 
 | Plan | Requests per Day | Context Size | Model |
 |------|------------------|--------------|-------|
-| Free | 10 | 2K tokens | Llama 3.2 3B |
-| Pro | 100 | 8K tokens | Llama 3.2 3B |
+| Free | 10 | 2K tokens | Phi-4 Mini |
+| Pro | 100 | 8K tokens | Phi-4 Mini |
 | Enterprise | Unlimited | 32K tokens | Mistral 7B |
 
 ### Rate Limit Implementation

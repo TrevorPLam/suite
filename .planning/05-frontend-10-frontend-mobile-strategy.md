@@ -135,6 +135,14 @@ While Micro‑Frontends and Module Federation are mature, they introduce operati
 
 For the rare case where runtime composition is genuinely required (e.g., embedding a Drive file picker inside Mail), use the established pattern of `window.postMessage` between iframes, wrapped in a secure typed messaging library that respects origin validation.
 
+**⚠️ BroadcastChannel Cross-Origin Warning:**
+
+The BroadcastChannel API is designed for same-origin communication only. It cannot be used for cross-subdomain communication (e.g., between `app.yourdomain.com` and `calendar.yourdomain.com`). For cross-app state sync across subdomains:
+- Use `window.postMessage` with explicit origin validation
+- Implement a shared event bus via a Worker with Service Bindings
+- Consider server-side state synchronization via WebSocket or polling
+- Do not rely on BroadcastChannel for cross-subdomain scenarios—it will fail silently
+
 ---
 
 ### 11.4 Mobile Strategy: Capacitor
@@ -180,6 +188,13 @@ Mobile apps require storing session tokens and encryption keys securely. Capacit
 
 **Rule:** Never embed secrets in app code. Never use `@capacitor/preferences` for authentication tokens or encryption keys. Always use the secure keychain/keystore APIs for sensitive values. For biometric‑protected secrets, use the iOS Keychain Services and Android Keystore APIs.
 
+**⚠️ Capacitor 8 SQLite Plugin Evaluation:**
+
+The `capacitor-community/sqlite` plugin for local database storage is maintained by a community fork (robingenz fork, v8.1.0+). Before Capacitor 8, the official Capacitor team maintained this plugin. Evaluate the fork's stability and update frequency before adopting. Consider alternatives:
+- **SQLite via native bridge**: Implement a custom native bridge to SQLite if the community fork proves unstable
+- **IndexedDB with encryption**: Use IndexedDB for cross-platform compatibility with WebCrypto encryption
+- **Third-party alternatives**: Evaluate other SQLite plugins with active maintenance
+
 The `packages/mobile` package provides unified TypeScript wrappers:
 
 ```typescript
@@ -221,6 +236,14 @@ Offline capability is non‑negotiable for a productivity suite. Users must acce
 
 The sync engine is built on CRDTs (Yjs for text; simpler last‑write‑wins for structured data). A dedicated Durable Object per user (for Drive) or per document (for collaborative editing) manages conflict resolution and incremental sync.
 
+**📝 Vite 8 Upgrade Note:**
+
+Vite 8.0 was released with Rolldown (Rust-based bundler) for significant build performance improvements. When upgrading to Vite 8:
+- Test the Capacitor build pipeline with the new bundler
+- Verify that HMR still works correctly with the mobile dev workflow
+- Check for any breaking changes in Vite plugins used by the mobile apps
+- Update the `@vitejs/plugin-react` version to the Vite 8-compatible release
+
 ---
 
 ### 11.6 Key Takeaways: Frontend Architecture
@@ -232,7 +255,7 @@ The sync engine is built on CRDTs (Yjs for text; simpler last‑write‑wins for
 | **Component library** | shadcn/ui v4 (vendored) | You own the source; no lock‑in |
 | **Styling** | Tailwind CSS v4 with shared tokens in `packages/ui-kit` | CSS‑first configuration; easy monorepo sharing; OKLCH colour space |
 | **Cross‑app navigation** | Independent SPAs + shared shell (`apps/shell/web`) | No Module Federation complexity; unified cookie domain for auth |
-| **Mobile** | Capacitor 6 | Shared web codebase; native API access; secure storage; biometrics |
+| **Mobile** | Capacitor 8 | Shared web codebase; native API access; secure storage; biometrics |
 | **Offline** | Service worker + SQLite/IndexedDB + CRDT sync via Durable Objects | Permits offline editing; queued sync on reconnection |
 
 ---

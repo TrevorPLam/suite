@@ -1,0 +1,38 @@
+{
+  "name": "tasks-api",
+  "root": "apps/tasks/api",
+  "sourceRoot": "apps/tasks/api/src",
+  "projectType": "application",
+  "implicitDependencies": ["domain-tasks", "auth", "env-config", "db", "shared-kernel"],
+  "tags": ["scope:tasks", "type:application", "layer:api"],
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint src",
+        "cwd": "apps/tasks/api"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tsconfig.json --noEmit",
+        "cwd": "apps/tasks/api"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest",
+        "cwd": "apps/tasks/api"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "wrangler deploy --dry-run",
+        "cwd": "apps/tasks/api"
+      }
+    }
+  }
+}

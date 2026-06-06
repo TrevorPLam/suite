@@ -82,6 +82,63 @@ export async function authenticateFIDO2Credential(
 
 ---
 
+## TOTP Anti-Phishing Advisory
+
+### Security Vulnerability
+
+TOTP (Time-based One-Time Password) is classified by NIST SP 800-63B as a "restricted authenticator" due to its vulnerability to phishing attacks. Unlike Passkeys (FIDO2/WebAuthn), TOTP codes can be phished:
+
+- **Phishing attack**: An attacker creates a fake login page that looks identical to the real service. The user enters their username, password, and TOTP code. The attacker immediately uses these credentials on the real site before the code expires.
+- **No origin binding**: TOTP codes are not bound to the requesting origin. A code generated for `example.com` will also work on `evil-phishing-site.com`.
+- **NIST classification**: NIST SP 800-63B classifies TOTP as a "restricted authenticator" and recommends that organizations assess and accept risks, offer alternative unrestricted authenticators, provide notice of risks, and develop migration plans.
+
+### Recommended Mitigation
+
+The Sovereign Suite recommends the following mitigation strategy:
+
+1. **Primary recommendation**: Use Passkeys (FIDO2/WebAuthn) wherever possible. Passkeys are phishing-resistant because they are bound to the requesting origin via public key cryptography.
+
+2. **If TOTP must be used**:
+   - Display a prominent warning in the UI that TOTP is vulnerable to phishing
+   - Encourage users to enable Passkeys as a more secure alternative
+   - Implement additional security measures (e.g., device fingerprinting, IP reputation checks)
+
+3. **User education**:
+   - Include a security notice when adding a TOTP entry
+   - Document the phishing risk in the app's help center
+   - Provide guidance on identifying phishing sites
+
+### Implementation Guidance
+
+When users add a TOTP entry, display the following warning:
+
+```
+⚠️ Security Notice: TOTP codes can be phished
+
+TOTP (Time-based One-Time Password) is vulnerable to phishing attacks.
+An attacker with a fake login page can steal your code and use it immediately.
+
+For stronger security, we recommend using Passkeys (FIDO2/WebAuthn) instead.
+Passkeys are phishing-resistant and don't require codes.
+
+[Learn more about phishing risks] [Add anyway]
+```
+
+### NIST Compliance Note
+
+Per NIST SP 800-63B, organizations using restricted authenticators like TOTP must:
+- Assess and accept the risk
+- Offer alternative unrestricted authenticators (Passkeys)
+- Provide notice of risks to users
+- Develop a migration plan to stronger authenticators
+
+The Sovereign Suite satisfies these requirements by:
+- Offering Passkeys as the primary authentication method
+- Providing this advisory notice for TOTP users
+- Recommending migration to Passkeys in security documentation
+
+---
+
 ## Encrypted Cross-Device Backup
 
 ### Backup Flow

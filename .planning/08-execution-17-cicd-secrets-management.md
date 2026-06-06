@@ -14,7 +14,70 @@ For a 53‑application monorepo, naive CI is not merely wasteful—it is impossi
 
 ---
 
-### 18.2 The Core Workflow: `ci.yml`
+### 18.2 Supply Chain Security — GitHub Actions Pinning
+
+All third-party GitHub Actions must be pinned to a full 40-character commit SHA, not a version tag. Version tags are mutable — an attacker who compromises the action maintainer's account can push a malicious commit to an existing tag. SHA pinning eliminates this attack vector entirely.
+
+**Why SHA pinning is mandatory:**
+
+According to GitHub's official security documentation:
+
+> "Pinning an action to a full-length commit SHA is currently the only way to use an action as an immutable release. Pinning to a particular SHA helps mitigate the risk of a bad actor adding a backdoor to the action's repository, as they would need to generate a SHA-1 collision for a valid Git object payload."
+
+**Example of correct vs. incorrect pinning:**
+
+```yaml
+# ❌ Wrong — tag is mutable
+- uses: actions/checkout@v5
+
+# ✅ Correct — SHA is immutable
+- uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6.0.3
+```
+
+**SHA tracking file:**
+
+Maintain a `docs/action-shas.md` file that records the current SHA and the corresponding version for each pinned action. Update this file with each Dependabot PR or manual action update. The file serves as:
+
+- A single source of truth for which SHAs are in use
+- Documentation for verification during security audits
+- A reference for updating workflows when Dependabot suggests changes
+
+**Current pinned actions (as of 2026-06-06):**
+
+| Action | Version | SHA |
+|--------|---------|-----|
+| actions/checkout | v6.0.3 | 9f698171ed81b15d1823a05fc7211befd50c8ae0 |
+| pnpm/action-setup | v6.0.8 | d15e628ca66d93ee5f352c71671a7bc6a97af5c9 |
+| actions/setup-node | v6.4.0 | 48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e |
+| actions/cache | v4 | 0057852bfaa89a56745cba8c7296529d2fc39830 |
+| nrwl/nx-set-shas | v4 | 3e9ad7370203c1e93d109be57f3b72eb0eb511b1 |
+| dorny/paths-filter | v3 | 6852f92c20ea7fd3b0c25de3b5112db3a98da050 |
+| anchore/sbom-action | v0 | e22c389904149dbc22b58101806040fa8d37a610 |
+| trufflesecurity/trufflehog | v3.95.5 | d411fff7b8879a62509f3fa98c07f247ac089a51 |
+| github/codeql-action | v3 | b0c4fd77f6c559021d78430ec4d0d169ae74a4eb |
+| dopplerhq/secrets-fetch-action | v1.3.1 | 451892f16195f9ac360e1a5bcbf0b5fd0e957534 |
+| zizmorcore/zizmor-action | v0.5.6 | 5f14fd08f7cf1cb1609c1e344975f152c7ee938d |
+
+**GitHub repository enforcement:**
+
+Configure GitHub repository settings to require SHA pinning:
+
+1. Settings → Actions → General
+2. Under "Actions permissions", select "Allow all actions and reusable workflows"
+3. Enable "Require SHA pinning for actions"
+4. This prevents workflows with mutable tags from being committed
+
+**Verification command:**
+
+To verify a SHA corresponds to a specific version tag:
+
+```bash
+git ls-remote https://github.com/<owner>/<repo>.git refs/tags/<version>
+```
+
+---
+
+### 18.3 The Core Workflow: `ci.yml`
 
 The `ci.yml` workflow is the heartbeat of the Sovereign Suite. It runs on every push, pull request, and merge to `main`. The workflow uses the official `nrwl/nx‑set‑shas` action to compute the base SHA (the last commit that ran a successful CI job) and the head SHA (the current commit). Nx then uses these to compute the affected projects—those that changed directly or are depended on by changed projects.
 
@@ -39,17 +102,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6.0.3
         with:
           fetch-depth: 0  # Required for Nx affected detection
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9  # v6.0.8
         with:
-          version: 9
+          version: 11
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
           node-version: 22
           cache: 'pnpm'
@@ -59,7 +122,7 @@ jobs:
         run: echo "store_dir=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
           path: ${{ steps.pnpm-store.outputs.store_dir }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -70,7 +133,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Set Nx SHAs
-        uses: nrwl/nx-set-shas@v4
+        uses: nrwl/nx-set-shas@3e9ad7370203c1e93d109be57f3b72eb0eb511b1  # v4
 
       - name: Run Nx affected
         run: pnpm nx affected --target=lint,typecheck,test,build
@@ -166,8 +229,8 @@ jobs:
       drive: ${{ steps.filter.outputs.drive }}
       vault: ${{ steps.filter.outputs.vault }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6.0.3
+      - uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050  # v3
         id: filter
         with:
           filters: |
@@ -188,7 +251,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6.0.3
+      - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9  # v6.0.8
       - run: pnpm install --frozen-lockfile
       - name: Run calendar migrations
         run: pnpm --filter=domain-calendar db:migrate
@@ -201,8 +265,8 @@ jobs:
     if: needs.changes.outputs.calendar == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6.0.3
+      - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9  # v6.0.8
       - run: pnpm install --frozen-lockfile
       - name: Deploy Calendar Worker
         run: pnpm nx run calendar-api:deploy
@@ -215,7 +279,8 @@ jobs:
     if: needs.changes.outputs.calendar == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6.0.3
+      - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9  # v6.0.8
       - run: pnpm install --frozen-lockfile
       - name: Deploy Calendar Pages
         run: pnpm nx run calendar-web:deploy
@@ -254,7 +319,7 @@ jobs:
     steps:
       - name: Fetch Doppler secrets
         id: secrets
-        uses: dopplerhq/secrets-fetch-action@v2
+        uses: dopplerhq/secrets-fetch-action@451892f16195f9ac360e1a5bcbf0b5fd0e957534  # v1.3.1
         with:
           doppler-token: ${{ secrets.DOPPLER_TOKEN }}
       - name: Deploy Worker
@@ -296,22 +361,22 @@ jobs:
   sbom:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6.0.3
       - name: Generate SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610  # v0
         with:
           path: .
           format: spdx-json
           output-file: sbom.spdx.json
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: sbom
           path: sbom.spdx.json
       - name: Scan SBOM with Grype
-        uses: anchore/grype-action@v0
+        uses: anchore/scan-action@04b73ec0bba3de85519c4ec634bffedead788f96  # v4
         with:
-          sbom: sbom.spdx.json
+          image: ${{ github.repository }}
           fail-build: true
           severity-cutoff: high
 ```
@@ -324,7 +389,7 @@ Grype scans the SBOM and fails the build if any critical or high severity CVE is
 
 ```yaml
 - name: Scan for secrets
-  uses: trufflesecurity/trufflehog@v3
+  uses: trufflesecurity/trufflehog@d411fff7b8879a62509f3fa98c07f247ac089a51  # v3.95.5
   with:
     extra_args: --only-verified --fail
 ```
@@ -335,18 +400,241 @@ TruffleHog scans the entire git history for exposed secrets. The `--only‑verif
 
 ```yaml
 - name: Initialize CodeQL
-  uses: github/codeql-action/init@v3
+  uses: github/codeql-action/init@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb  # v3
   with:
     languages: javascript, typescript
 - name: Perform CodeQL Analysis
-  uses: github/codeql-action/analyze@v3
+  uses: github/codeql-action/analyze@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb  # v3
 ```
 
 CodeQL runs semantic analysis on the application code, detecting SQL injection, cross‑site scripting, path traversal, and other vulnerability classes. Results appear in the GitHub Security tab.
 
+**Static analysis with zizmor:**
+
+**zizmor** is the 2026 standard for GitHub Actions YAML static analysis. It catches vulnerabilities that standard linting misses — including `|| true` patterns that hide failures, unsafe use of `GITHUB_ENV`, `pull_request_target` privilege escalation, and script injection via `github.event.*` interpolation. Add it as a required check on all `.github/workflows/` changes:
+
+```yaml
+- name: Run zizmor
+  uses: zizmorcore/zizmor-action@5f14fd08f7cf1cb1609c1e344975f152c7ee938d  # v0.5.6
+  with:
+    config: .zizmor.yml
+```
+
+**Configuration file (`.zizmor.yml`):**
+
+```yaml
+# zizmor configuration for Sovereign Suite
+# See: https://docs.zizmor.sh/
+
+# Enable all security checks by default
+checks:
+  - template-injection
+  - script-injection
+  - dangerous-triggers
+  - github-token-permissions
+  - insecure-outputs
+  - unpinned-uses
+
+# Fail the workflow if any findings are detected
+fail-on: any
+
+# Minimum severity level
+severity: warning
+```
+
+**Why zizmor is critical:**
+
+In March 2026, attackers exploited a `pull_request_target` misconfiguration in the `aquasecurity/trivy-action` GitHub Action to exfiltrate organization and repository secrets, then used those credentials to backdoor LiteLLM on PyPI. zizmor would have detected this misconfiguration before deployment. The tool provides:
+
+- Detection of template injection vulnerabilities (attacker-controlled code execution)
+- Identification of unsafe `GITHUB_ENV` usage (environment variable poisoning)
+- Flagging of `pull_request_target` privilege escalation risks
+- Detection of script injection via `github.event.*` interpolation
+- Verification that all actions are pinned to SHAs (not mutable tags)
+
+Add zizmor as a required status check in GitHub branch protection rules for any PR that modifies `.github/workflows/`.
+
 ---
 
-### 18.8 GitHub‑Hosted vs. Self‑Hosted Runners
+### 18.8 SLSA Level 3 Build Provenance
+
+To achieve SLSA Level 3 provenance, the Sovereign Suite implements a supply chain stack that generates signed attestations for all build artifacts. This proves which source commit, which workflow run, and which build environment produced each artifact — enabling downstream consumers to verify supply chain integrity.
+
+**What is SLSA Level 3?**
+
+SLSA (Supply-chain Levels for Software Artifacts) is a security framework that defines levels of supply chain integrity. Level 3 is the practical target for most teams and requires:
+
+- **Provenance generation:** Signed metadata about how the artifact was built
+- **Isolated build:** The build process runs in an isolated environment
+- **Reproducible builds:** The same source produces the same artifact
+
+**Implementation components:**
+
+1. **Ephemeral runners** — Use GitHub-hosted runners (not self-hosted) for all signing steps. Self-hosted runners introduce persistence that can be compromised; ephemeral runners provide clean isolation per build.
+
+2. **slsa-github-generator** — Generates signed SLSA provenance attestations per artifact using the official SLSA framework tools.
+
+3. **Cosign** — Signs container images and Workers bundles with cryptographic signatures.
+
+4. **Syft + Grype** — Already in the compliance workflow; add to the build output as a release artifact for downstream verification.
+
+**Deploy workflow with SLSA provenance:**
+
+```yaml
+name: Deploy with SLSA Provenance
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for OIDC signing
+      contents: read
+    steps:
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6.0.3
+
+      - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9  # v6.0.8
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+        with:
+          node-version: 22
+
+      - name: Build Workers
+        run: pnpm nx run calendar-api:build
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610  # v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+
+  provenance:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for OIDC signing
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6.0.3
+
+      - name: Generate SLSA provenance
+        uses: slsa-framework/slsa-github-generator@v2.0.0
+        with:
+          provenance-name: provenance.json
+          upload-assets: true
+
+      - name: Sign with Cosign
+        uses: sigstore/cosign-installer@v3.5.0
+        with:
+          cosign-release: 'v2.4.1'
+
+      - name: Sign Workers bundle
+        run: |
+          cosign sign-blob \
+            --output-signature signature.sig \
+            --output-certificate certificate.pem \
+            dist/calendar-api/index.js
+
+      - name: Upload provenance artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: provenance
+          path: |
+            provenance.json
+            signature.sig
+            certificate.pem
+```
+
+**Verification workflow:**
+
+Downstream consumers can verify the provenance using the slsa-verifier:
+
+```bash
+# Verify the artifact's provenance
+slsa-verifier verify-artifact \
+  --provenance-path provenance.json \
+  --source-uri github.com/your-org/suite \
+  --source-tag v1.0.0 \
+  dist/calendar-api/index.js
+```
+
+**Why SLSA Level 3 matters:**
+
+- **Supply chain integrity:** Proves the artifact was built from the claimed source commit
+- **Build isolation:** Ensures the build environment was not compromised
+- **Regulatory compliance:** Meets EU Cyber Resilience Act (CRA) requirements for software supply chain transparency
+- **Downstream trust:** Enables consumers to verify artifacts before deployment
+
+**SLSA in the quality gates:**
+
+Add SLSA provenance generation as a required step in the deploy workflow. The provenance attestation must be uploaded as a GitHub release asset for every production deployment.
+
+---
+
+### 18.9 Worker Security Checklist
+
+Cloudflare Workers are the compute layer for the Sovereign Suite's APIs. Because they handle authentication, rate limiting, and encryption, security misconfigurations in Workers can have catastrophic consequences. This checklist enumerates the critical security rules for all production Workers.
+
+**🔴 Never use `passThroughOnException()` in production Workers.**
+
+`passThroughOnException()` is a fail-open mechanism that sends requests to your origin when your Worker throws an unhandled exception. While it can be useful during migration from an origin server, it hides bugs and makes debugging difficult. In a security-critical context (auth, rate limiting, encryption), this means an attacker who triggers an unhandled exception bypasses all Worker-layer protections.
+
+**Example of incorrect vs. correct error handling:**
+
+```javascript
+// 🔴 Bad: hides errors by falling through to origin
+const badHandler = {
+  async fetch(request, env, ctx) {
+    ctx.passThroughOnException();
+    const result = await handleRequest(request, env);
+    return Response.json(result);
+  },
+};
+
+// ✅ Good: explicit error handling with structured responses
+export default {
+  async fetch(request, env, ctx) {
+    try {
+      const result = await handleRequest(request, env);
+      return Response.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error(
+        JSON.stringify({
+          message: "unhandled error",
+          error: message,
+          path: new URL(request.url).pathname,
+        }),
+      );
+      return Response.json({ error: "Internal server error" }, { status: 500 });
+    }
+  },
+};
+```
+
+**Additional Worker security rules:**
+
+- **Store secrets with `wrangler secret`, not in source.** Never commit API keys, tokens, or credentials to the repository. Use `wrangler secret put` to store them securely in Cloudflare's encrypted secret store.
+- **Use Web Crypto for secure token generation.** Never use `Math.random()` for cryptographic operations. Use the Web Crypto API (`crypto.subtle`) for generating secure random values and hashing.
+- **Do not store request-scoped state in global scope.** Each invocation is independent. Global state can leak between requests in development but is not guaranteed in production.
+- **Always await or `waitUntil` your Promises.** Unawaited promises may not complete before the response is sent, leading to race conditions and data loss.
+- **Validate all inputs before processing.** Never trust user input. Validate request bodies, query parameters, and headers against strict schemas before passing them to business logic.
+- **Rate limit sensitive endpoints.** Implement rate limiting on authentication, password reset, and other sensitive operations to prevent brute force attacks.
+- **Log security events for audit trails.** Log authentication attempts, authorization failures, and suspicious activity patterns for compliance and incident response.
+
+---
+
+### 18.10 GitHub‑Hosted vs. Self‑Hosted Runners
 
 The Sovereign Suite begins with GitHub‑hosted runners (free tier: 2,000 minutes/month for private repositories, unlimited for public). As the suite scales, self‑hosted runners on the VPS become necessary to stay within free tier limits.
 
@@ -393,7 +681,7 @@ sudo ./svc.sh start
 
 ---
 
-### 18.9 Quality Gates and Merge Protection
+### 18.11 Quality Gates and Merge Protection
 
 The Sovereign Suite enforces quality gates at multiple levels:
 
@@ -404,9 +692,11 @@ The Sovereign Suite enforces quality gates at multiple levels:
 | **Unit tests** | `nx affected --target=test` | PR cannot be merged |
 | **Integration tests** | `nx affected --target=e2e` | PR cannot be merged |
 | **Linting** | `nx affected --target=lint` | PR cannot be merged |
+| **zizmor workflow analysis** | `ci.yml` (on workflow changes) | PR cannot be merged |
 | **SBOM vulnerability scan** | `compliance.yml` (weekly) | Alert, not block |
 | **Secret detection** | `ci.yml` (pre‑merge) | PR cannot be merged |
 | **CodeQL analysis** | `compliance.yml` (on push to main) | Block merge if critical severity |
+| **SLSA provenance** | `deploy.yml` (on deploy) | Block deployment if missing |
 
 **GitHub branch protection rules:**
 
@@ -416,6 +706,7 @@ Branch name pattern: main
 Require status checks:
   - CI / ci
   - Compliance / sbom
+  - Compliance / zizmor (for workflow changes)
   - Deploy / migrations-calendar (for calendar changes)
 Require branches to be up‑to‑date: true
 Require pull request reviews: 1
@@ -426,19 +717,20 @@ These rules ensure that no code reaches `main` without passing all quality gates
 
 ---
 
-### 18.10 Workflow Summary and Runbook
+### 18.12 Workflow Summary and Runbook
 
 **Typical PR workflow:**
 
 1. Developer creates a feature branch and pushes code.
 2. `ci.yml` runs affected lint, typecheck, test, and build on the branch.
 3. Developer opens a pull request.
-4. GitHub Actions re‑runs `ci.yml` on the PR branch.
-5. Human reviewer approves the PR.
-6. PR merges to `main`.
-7. `deploy.yml` runs affected migrations, API deployment, and Pages deployment.
-8. `compliance.yml` runs SBOM generation and vulnerability scanning on the merged code.
-9. Slack notification is sent to the team channel.
+4. If the PR modifies `.github/workflows/`, `zizmor` runs static analysis.
+5. GitHub Actions re‑runs `ci.yml` on the PR branch.
+6. Human reviewer approves the PR.
+7. PR merges to `main`.
+8. `deploy.yml` runs affected migrations, API deployment, and Pages deployment with SLSA provenance generation.
+9. `compliance.yml` runs SBOM generation and vulnerability scanning on the merged code.
+10. Slack notification is sent to the team channel.
 
 **Emergency deployment runbook:**
 
@@ -455,7 +747,7 @@ npx wrangler rollback calendar-api --version=previous
 
 ---
 
-### 18.11 AI Agent Rules for CI/CD
+### 18.13 AI Agent Rules for CI/CD
 
 Add the following to your root `AGENTS.md`:
 
@@ -472,11 +764,15 @@ Add the following to your root `AGENTS.md`:
 8. **CodeQL must pass on all new code.** Warnings are allowed; critical findings are not.
 9. **Use `nx affected` in CI, never `nx run‑many`.** The latter runs everything, defeating the purpose of a monorepo.
 10. **Rollback via Wrangler, not database restore.** Rolling back code is faster; database restores are for disaster recovery only.
+11. **All GitHub Actions must be SHA‑pinned.** Never use version tags (`@v4`, `@main`). Use full 40‑character commit SHAs. Update `docs/action-shas.md` with each change.
+12. **zizmor must run on all workflow changes.** Add zizmor analysis to `ci.yml` for any PR that modifies `.github/workflows/`.
+13. **SLSA provenance is required for production deployments.** Generate signed attestations using `slsa-github-generator` and upload as release assets.
+14. **Never use `passThroughOnException()` in production Workers.** This is a fail‑open mechanism that bypasses all Worker‑layer security on unhandled exceptions. Use explicit `try/catch` error handling instead.
 ```
 
 ---
 
-### 18.12 Summary: CI/CD Decisions at a Glance
+### 18.14 Summary: CI/CD Decisions at a Glance
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
@@ -488,7 +784,8 @@ Add the following to your root `AGENTS.md`:
 | **SBOM generation** | `anchore/sbom‑action` + Syft | CRA compliant; exports SPDX/JSON |
 | **Vulnerability scanning** | Grype on SBOM | Fails CI on critical CVEs |
 | **Secret detection** | TruffleHog (verified only) | Prevents exposed credentials |
-| **Static analysis** | CodeQL | GitHub‑native; no additional configuration |
+| **Static analysis** | CodeQL + zizmor | CodeQL for code; zizmor for workflow security |
+| **Supply chain security** | SHA‑pinned actions + SLSA Level 3 | Prevents action tampering; provides provenance |
 | **Runner type** | GitHub‑hosted (start); self‑hosted (scale) | Free tier sufficient for early stage; migrate when limits approach |
 
 The CI/CD pipeline is the backbone of the Sovereign Suite’s development workflow. Affected‑only execution, aggressive caching, and dynamic secrets management transform what would be an hour‑long full rebuild into a 5‑10 minute incremental check. As the suite grows from 3 apps to 53, the pipeline scales with it—without requiring a redesign.

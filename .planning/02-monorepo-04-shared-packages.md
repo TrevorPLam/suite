@@ -78,6 +78,12 @@ export async function generateBlindIndexToken(
   key: CryptoKey
 ): Promise<string>;
 export function generateBlindIndexSalt(): Uint8Array;
+
+// Required for all secret comparison operations
+export function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  return crypto.subtle.timingSafeEqual(a, b);
+}
 ```
 
 #### 5.1.2 Critical Security Constants
@@ -90,6 +96,8 @@ export function generateBlindIndexSalt(): Uint8Array;
 | `AES_MODE` | AES-256-GCM | Authenticated encryption (integrity + confidentiality) |
 | `RECOVERY_SECRET_LENGTH` | 32 bytes | 256 bits of entropy |
 | `BLIND_INDEX_HMAC` | HMAC-SHA-256 | Deterministic, keyed token for exact-match search |
+
+⚠️ **PQC Migration Note**: NIST finalized ML-KEM (FIPS 203), ML-DSA (FIPS 204), and SLH-DSA (FIPS 205) in August 2024. Classical algorithms (ECDH P-384, AES-256-GCM) are deprecated by 2030 and disallowed by 2035 per CNSA 2.0. Long-lived encrypted blobs stored by this system (Drive files, Vault credentials) are harvest-now-decrypt-later (HNDL) targets. A PQC migration path must be planned before 2029. Annotate any blob field with a zero-knowledge lifetime > 5 years as a `@pqc-migration-candidate` in the schema.
 
 #### 5.1.3 Blind Indexing for Searchable Encryption
 
@@ -120,6 +128,7 @@ const queryToken = await generateBlindIndexToken(searchTerm, storedSalt, domainK
 5. **Domain separation is mandatory.** Always use `deriveDomainKey` before domain-specific operations.
 6. **Never reuse nonce/IV.** `generateItemKey` uses random IV with every encryption.
 7. **Zeroize sensitive buffers.** Use `sensitive.set(new Uint8Array(0))` after use where possible.
+8. **Never use === to compare secrets, tokens, or HMAC outputs.** Always use `constantTimeEqual()` from @suite/crypto. CVE-class timing attacks against HMAC token comparisons are a real exploit path. Every secret comparison in Worker auth handlers must use `crypto.subtle.timingSafeEqual`.
 ```
 
 ---
@@ -198,6 +207,8 @@ export default defineConfig({
 
 The `schemaFilter: ['calendar']` directive is your critical safeguard: Drizzle Kit introspects the live database but **only looks at tables in the `calendar` PostgreSQL schema**. It will never generate a `DROP TABLE drive.items` statement. Each migration is generated and applied separately per domain, using a single `migrate.ts` runner invoked with `APP_DOMAIN=calendar tsx migrate.ts`.
 
+🔴 **CRITICAL: Never run `drizzle-kit push` in CI or against production.** `push` compares live schema to your TypeScript definition and generates a diff — but it does not record a migration file. This breaks Point-In-Time Recovery (PITR) schema consistency, making it impossible to replay migrations during a disaster recovery. The only permitted workflow in CI is `drizzle-kit migrate`. Add a CI check that fails if any script in `.github/workflows/` calls `push`.
+
 #### 5.2.3 Multi‑Tenancy with Row‑Level Security (RLS)
 
 For shared‑schema multi‑tenancy, you will use PostgreSQL RLS to enforce tenant isolation at the database level. Every tenant‑scoped table has an `organization_id` column, and RLS policies ensure that queries only return rows matching the current session variable.
@@ -229,7 +240,7 @@ app.use('*', async (c, next) => {
 
 1. **Never bypass tenant client.** Always use `createTenantClient(db, userId)` for domain queries.
 2. **Never hardcode schema names.** Use `schemaFilter` in Drizzle configs.
-3. **Migrations are per‑domain.** Run `APP_DOMAIN=calendar pnpm db:migrate`, never inside Workers.
+3. **Migrations are per‑domain.** Run `APP_DOMAIN=calendar pnpm db:migrate`, never inside Workers. Never run `drizzle-kit push` — use `drizzle-kit migrate` only. `push` is for local schema exploration only and must never touch staging or production databases.
 4. **RLS is mandatory for shared tables.** Every tenant‑scoped table must have RLS enabled.
 5. **Never import from other domain packages.** Enforced by Nx tags.
 6. **Use advisory locks for concurrent migrations.** Same lock ID per domain.
@@ -310,6 +321,8 @@ CREATE TABLE auth.user_identities (
 4. **External identities store provider_account_id.** Never rely on email as stable identifier.
 5. **Never store plaintext emails.** Use salted hash for GDPR compliance.
 6. **Session cookie domain is `.yourdomain.com`.** Enables SSO across all apps.
+7. **Workers Isolate Reuse Risk:** Cloudflare Workers reuse the same V8 isolate across multiple requests under load. Any module-level variable (e.g., `let currentUser = null` defined outside a handler function) will leak its value from one request to the next. All request-scoped context — user ID, tenant ID, session data — must be passed through function arguments or Hono context (`c.get()`/`c.set()`), never stored in module-level state. Audit every Hono middleware for this pattern before deployment.
+8. **SAML is SP-only.** Better Auth's SAML/SSO plugin supports Service Provider (SP) flows only. It cannot function as an Identity Provider (IdP). Use external IdP (Okta, Azure AD, Authentik) for IdP-initiated SSO.
 ```
 
 ---
@@ -443,9 +456,9 @@ Running `pnpm nx run api-clients:generate` produces:
 - `calendar/src/schemas/event.zod.ts` → Zod runtime validators
 - `calendar/src/handlers/mcp.ts` → MCP server for AI discovery
 
-#### 5.5.3 CVE-2026-22785 Security Note
+#### 5.5.3 CVE-2026-22785 and CVE-2026-23947 Security Note
 
-Versions prior to Orval 7.18.0 contain a vulnerability where the MCP server generation logic is vulnerable to code injection via unsanitized `summary` fields. **You must pin Orval to ≥7.18.0**.
+Versions prior to Orval 7.19.0 have vulnerabilities — CVE-2026-22785 (patched in 7.18.0) and CVE-2026-23947 (patched in 7.19.0). You must use 7.19.0 minimum. Do not upgrade to 8.x until issue #2749 (React Query type incompatibility) is resolved.
 
 #### 5.5.4 AI Agent Rules (AGENTS.md)
 
@@ -455,7 +468,7 @@ Versions prior to Orval 7.18.0 contain a vulnerability where the MCP server gene
 1. **Never edit generated files manually.** Modify OpenAPI specs and regenerate.
 2. **Run generation after every API change.** `pnpm nx run api-clients:generate`.
 3. **Commit generated code to the repository.** Makes diffs visible during code review.
-4. **Verify Orval version ≥7.18.0.** Earlier versions have CVE-2026-22785.
+4. **Verify Orval version ≥7.19.0.** Earlier versions have CVE-2026-22785 and CVE-2026-23947. Do not upgrade to 8.x until issue #2749 (React Query type incompatibility) is resolved.
 5. **Use generated hooks in frontend.** Do not write manual `fetch` calls.
 ```
 

@@ -1,0 +1,38 @@
+{
+  "name": "drive-web",
+  "root": "apps/drive/web",
+  "sourceRoot": "apps/drive/web/src",
+  "projectType": "application",
+  "implicitDependencies": ["domain-drive", "auth", "ui"],
+  "tags": ["scope:drive", "type:application", "layer:web"],
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint src",
+        "cwd": "apps/drive/web"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tsconfig.json --noEmit",
+        "cwd": "apps/drive/web"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest",
+        "cwd": "apps/drive/web"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vite build",
+        "cwd": "apps/drive/web"
+      }
+    }
+  }
+}
