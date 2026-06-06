@@ -11,20 +11,21 @@ import {
   searchTasks,
   batchComplete,
   batchArchive,
-  type CreateTaskInput,
-  type UpdateTaskCompletionInput,
-  type UpdateTaskInput,
-  type ArchiveTaskInput,
-  type TaskPriority,
   type SearchTasksInput,
-  type BatchOperationInput,
 } from '@suite/domain-tasks';
 import { wireRepositories } from './bootstrap.js';
 import { validateTasksEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
+import {
+  createTaskBodySchema,
+  taskCompletionBodySchema,
+  updateTaskBodySchema,
+  archiveTaskBodySchema,
+  batchOperationBodySchema,
+} from './schemas.js';
 
 // Validate environment variables at startup
-const env = validateTasksEnv();
+validateTasksEnv();
 
 // Wire repositories before mounting routes
 wireRepositories();
@@ -33,144 +34,6 @@ const app = new Hono();
 
 // Mount Better Auth handler
 mountAuth(app);
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
-}
-
-function parseCreateTaskBody(body: unknown): CreateTaskInput | null {
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-
-  const { title, completed, dueDate, priority, tags } = body as Record<string, unknown>;
-
-  if (!isNonEmptyString(title)) {
-    return null;
-  }
-
-  if (completed !== undefined && typeof completed !== 'boolean') {
-    return null;
-  }
-
-  if (dueDate !== undefined && dueDate !== null && typeof dueDate !== 'string') {
-    return null;
-  }
-
-  if (priority !== undefined && !['low', 'medium', 'high'].includes(priority as string)) {
-    return null;
-  }
-
-  if (tags !== undefined && !Array.isArray(tags)) {
-    return null;
-  }
-
-  if (tags !== undefined && !tags.every((tag: unknown) => typeof tag === 'string')) {
-    return null;
-  }
-
-  const payload: CreateTaskInput = {
-    title: title.trim(),
-  };
-
-  if (completed !== undefined) {
-    payload.completed = completed;
-  }
-
-  if (dueDate !== undefined) {
-    payload.dueDate = dueDate === null ? null : dueDate;
-  }
-
-  if (priority !== undefined) {
-    payload.priority = priority as TaskPriority;
-  }
-
-  if (tags !== undefined) {
-    payload.tags = tags as string[];
-  }
-
-  return payload;
-}
-
-function parseTaskCompletionBody(body: unknown): UpdateTaskCompletionInput | null {
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-
-  const { completed } = body as Record<string, unknown>;
-
-  if (typeof completed !== 'boolean') {
-    return null;
-  }
-
-  return { completed };
-}
-
-function parseUpdateTaskBody(body: unknown): UpdateTaskInput | null {
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-
-  const { title, dueDate, priority, tags } = body as Record<string, unknown>;
-
-  if (title !== undefined && !isNonEmptyString(title)) {
-    return null;
-  }
-
-  if (dueDate !== undefined && dueDate !== null && typeof dueDate !== 'string') {
-    return null;
-  }
-
-  if (priority !== undefined && !['low', 'medium', 'high'].includes(priority as string)) {
-    return null;
-  }
-
-  if (tags !== undefined && !Array.isArray(tags)) {
-    return null;
-  }
-
-  if (tags !== undefined && !tags.every((tag: unknown) => typeof tag === 'string')) {
-    return null;
-  }
-
-  const payload: UpdateTaskInput = {};
-
-  if (title !== undefined) {
-    payload.title = title.trim();
-  }
-
-  if (dueDate !== undefined) {
-    payload.dueDate = dueDate === null ? null : dueDate;
-  }
-
-  if (priority !== undefined) {
-    payload.priority = priority as TaskPriority;
-  }
-
-  if (tags !== undefined) {
-    payload.tags = tags as string[];
-  }
-
-  if (Object.keys(payload).length === 0) {
-    return null;
-  }
-
-  return payload;
-}
-
-function parseArchiveTaskBody(body: unknown): ArchiveTaskInput | null {
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-
-  const { archived } = body as Record<string, unknown>;
-
-  if (typeof archived !== 'boolean') {
-    return null;
-  }
-
-  return { archived };
-}
 
 function readTaskError(error: unknown): { status: 400 | 404 | 500; body: Record<string, unknown> } {
   if (error instanceof TaskError) {
@@ -231,17 +94,18 @@ app.post('/api/tasks', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseCreateTaskBody(body);
+  const result = createTaskBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json({
       error: 'Invalid task payload',
       expected: ['title', 'completed?'],
+      details: result.error.errors,
     }, 400);
   }
 
   try {
-    return c.json({ task: await createTask(payload) }, 201);
+    return c.json({ task: await createTask(result.data) }, 201);
   } catch (error) {
     const response = readTaskError(error);
 
@@ -274,14 +138,14 @@ app.put('/api/tasks/:id/completion', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseTaskCompletionBody(body);
+  const result = taskCompletionBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json({ error: 'Invalid task completion payload', expected: ['completed'] }, 400);
   }
 
   try {
-    return c.json({ task: await updateTaskCompletion(id, payload) });
+    return c.json({ task: await updateTaskCompletion(id, result.data) });
   } catch (error) {
     const response = readTaskError(error);
 
@@ -304,14 +168,14 @@ app.put('/api/tasks/:id', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseUpdateTaskBody(body);
+  const result = updateTaskBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json({ error: 'Invalid task update payload', expected: ['title'] }, 400);
   }
 
   try {
-    return c.json({ task: await updateTask(id, payload) });
+    return c.json({ task: await updateTask(id, result.data) });
   } catch (error) {
     const response = readTaskError(error);
 
@@ -334,14 +198,14 @@ app.put('/api/tasks/:id/archive', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseArchiveTaskBody(body);
+  const result = archiveTaskBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json({ error: 'Invalid task archive payload', expected: ['archived'] }, 400);
   }
 
   try {
-    return c.json({ task: await archiveTask(id, payload) });
+    return c.json({ task: await archiveTask(id, result.data) });
   } catch (error) {
     const response = readTaskError(error);
 
@@ -366,24 +230,6 @@ app.delete('/api/tasks/:id', requireAuth, async (c) => {
   }
 });
 
-function parseBatchOperationBody(body: unknown): BatchOperationInput | null {
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-
-  const { taskIds } = body as Record<string, unknown>;
-
-  if (!Array.isArray(taskIds)) {
-    return null;
-  }
-
-  if (!taskIds.every((id: unknown) => typeof id === 'string' && id.trim().length > 0)) {
-    return null;
-  }
-
-  return { taskIds: taskIds as string[] };
-}
-
 app.post('/api/tasks/batch/complete', requireAuth, async (c) => {
   let body: unknown;
 
@@ -393,9 +239,9 @@ app.post('/api/tasks/batch/complete', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseBatchOperationBody(body);
+  const result = batchOperationBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json({
       error: 'Invalid batch operation payload',
       expected: ['taskIds: string[]'],
@@ -403,7 +249,7 @@ app.post('/api/tasks/batch/complete', requireAuth, async (c) => {
   }
 
   try {
-    const results = await batchComplete(payload);
+    const results = await batchComplete(result.data);
     return c.json({ tasks: results });
   } catch (error) {
     const response = readTaskError(error);
@@ -421,9 +267,9 @@ app.post('/api/tasks/batch/archive', requireAuth, async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const payload = parseBatchOperationBody(body);
+  const result = batchOperationBodySchema.safeParse(body);
 
-  if (!payload) {
+  if (!result.success) {
     return c.json({
       error: 'Invalid batch operation payload',
       expected: ['taskIds: string[]'],
@@ -431,7 +277,7 @@ app.post('/api/tasks/batch/archive', requireAuth, async (c) => {
   }
 
   try {
-    const results = await batchArchive(payload);
+    const results = await batchArchive(result.data);
     return c.json({ tasks: results });
   } catch (error) {
     const response = readTaskError(error);

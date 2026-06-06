@@ -1468,10 +1468,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] API-001 — Extract shared Zod request schemas for Tasks API
+### [x] API-001 — Extract shared Zod request schemas for Tasks API
 
-**Status:** pending  
-**Depends on:** SPEC-001  
+**Status:** done
+**Depends on:** SPEC-001
 **Blocks:** none
 
 #### Related paths
@@ -1511,8 +1511,17 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| API-001-a | `apps/tasks/api/src/schemas.ts` | Define Zod schemas matching spec fields. | `pnpm --filter @suite/tasks-api typecheck` |
-| API-001-b | `apps/tasks/api/src/index.ts` | Replace `parseCreateTaskBody` with schema.safeParse. | `pnpm --filter @suite/tasks-api test:run -- src/index.test.ts` |
+| API-001-a | `apps/tasks/api/src/schemas.ts` | Define Zod schemas matching spec fields. | `pnpm --filter @suite/tasks-api typecheck` ✅ |
+| API-001-b | `apps/tasks/api/src/index.ts` | Replace `parseCreateTaskBody` with schema.safeParse. | `pnpm --filter @suite/tasks-api test:run -- src/index.test.ts` ✅ |
+
+#### Implementation notes
+
+- Created `apps/tasks/api/src/schemas.ts` with Zod schemas for all request bodies (create, update, completion, archive, batch)
+- Schemas use transform to convert Zod types to domain types (CreateTaskInput, UpdateTaskInput, etc.)
+- Replaced all manual parser functions (parseCreateTaskBody, parseUpdateTaskBody, parseTaskCompletionBody, parseArchiveTaskBody, parseBatchOperationBody) with Zod schema.safeParse
+- Added zod dependency to @suite/tasks-api package.json
+- All 43 API tests pass, typecheck passes
+- Validation behavior unchanged - invalid payloads still return 400 with same error shape
 
 ---
 
@@ -1657,7 +1666,7 @@ UI-001 → UI-002
 | CRYPTO-002 | Tasks domain encryption | done |
 | CRYPTO-003 | Drive domain encryption | done |
 | LINT-001 | Add ESLint | done |
-| API-001 | Zod schemas for Tasks API | pending |
+| API-001 | Zod schemas for Tasks API | done |
 | UI-001 | Extract Drive upload dialog | pending |
 | UI-002 | Extract Drive rename/delete dialogs | pending |
 
