@@ -35,6 +35,10 @@ export type { Database, DatabaseEnvironment, TransactionContext, QueryResult } f
 export { PostgresDatabase } from './postgres-database.js';
 export { WorkerDatabase } from './worker-database.js';
 
+// Transaction support
+export type { TransactionScope, TransactionConfig, IsolationLevel, AccessMode } from './transaction-scope.js';
+export { UnitOfWork } from './unit-of-work.js';
+
 // Factory function
 export { createDbClient } from './database-factory.js';
 
