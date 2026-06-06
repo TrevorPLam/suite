@@ -32,6 +32,7 @@ export type DriveFile = {
   mimeType?: string;
   createdAt: string;
   modifiedAt: string;
+  blindIndex?: string;
 };
 
 export type DriveFolder = {
@@ -82,7 +83,8 @@ export type MoveFileInput = {
 };
 
 export type SearchFilesInput = {
-  query: string;
+  query?: string;
+  blindIndex?: string;
   folderId?: string;
 };
 
@@ -622,14 +624,29 @@ export async function searchFiles(input: SearchFilesInput): Promise<DriveFile[]>
     filesToSearch = await _unsealFiles(encryptedFiles);
   }
   
-  const query = input.query.toLowerCase();
-
   return filesToSearch.filter(file => {
+    // Filter by blind index (exact match search for encrypted data)
+    if (input.blindIndex) {
+      const blindIndexMatch = file.blindIndex === input.blindIndex;
+      if (!blindIndexMatch) {
+        return false;
+      }
+    }
+    
+    // Fallback to plaintext query for non-encrypted data (legacy support)
+    if (input.query && !input.blindIndex) {
+      const query = input.query.toLowerCase();
+      const nameMatch = file.name.toLowerCase().includes(query);
+      if (!nameMatch) {
+        return false;
+      }
+    }
+    
     // Filter by folder if specified
     if (input.folderId && file.folderId !== input.folderId) {
       return false;
     }
-    // Filter by name (case-insensitive partial match)
-    return file.name.toLowerCase().includes(query);
+    
+    return true;
   });
 }

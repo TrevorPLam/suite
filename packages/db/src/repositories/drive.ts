@@ -13,6 +13,7 @@ export type DriveFile = {
   mimeType?: string;
   createdAt: string;
   modifiedAt: string;
+  blindIndex?: string;
 };
 
 export type DriveFolder = {
@@ -40,6 +41,9 @@ function mapFileToDomain(schema: DriveFileSchema): DriveFile {
   if (schema.mimeType !== null) {
     result.mimeType = schema.mimeType;
   }
+  if (schema.blindIndex !== null) {
+    result.blindIndex = schema.blindIndex;
+  }
   return result;
 }
 
@@ -57,14 +61,16 @@ function mapFolderToDomain(schema: DriveFolderSchema): DriveFolder {
 
 // Map domain type to DB schema (for create/update)
 function mapFileToSchema(domain: Omit<DriveFile, 'id'>): Omit<DriveFileSchema, 'id' | 'userId'> {
-  return {
+  const result: Omit<DriveFileSchema, 'id' | 'userId'> = {
     name: domain.name,
     size: domain.size,
     folderId: domain.folderId ?? null,
     mimeType: domain.mimeType ?? null,
     createdAt: new Date(domain.createdAt),
     modifiedAt: new Date(domain.modifiedAt),
+    blindIndex: domain.blindIndex ?? null,
   };
+  return result;
 }
 
 function mapFolderToSchema(domain: Omit<DriveFolder, 'id'>): Omit<DriveFolderSchema, 'id' | 'userId'> {

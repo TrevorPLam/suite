@@ -13,3 +13,6 @@ export { deriveKeyFromPassword, generateSalt } from './keyderivation.js';
 
 // Key serialization/deserialization
 export { serializeKey, deserializeKey, serializeKeyRaw, deserializeKeyRaw } from './serialization.js';
+
+// Blind indexing for encrypted search
+export { generateBlindIndex, deriveIndexKey } from './blind-index.js';

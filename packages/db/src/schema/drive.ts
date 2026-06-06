@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, uuid, index } from 'drizzle-orm/pg-core';
 import { users } from './users.js';
 
 export const driveFiles = pgTable('drive_files', {
@@ -10,7 +10,10 @@ export const driveFiles = pgTable('drive_files', {
   mimeType: text('mime_type'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   modifiedAt: timestamp('modified_at').notNull().defaultNow(),
-});
+  blindIndex: text('blind_index'),
+}, (table) => ({
+  blindIndexIdx: index('drive_blind_index_idx').on(table.blindIndex),
+}));
 
 export const driveFolders = pgTable('drive_folders', {
   id: text('id').primaryKey(),

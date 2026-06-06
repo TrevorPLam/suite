@@ -11,7 +11,8 @@ export type TaskItem = {
   archived: boolean;
   dueDate: string | null;
   priority: TaskPriority;
-  tags: string[]
+  tags: string[];
+  blindIndex?: string;
 };
 
 export type CreateTaskInput = {
@@ -41,6 +42,7 @@ export type TaskErrorCode = 'validation_error' | 'not_found_error';
 
 export type SearchTasksInput = {
   query?: string;
+  blindIndex?: string;
   tags?: string[];
 };
 
@@ -511,8 +513,16 @@ export async function searchTasks(input: SearchTasksInput): Promise<TaskItem[]> 
   const allTasks = await listTasks();
   
   return allTasks.filter((task) => {
-    // Filter by query (title search)
-    if (input.query) {
+    // Filter by blind index (exact match search for encrypted data)
+    if (input.blindIndex) {
+      const blindIndexMatch = task.blindIndex === input.blindIndex;
+      if (!blindIndexMatch) {
+        return false;
+      }
+    }
+    
+    // Fallback to plaintext query for non-encrypted data (legacy support)
+    if (input.query && !input.blindIndex) {
       const query = input.query.toLowerCase();
       const titleMatch = task.title.toLowerCase().includes(query);
       if (!titleMatch) {

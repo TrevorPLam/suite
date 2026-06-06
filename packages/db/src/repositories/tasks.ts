@@ -13,6 +13,7 @@ export type TaskItem = {
   dueDate: string | null;
   priority: 'low' | 'medium' | 'high';
   tags: string[];
+  blindIndex?: string;
 };
 
 export interface TaskRepository extends QueryRepository<TaskItem> {
@@ -21,7 +22,7 @@ export interface TaskRepository extends QueryRepository<TaskItem> {
 
 // Map DB schema to domain type
 function mapToDomain(schema: TaskSchema): TaskItem {
-  return {
+  const result: TaskItem = {
     id: schema.id,
     title: schema.title,
     completed: schema.completed,
@@ -30,18 +31,24 @@ function mapToDomain(schema: TaskSchema): TaskItem {
     priority: schema.priority ?? 'medium',
     tags: schema.tags ?? [],
   };
+  if (schema.blindIndex !== null) {
+    result.blindIndex = schema.blindIndex;
+  }
+  return result;
 }
 
 // Map domain type to DB schema (for create/update)
 function mapToSchema(domain: Omit<TaskItem, 'id'>): Omit<TaskSchema, 'id' | 'userId'> {
-  return {
+  const result: Omit<TaskSchema, 'id' | 'userId'> = {
     title: domain.title,
     completed: domain.completed,
     archived: domain.archived,
     dueDate: domain.dueDate ? new Date(domain.dueDate) : null,
     priority: domain.priority,
     tags: domain.tags,
+    blindIndex: domain.blindIndex ?? null,
   };
+  return result;
 }
 
 export class PostgresTaskRepository implements TaskRepository {
