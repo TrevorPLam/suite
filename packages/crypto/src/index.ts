@@ -68,3 +68,13 @@ export {
   argon2idHash,
   getWasmStatus,
 } from './wasm-backend.js';
+
+// KMS integration (optional dependency)
+export {
+  type KMSConfig,
+  type KMSClient,
+  type KMSEnvelopeEncryptionResult,
+  createKMSClient,
+  envelopeEncryptWithKMS,
+  envelopeDecryptWithKMS,
+} from './kms.js';

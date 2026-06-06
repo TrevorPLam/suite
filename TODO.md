@@ -236,11 +236,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] CRYPTO-009: Add KMS Integration
+### [~] CRYPTO-009: Add KMS Integration
 
 **Priority**: P2
 **Bounded Context**: Enterprise
-**Status**: Not Started
+**Status**: In Progress (AGENT subtasks complete, HUMAN subtasks pending)
 
 **Related Files**:
 - `packages/crypto/package.json`
