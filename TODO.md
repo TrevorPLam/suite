@@ -1191,10 +1191,10 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] INF-001: Fix Postgres Bundling in Web Builds
+### [x] INF-001: Fix Postgres Bundling in Web Builds
 
-**Status**: Pending  
-**Priority**: P1  
+**Status**: Completed
+**Priority**: P1
 **Bounded Context**: Infrastructure
 
 **Related Files**:
@@ -1235,12 +1235,21 @@ This occurs because `drizzle-orm` or another dependency is pulling the `postgres
 - P1-006 build validation
 - Any web app production builds
 
+**Implementation Notes**:
+- Added `build.rollupOptions.external: ['postgres']` to all three web app Vite configs
+- This excludes the postgres Node.js driver from browser bundles
+- The postgres module was being pulled in transitively through domain packages (domain-calendar, domain-tasks, domain-drive) which depend on @suite/db
+- All three web builds now succeed: calendar-web, tasks-web, drive-web
+- Typecheck passes for all three web apps
+- Lint passes with 0 errors (only warnings for existing `any` types, unrelated to this task)
+
 **Subtasks**:
 
 #### INF-001-01: Add postgres to Vite externals/alias
 **Target File**: `apps/calendar/web/vite.config.ts`, `apps/tasks/web/vite.config.ts`, `apps/drive/web/vite.config.ts`
 **Action**: Configure Vite to exclude `postgres` from bundling or alias it to an empty module
 **Validate Command**: `pnpm --filter @suite/calendar-web build`
+**Status**: ✅ Complete
 
 ---
 
