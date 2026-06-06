@@ -47,6 +47,7 @@ export type UploadDriveFileInput = {
   size: number;
   folderId?: string;
   mimeType?: string;
+  bytes?: ReadableStream | Uint8Array | ArrayBuffer;
 };
 
 export type RenameDriveFileInput = {
@@ -94,6 +95,22 @@ export interface DriveFileRepository extends QueryRepository<DriveFile> {
 
 export interface DriveFolderRepository extends QueryRepository<DriveFolder> {
   clear?(): void;
+}
+
+export interface StorageAdapter {
+  put(key: string, data: ReadableStream | Uint8Array | ArrayBuffer): Promise<void>;
+  get(key: string): Promise<ReadableStream | null>;
+  delete(key: string): Promise<void>;
+}
+
+let currentStorageAdapter: StorageAdapter | null = null;
+
+export function setDriveStorage(adapter: StorageAdapter): void {
+  currentStorageAdapter = adapter;
+}
+
+export function getDriveStorage(): StorageAdapter | null {
+  return currentStorageAdapter;
 }
 
 // In-memory repository for testing (default)
@@ -390,6 +407,7 @@ export async function uploadDriveFile(input: UploadDriveFileInput): Promise<Driv
   }
 
   const now = getCurrentTimestamp();
+  const fileId = generateUUID();
   const createData: Omit<DriveFile, 'id'> = {
     name,
     size: input.size,
@@ -402,15 +420,21 @@ export async function uploadDriveFile(input: UploadDriveFileInput): Promise<Driv
   if (input.mimeType !== undefined) {
     createData.mimeType = input.mimeType.toLowerCase();
   }
-  
+
+  // Store file bytes in R2 if storage adapter is available and bytes provided
+  if (currentStorageAdapter && input.bytes) {
+    const storageKey = `files/${fileId}`;
+    await currentStorageAdapter.put(storageKey, input.bytes);
+  }
+
   // Encrypt name if encryption is enabled
   let dataToStore = createData;
   if (_isEncryptionEnabled()) {
-    const encrypted = await _sealFile({ ...createData, id: 'temp' } as DriveFile);
+    const encrypted = await _sealFile({ ...createData, id: fileId } as DriveFile);
     const { encryptedName, ...rest } = encrypted;
     dataToStore = { ...rest, name: encryptedName as any };
   }
-  
+
   const created = await currentFileRepository.create(dataToStore);
 
   // Decrypt name if encryption is enabled before returning
@@ -462,6 +486,12 @@ export async function renameDriveFile(input: RenameDriveFileInput): Promise<Driv
 }
 
 export async function deleteDriveFile(id: string): Promise<boolean> {
+  // Delete from storage if adapter is available
+  if (currentStorageAdapter) {
+    const storageKey = `files/${id}`;
+    await currentStorageAdapter.delete(storageKey);
+  }
+
   return await currentFileRepository.delete(id);
 }
 

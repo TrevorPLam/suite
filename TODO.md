@@ -89,16 +89,17 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P1-005: Implement Real Blob Storage for Drive
+### [x] P1-005: Implement Real Blob Storage for Drive
 
-**Status**: Pending  
-**Priority**: P1  
+**Status**: Complete
+**Priority**: P1
 **Bounded Context**: Drive
 
 **Related Files**:
 - `apps/drive/api/src/index.ts`
-- `packages/domain-drive/src/lib/drive.ts`
+- `packages/domain-drive/src/index.ts`
 - `packages/db/src/repositories/drive.ts`
+- `apps/drive/api/src/bootstrap.ts`
 
 **Definition of Done**:
 - Drive uploads file bytes to R2
@@ -139,32 +140,32 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 **Subtasks**:
 
-#### P1-005-01: Add R2 client to Drive API
+#### P1-005-01: Add R2 client to Drive API ✅
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Import R2 client from @cloudflare/workers-types; configure R2 binding from env; add R2 client to context
 **Validate Command**: `pnpm --filter @suite/drive-api typecheck`
 
-#### P1-005-02: Update Drive domain to accept storage adapter
-**Target File**: `packages/domain-drive/src/lib/drive.ts`
+#### P1-005-02: Update Drive domain to accept storage adapter ✅
+**Target File**: `packages/domain-drive/src/index.ts`
 **Action**: Add setDriveStorage function that accepts storage interface with put, get, delete methods; modify uploadDriveFile to call storage.put
 **Validate Command**: `pnpm --filter @suite/domain-drive test`
 
-#### P1-005-03: Implement R2 storage adapter
+#### P1-005-03: Implement R2 storage adapter ✅
 **Target File**: `apps/drive/api/src/bootstrap.ts`
 **Action**: Create R2StorageAdapter class that wraps R2 client; pass adapter to setDriveStorage
 **Validate Command**: `pnpm --filter @suite/drive-api test`
 
-#### P1-005-04: Update upload endpoint to handle file bytes
+#### P1-005-04: Update upload endpoint to handle file bytes ✅
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Modify POST /api/files to accept multipart/form-data with file bytes; stream bytes to R2; return R2 key in response
 **Validate Command**: `pnpm --filter @suite/drive-api test -- src/index.test.ts -t "upload"`
 
-#### P1-005-05: Add download endpoint
+#### P1-005-05: Add download endpoint ✅
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Add GET /api/files/:id/download that retrieves bytes from R2 and streams to client
 **Validate Command**: `pnpm --filter @suite/drive-api test -- src/index.test.ts -t "download"`
 
-#### P1-005-06: Update delete to remove from R2
+#### P1-005-06: Update delete to remove from R2 ✅
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Modify DELETE /api/files/:id to call R2 delete before database delete
 **Validate Command**: `pnpm --filter @suite/drive-api test -- src/index.test.ts -t "delete"`

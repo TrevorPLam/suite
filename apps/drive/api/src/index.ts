@@ -5,6 +5,7 @@ import {
   createFolder,
   deleteDriveFile,
   deleteFolder,
+  getDriveFile,
   listDriveFiles,
   listFolders,
   moveFile,
@@ -20,7 +21,7 @@ import {
   uploadDriveFile,
   DriveError,
 } from '@suite/domain-drive';
-import { wireRepositories } from './bootstrap.js';
+import { wireRepositories, getR2Adapter } from './bootstrap.js';
 import { validateDriveEnv } from '@suite/env-config';
 import { mountAuth, requireAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger } from '@suite/shared-kernel';
@@ -32,11 +33,16 @@ validateDriveEnv();
 // Create usage repository for monitoring
 const usageRepository = new PostgresUsageRepository();
 
-type Variables = {
-  userId: string | null;
+type Env = {
+  R2: R2Bucket;
 };
 
-const app = new Hono<{ Variables: Variables }>();
+type Variables = {
+  userId: string | null;
+  r2Bucket: R2Bucket | null;
+};
+
+const app = new Hono<{ Variables: Variables; Bindings: Env }>();
 
 // Mount structured logging middleware
 app.use('/api/*', structuredLogger());
@@ -81,8 +87,10 @@ app.use('/api/*', rateLimit({
 // Middleware to wire repositories with userId from auth context
 app.use('/api/*', async (c, next) => {
   const userId = c.get('userId') as string | undefined;
+  const r2Bucket = c.env.R2 || null;
+  c.set('r2Bucket', r2Bucket);
   if (userId) {
-    await wireRepositories(userId);
+    await wireRepositories(userId, r2Bucket || undefined);
   }
   await next();
 });
@@ -260,6 +268,62 @@ app.get('/api/files', async (c) => {
 });
 
 app.post('/api/files', requireAuth, async (c) => {
+  const contentType = c.req.header('content-type') || '';
+
+  // Handle multipart/form-data for file uploads
+  if (contentType.includes('multipart/form-data')) {
+    try {
+      const formData = await c.req.formData();
+      const file = formData.get('file') as File | null;
+      const name = formData.get('name') as string | null;
+      const folderId = formData.get('folderId') as string | null;
+      const mimeType = formData.get('mimeType') as string | null;
+
+      if (!file) {
+        return c.json({ error: 'File is required' }, 400);
+      }
+
+      if (!name) {
+        return c.json({ error: 'Name is required' }, 400);
+      }
+
+      // File size limit: 100MB
+      const MAX_FILE_SIZE = 100 * 1024 * 1024;
+      if (file.size > MAX_FILE_SIZE) {
+        return c.json({
+          error: 'File size exceeds limit',
+          maxSize: MAX_FILE_SIZE,
+          actualSize: file.size,
+        }, 413);
+      }
+
+      const payload: UploadDriveFileInput = {
+        name: name.trim(),
+        size: file.size,
+        bytes: file.stream(),
+      };
+
+      if (folderId) {
+        payload.folderId = folderId.trim();
+      }
+
+      if (mimeType) {
+        payload.mimeType = mimeType.trim();
+      }
+
+      try {
+        const uploadedFile = await uploadDriveFile(payload);
+        return c.json(uploadedFile, 201);
+      } catch (error) {
+        const response = readDriveError(error);
+        return c.json(response.body, response.status);
+      }
+    } catch (_error) {
+      return c.json({ error: 'Failed to parse form data' }, 400);
+    }
+  }
+
+  // Handle JSON for metadata-only uploads (legacy support)
   let body: unknown;
 
   try {
@@ -347,6 +411,39 @@ app.delete('/api/files/:id', requireAuth, async (c) => {
   }
 
   return c.json({ ok: true });
+});
+
+app.get('/api/files/:id/download', async (c) => {
+  const id = c.req.param('id');
+
+  if (!id) {
+    return c.json({ error: 'File ID is required' }, 400);
+  }
+
+  const file = await getDriveFile(id);
+
+  if (!file) {
+    return c.json({ error: 'File not found' }, 404);
+  }
+
+  const r2Adapter = getR2Adapter();
+  if (!r2Adapter) {
+    return c.json({ error: 'Storage not available' }, 503);
+  }
+
+  const storageKey = `files/${id}`;
+  const stream = await r2Adapter.get(storageKey);
+
+  if (!stream) {
+    return c.json({ error: 'File bytes not found in storage' }, 404);
+  }
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': file.mimeType || 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${file.name}"`,
+    },
+  });
 });
 
 // Folder endpoints
