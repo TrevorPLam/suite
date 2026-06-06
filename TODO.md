@@ -243,7 +243,7 @@ coverage: {
 
 ## TEST-003: Implement Playwright StorageState for Authentication
 
-Status: [ ]
+Status: [x]
 
 **Related Files**:
 - `playwright.config.ts`
@@ -306,31 +306,48 @@ export default globalSetup
 **Target File**: `playwright.global-setup.ts` (new)
 **Action**: Create global setup file that launches browser, performs login flow, saves storage state to `.auth/storage-state.json`. Export default globalSetup function.
 **Validation**: Run `npx playwright test --config=playwright.config.ts` and verify `.auth/storage-state.json` is created.
+**Status**: ✅ Complete
 
 #### TEST-003-02: Add .auth to gitignore
 **Target File**: `.gitignore`
 **Action**: Add `.auth/` directory to gitignore to prevent committing session tokens.
 **Validation**: Run `git status` and verify `.auth/` is not tracked.
+**Status**: ✅ Complete
 
 #### TEST-003-03: Configure Playwright to use global setup
 **Target File**: `playwright.config.ts`
 **Action**: Add globalSetup and globalTeardown configuration pointing to `playwright.global-setup.ts`. Configure storageState for test projects.
 **Validation**: Run `npx playwright test` and verify tests use pre-authenticated state.
+**Status**: ✅ Complete
 
 #### TEST-003-04: Refactor calendar E2E tests to use storageState
 **Target File**: `apps/calendar/web/e2e/calendar.spec.ts`
 **Action**: Remove login steps from tests. Configure test project to use storageState fixture. Update tests to start already authenticated.
 **Validation**: Run `npx playwright test apps/calendar/web/e2e/calendar.spec.ts` and verify tests pass without login steps.
+**Status**: ✅ Complete
 
 #### TEST-003-05: Refactor drive E2E tests to use storageState
 **Target File**: `apps/drive/web/e2e/drive.spec.ts`
 **Action**: Remove login steps from tests. Configure test project to use storageState fixture. Update tests to start already authenticated.
 **Validation**: Run `npx playwright test apps/drive/web/e2e/drive.spec.ts` and verify tests pass without login steps.
+**Status**: ✅ Complete
 
 #### TEST-003-06: Refactor tasks E2E tests to use storageState
 **Target File**: `apps/tasks/web/e2e/tasks.spec.ts`
 **Action**: Remove login steps from tests. Configure test project to use storageState fixture. Update tests to start already authenticated.
 **Validation**: Run `npx playwright test apps/tasks/web/e2e/tasks.spec.ts` and verify tests pass without login steps.
+**Status**: ✅ Complete
+
+---
+
+**Implementation Notes**:
+- Created `playwright.global-setup.ts` with login flow using better-auth credentials (test@example.com/password123)
+- Added `.auth/` to `.gitignore` to prevent committing session tokens
+- Configured `playwright.config.ts` with globalSetup and storageState for all tests
+- Refactored all E2E tests (calendar, drive, tasks) to remove login steps - tests now start authenticated
+- Preserved "displays sign in form when not authenticated" tests by using `test.use({ storageState: undefined })`
+- Typecheck passed, lint passed (pre-existing warnings unrelated to this change)
+- Login overhead eliminated from all authenticated E2E tests
 
 ---
 

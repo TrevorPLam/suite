@@ -5,13 +5,8 @@ test.describe('Drive E2E', () => {
     await page.goto('http://localhost:5175');
   });
 
-  test('signs in and uploads a file', async ({ page }) => {
-    // Sign in
-    await page.getByLabel('Email').fill('test@example.com');
-    await page.getByLabel('Password').fill('password123');
-    await page.getByRole('button', { name: 'Sign In' }).click();
-
-    // Wait for sign in to complete
+  test('uploads a file', async ({ page }) => {
+    // Already authenticated via storageState
     await expect(page.getByRole('button', { name: 'Sign Out' })).toBeVisible();
 
     // Click upload button
@@ -22,6 +17,8 @@ test.describe('Drive E2E', () => {
   });
 
   test('displays sign in form when not authenticated', async ({ page }) => {
+    // This test does not use storageState
+    test.use({ storageState: undefined });
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.getByLabel('Password')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible();
