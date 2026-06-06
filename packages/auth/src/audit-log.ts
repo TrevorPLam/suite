@@ -12,7 +12,8 @@ export type AuthEventType =
   | 'email_verification'
   | 'mfa_enabled'
   | 'mfa_disabled'
-  | 'session_revoked';
+  | 'session_revoked'
+  | 'user_deleted';
 
 export interface AuthEvent {
   type: AuthEventType;

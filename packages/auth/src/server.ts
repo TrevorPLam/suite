@@ -48,6 +48,27 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
         accounts,
       },
     }) : undefined,
+    user: {
+      deleteUser: {
+        enabled: true,
+      },
+    },
+    databaseHooks: {
+      user: {
+        delete: {
+          after: async (user) => {
+            // Log user deletion event for GDPR compliance
+            logAuthEvent(createAuthEvent('user_deleted', {
+              userId: user.id,
+              email: user.email,
+              metadata: {
+                deletedAt: new Date().toISOString(),
+              },
+            }));
+          },
+        },
+      },
+    },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false,
