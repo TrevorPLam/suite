@@ -1,0 +1,21 @@
+{
+  "name": "@suite/design-tokens",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./colors.json": "./src/colors.json",
+    "./spacing.json": "./src/spacing.json",
+    "./typography.json": "./src/typography.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  }
+}

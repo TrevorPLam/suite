@@ -1,5 +1,27 @@
 @import "tailwindcss";
 
+/*
+ * Design Tokens
+ *
+ * CSS custom properties below are the source of truth for styling.
+ * For programmatic access to these tokens in TypeScript/JavaScript,
+ * use @suite/design-tokens package which provides type-safe token exports.
+ *
+ * The design tokens package exports:
+ * - colorTokens: All color tokens in DTCG format
+ * - darkColorTokens: Dark mode color overrides
+ * - spacingTokens: Spacing scale (0-24)
+ * - radiusTokens: Border radius values
+ * - fontSizeTokens: Typography scale (xs-4xl)
+ * - lineHeightTokens: Line height scale
+ * - fontWeightTokens: Font weight scale
+ * - letterSpacingTokens: Letter spacing scale
+ *
+ * Example usage:
+ * import { colorTokens, formatOklchColor } from '@suite/design-tokens';
+ * const primaryColor = formatOklchColor(colorTokens.primary);
+ */
+
 @theme {
   --color-primary: oklch(45% 0.18 260);
   --color-primary-foreground: oklch(99% 0 0);

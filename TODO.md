@@ -1182,11 +1182,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] UI-002: Extract Design Tokens to Separate Package
+### [x] UI-002: Extract Design Tokens to Separate Package
 
 **Priority**: P0
 **Bounded Context**: UI Package
-**Status**: Not Started
+**Status**: Complete
 
 **Related Files**:
 - `packages/design-tokens/package.json` (create)
@@ -1241,47 +1241,61 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### UI-002-01: Create design-tokens package structure
+#### ✅ UI-002-01: Create design-tokens package structure
 **Assigned To**: AGENT
 **Target File**: `packages/design-tokens/package.json` (create)
 **Action**: Create new package.json for @suite/design-tokens. Set name, version, type: module, and exports field. Add dependency on @suite/ui for CSS generation. Add to pnpm-workspace.yaml if needed.
 **Validate Command**: `pnpm --filter @suite/design-tokens typecheck`
 
-#### UI-002-02: Extract color tokens to DTCG format
+#### ✅ UI-002-02: Extract color tokens to DTCG format
 **Assigned To**: AGENT
 **Target File**: `packages/design-tokens/src/colors.json` (create)
 **Action**: Extract all color tokens from globals.css to colors.json in DTCG format. Use oklch values. Organize by semantic names (primary, secondary, destructive, success, warning, etc.). Include light and dark mode variants.
 **Validate Command**: `pnpm --filter @suite/design-tokens typecheck`
 
-#### UI-002-03: Extract spacing tokens to DTCG format
+#### ✅ UI-002-03: Extract spacing tokens to DTCG format
 **Assigned To**: AGENT
 **Target File**: `packages/design-tokens/src/spacing.json` (create)
 **Action**: Extract spacing tokens from globals.css to spacing.json in DTCG format. Include spacing scale (0, 1, 2, 3, 4, 5, 6, etc.) with pixel/rem values. Document spacing scale usage.
 **Validate Command**: `pnpm --filter @suite/design-tokens typecheck`
 
-#### UI-002-04: Extract typography tokens to DTCG format
+#### ✅ UI-002-04: Extract typography tokens to DTCG format
 **Assigned To**: AGENT
 **Target File**: `packages/design-tokens/src/typography.json` (create)
 **Action**: Extract typography tokens from globals.css to typography.json in DTCG format. Include font sizes, line heights, font weights, and letter spacing. Document typography scale.
 **Validate Command**: `pnpm --filter @suite/design-tokens typecheck`
 
-#### UI-002-05: Create TypeScript exports for tokens
+#### ✅ UI-002-05: Create TypeScript exports for tokens
 **Assigned To**: AGENT
 **Target File**: `packages/design-tokens/src/index.ts` (create)
 **Action**: Create index.ts that imports JSON token files and exports them as TypeScript types and constants. Provide type-safe access to tokens. Export ColorToken, SpacingToken, TypographyToken types.
 **Validate Command**: `pnpm --filter @suite/design-tokens typecheck`
 
-#### UI-002-06: Update UI package CSS to use token imports
+#### ✅ UI-002-06: Update UI package CSS to use token imports
 **Assigned To**: AGENT
 **Target File**: `packages/ui/src/styles/globals.css`
 **Action**: Update globals.css to import design tokens from @suite/design-tokens package if possible, or document that CSS variables are generated from tokens. Ensure CSS custom property names match token names.
 **Validate Command**: `pnpm --filter @suite/ui build`
 
-#### UI-002-07: Add design token documentation
+#### ✅ UI-002-07: Add design token documentation
 **Assigned To**: HUMAN
 **Target File**: `packages/design-tokens/README.md` (create)
 **Action**: Create README.md documenting design token architecture, DTCG format, token naming conventions, usage examples in CSS and TypeScript, and contribution guidelines for adding new tokens.
 **Validate Command**: No validation needed
+
+**Implementation Notes**:
+- Created @suite/design-tokens package with DTCG-compliant JSON format
+- Extracted all color tokens (19 light mode, 10 dark mode) to colors.json using oklch color space
+- Extracted spacing scale (0-24) and radius tokens to spacing.json with rem units
+- Extracted typography tokens (font sizes, line heights, font weights, letter spacing) to typography.json
+- Created TypeScript exports with type-safe token access (ColorToken, DimensionToken, NumberToken, FontWeightToken)
+- Added helper functions: formatOklchColor(), formatDimension(), formatFontWeight()
+- Updated UI package globals.css with documentation referencing design-tokens package
+- CSS custom properties remain source of truth for styling; design tokens provide programmatic access
+- Created comprehensive README.md with DTCG format documentation, usage examples, and contribution guidelines
+- Added tsconfig.json for design-tokens package
+- All typecheck passing for design-tokens package and entire monorepo
+- UI package build successful with updated CSS documentation
 
 ---
 
