@@ -37,6 +37,21 @@
         "^production"
       ]
     },
+    "e2e": {
+      "inputs": [
+        "default",
+        "^production"
+      ]
+    },
+    "e2e-ci": {
+      "inputs": [
+        "default",
+        "^production"
+      ],
+      "dependsOn": [
+        "^build"
+      ]
+    },
     "coverage": {
       "inputs": [
         "default",

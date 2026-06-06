@@ -26,6 +26,20 @@
         "command": "vite build",
         "cwd": "apps/drive/web"
       }
+    },
+    "e2e": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "playwright test apps/drive/web/e2e",
+        "cwd": "."
+      }
+    },
+    "e2e-ci": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "playwright test apps/drive/web/e2e",
+        "cwd": "."
+      }
     }
   }
 }

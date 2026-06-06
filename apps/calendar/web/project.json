@@ -26,6 +26,20 @@
         "command": "vite build",
         "cwd": "apps/calendar/web"
       }
+    },
+    "e2e": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "playwright test apps/calendar/web/e2e",
+        "cwd": "."
+      }
+    },
+    "e2e-ci": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "playwright test apps/calendar/web/e2e",
+        "cwd": "."
+      }
     }
   }
 }

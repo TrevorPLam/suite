@@ -172,7 +172,7 @@ describe('calendar API - create event', () => {
   it('should reject conflicting event', async () => {
     allowAuth = true;
     // Create first event
-    await app.request('/api/events', {
+    await app.request('/api/v1/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -224,7 +224,7 @@ describe('calendar API - update event', () => {
   it('should update an existing event', async () => {
     allowAuth = true;
     // Create event first
-    const createRes = await app.request('/api/events', {
+    const createRes = await app.request('/api/v1/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
