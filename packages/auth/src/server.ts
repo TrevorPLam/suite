@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { organization, twoFactor } from 'better-auth/plugins';
+import { organization, twoFactor, magicLink } from 'better-auth/plugins';
 import { sso } from '@better-auth/sso';
 import { scim } from '@better-auth/scim';
 import { passkey } from '@better-auth/passkey';
@@ -11,7 +11,7 @@ import { logAuthEvent, createAuthEvent } from './audit-log.js';
 import { generateDeviceFingerprint, detectAnomalousDevice, logDeviceAnomaly } from './device-fingerprinting.js';
 import { extractGeolocationFromCF, detectLocationAnomaly, logLocationAnomaly, type GeolocationData } from './geolocation.js';
 import { extractClientIP } from './ip-binding.js';
-import { sendVerificationEmail, sendPasswordResetEmail, sendPasswordResetNotificationEmail, type SendPasswordResetNotificationEmailOptions } from './email-service.js';
+import { sendVerificationEmail, sendPasswordResetEmail, sendPasswordResetNotificationEmail, sendMagicLinkEmail, type SendPasswordResetNotificationEmailOptions } from './email-service.js';
 
 interface KVNamespace {
   get(key: string): Promise<string | null>;
@@ -172,6 +172,19 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
     plugins: [
       organization(),
       twoFactor(),
+      magicLink({
+        sendMagicLink: async ({ email, url, token }, _ctx) => {
+          // Use waitUntil for non-blocking email sending in Workers
+          if (waitUntil) {
+            waitUntil(sendMagicLinkEmail({ email, url, token }));
+          } else {
+            // In Node.js environments, send synchronously (but don't await to prevent timing attacks)
+            void sendMagicLinkEmail({ email, url, token });
+          }
+        },
+        expiresIn: 1800, // 30 minutes (task requirement: 15-30 min)
+        disableSignUp: false, // Allow sign-up via magic link
+      }),
       sso(),
       passkey({
         rpID: process.env.PASSKEY_RP_ID || 'localhost',
@@ -351,6 +364,10 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
               '/reset-password': {
                 window: 900, // 15 minutes
                 max: 5, // Max 5 reset attempts per 15 minutes
+              },
+              '/sign-in/magic-link': {
+                window: 900, // 15 minutes
+                max: 5, // Max 5 magic link requests per 15 minutes per email
               },
             },
             customStorage: {

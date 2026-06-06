@@ -34,6 +34,12 @@ export interface SendPasswordResetNotificationEmailOptions {
   userAgent?: string;
 }
 
+export interface SendMagicLinkEmailOptions {
+  email: string;
+  url: string;
+  token: string;
+}
+
 /**
  * Send an email (placeholder implementation)
  *
@@ -131,6 +137,34 @@ export async function sendPasswordResetNotificationEmail(
         ${userAgent ? `<p><strong>Device:</strong> ${userAgent}</p>` : ''}
         <p>If you didn't make this change, please contact support immediately.</p>
         <p>For your security, all active sessions have been revoked. You will need to sign in again.</p>
+      </div>
+    `,
+  });
+}
+
+/**
+ * Send magic link email
+ *
+ * Called by Better Auth magic link plugin when a user requests a magic link.
+ */
+export async function sendMagicLinkEmail(
+  options: SendMagicLinkEmailOptions
+): Promise<void> {
+  const { email, url } = options;
+
+  await sendEmail({
+    to: email,
+    subject: 'Sign in to Suite',
+    text: `Click the link to sign in: ${url}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Sign in to Suite</h2>
+        <p>Click the link below to sign in to your account:</p>
+        <p><a href="${url}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Sign In</a></p>
+        <p>Or copy and paste this link into your browser:</p>
+        <p style="word-break: break-all;">${url}</p>
+        <p>This link will expire in 30 minutes.</p>
+        <p>If you didn't request this, you can safely ignore this email.</p>
       </div>
     `,
   });

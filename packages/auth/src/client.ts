@@ -1,5 +1,5 @@
 import { createAuthClient } from 'better-auth/react';
-import { organizationClient, twoFactorClient } from 'better-auth/client/plugins';
+import { organizationClient, twoFactorClient, magicLinkClient } from 'better-auth/client/plugins';
 import { ssoClient } from '@better-auth/sso/client';
 import { passkeyClient } from '@better-auth/passkey/client';
 
@@ -11,6 +11,7 @@ export const authClient = createAuthClient({
   plugins: [
     organizationClient(),
     twoFactorClient(),
+    magicLinkClient(),
     ssoClient(),
     passkeyClient(),
   ],
