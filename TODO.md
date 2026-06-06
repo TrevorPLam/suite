@@ -183,7 +183,7 @@
 
 ## Task: T004 - Fix PostgresDatabase for Workers Runtime
 
-- [ ] **T004** [PENDING] Fix PostgresDatabase for Workers Runtime
+- [x] **T004** [DONE] Fix PostgresDatabase for Workers Runtime
 
 **Files:** `packages/db/src/postgres-database.ts`, `packages/db/src/worker-database.ts`, `packages/db/src/connection.ts`, `packages/db/src/repositories/usage.ts`
 
@@ -203,25 +203,37 @@
 
 ### Subtasks
 
-- [ ] **T004.01 [AGENT]** Guard `process.on()` in PostgresDatabase
+- [x] **T004.01 [AGENT]** Guard `process.on()` in PostgresDatabase ✅
   - **File:** `packages/db/src/postgres-database.ts`
   - **Action:** Wrap `setupShutdownHandlers()` with `typeof process !== 'undefined'`. Make removal safe.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T004.02 [AGENT]** Configure WorkerDatabase
+- [x] **T004.02 [AGENT]** Configure WorkerDatabase ✅
   - **File:** `packages/db/src/worker-database.ts`
   - **Action:** Add `max: 1` and `prepare: false` to `postgres()` call. Document why.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T004.03 [AGENT]** Remove `connection.ts` singleton
+- [x] **T004.03 [AGENT]** Remove `connection.ts` singleton ✅
   - **File:** `packages/db/src/connection.ts`
   - **Action:** Delete. Migrate `PostgresUsageRepository` to accept `Database` in constructor. `auth/server.ts` legacy path removed in T002.
   - **Validation:** `grep -r "getDb\|getDbOrNull\|closeDb" packages/ apps/ --include="*.ts"` returns nothing outside tests.
 
-- [ ] **T004.04 [AGENT]** Update PostgresUsageRepository
+- [x] **T004.04 [AGENT]** Update PostgresUsageRepository ✅
   - **File:** `packages/db/src/repositories/usage.ts`
   - **Action:** Add `db: Database` constructor param. Remove `getDb` import. Use `this.db.getDrizzleDb()`.
   - **Validation:** `pnpm --filter @suite/db test:run`.
+
+### Implementation Notes
+- Added `typeof process === 'undefined'` guards to PostgresDatabase shutdown handlers for Workers compatibility
+- Configured WorkerDatabase with `max: 1` and `prepare: false` for Hyperdrive compatibility
+- Deleted `connection.ts` singleton and its exports from `packages/db/src/index.ts`
+- Updated PostgresUsageRepository to accept Database in constructor via dependency injection
+- Updated all APIs (calendar, drive, tasks) to use `createDbClient` instead of `getDbOrNull`
+- Updated health endpoints to use `db.query()` instead of `db.execute()`
+- Updated UsageMonitor middleware to conditionally run when usageRepository is available
+- Deleted `connection.test.ts` as it tested the removed singleton
+- All typechecks pass for db package and all three APIs
+- All db tests pass (35 tests, 77 skipped)
 
 ---
 

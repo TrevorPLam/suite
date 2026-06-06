@@ -116,20 +116,26 @@ export class PostgresDatabase implements Database {
 
   /**
    * Setup graceful shutdown handlers
+   * Only runs in Node.js environments (not Cloudflare Workers)
    */
   private setupShutdownHandlers(): void {
-    const shutdown = async () => {
-      await this.close();
-    };
+    if (typeof process === 'undefined') {
+      return;
+    }
 
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', this.shutdownHandler);
+    process.on('SIGINT', this.shutdownHandler);
   }
 
   /**
    * Remove graceful shutdown handlers
+   * Only runs in Node.js environments (not Cloudflare Workers)
    */
   private removeShutdownHandlers(): void {
+    if (typeof process === 'undefined') {
+      return;
+    }
+
     process.removeListener('SIGTERM', this.shutdownHandler);
     process.removeListener('SIGINT', this.shutdownHandler);
   }

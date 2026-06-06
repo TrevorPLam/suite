@@ -31,7 +31,7 @@ import {
   batchOperationBodySchema,
 } from './schemas.js';
 import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
-import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
+import { PostgresUsageRepository, createDbClient } from '@suite/db';
 import { openApiDoc } from './openapi.js';
 
 type Env = {
@@ -62,7 +62,14 @@ app.use('/api/*', async (c, next) => {
 });
 
 // Create usage repository for monitoring
-const usageRepository = new PostgresUsageRepository();
+let usageRepository: PostgresUsageRepository | null = null;
+app.use('/api/*', async (c, next) => {
+  if (!usageRepository && c.env.DATABASE_URL) {
+    const db = createDbClient({ DATABASE_URL: c.env.DATABASE_URL });
+    usageRepository = new PostgresUsageRepository(db);
+  }
+  await next();
+});
 
 // Simple in-memory metrics collector
 const metrics = {
@@ -173,7 +180,7 @@ app.use('/api/*', async (c, next) => {
 
 // Middleware to create auth instance per request
 app.use('/api/*', async (c, next) => {
-  const db = getDbOrNull();
+  const db = c.env.DATABASE_URL ? createDbClient({ DATABASE_URL: c.env.DATABASE_URL }) : null;
   const auth = createAuth({
     db,
     env: {
@@ -191,11 +198,16 @@ app.use('/api/*', async (c, next) => {
 mountAuth(app);
 
 // Mount UsageMonitor middleware (blocks at 80% of 1000 requests per hour)
-app.use('/api/*', UsageMonitor({
-  limit: 1000,
-  periodMs: 3600000, // 1 hour
-  usageRepository,
-}));
+app.use('/api/*', async (c, next) => {
+  if (usageRepository) {
+    return UsageMonitor({
+      limit: 1000,
+      periodMs: 3600000, // 1 hour
+      usageRepository,
+    })(c, next);
+  }
+  await next();
+});
 
 // Mount rate limiting middleware (60 requests per minute per user)
 app.use('/api/*', async (c, next) => {
@@ -254,14 +266,14 @@ function readTaskError(error: unknown): { status: 400 | 404 | 500; body: Record<
 }
 
 app.get('/api/v1/health', async (c) => {
-  const db = getDbOrNull();
+  const db = c.env.DATABASE_URL ? createDbClient({ DATABASE_URL: c.env.DATABASE_URL }) : null;
   let dbStatus = 'ok';
   let dbLatency: number | undefined;
 
   if (db) {
     try {
       const start = performance.now();
-      await db.execute('SELECT 1');
+      await db.query('SELECT 1');
       dbLatency = performance.now() - start;
     } catch (_error) {
       dbStatus = 'error';

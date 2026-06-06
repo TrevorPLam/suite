@@ -18,7 +18,7 @@ import { wireRepositories } from './bootstrap.js';
 import { validateCalendarEnv, type CalendarEnv } from '@suite/env-config';
 import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
-import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
+import { PostgresUsageRepository, createDbClient } from '@suite/db';
 import { createEventBodySchema, updateEventBodySchema } from './schemas.js';
 import { openApiDoc } from './openapi.js';
 
@@ -28,15 +28,22 @@ type Env = {
   waitUntil: (promise: Promise<unknown>) => void;
 } & CalendarEnv;
 
-// Create usage repository for monitoring
-const usageRepository = new PostgresUsageRepository();
-
 type Variables = {
   userId: string | null;
   auth: ReturnType<typeof createAuth>;
 };
 
 const app = new Hono<{ Variables: Variables; Bindings: Env }>();
+
+// Create usage repository for monitoring
+let usageRepository: PostgresUsageRepository | null = null;
+app.use('/api/*', async (c, next) => {
+  if (!usageRepository && c.env.DATABASE_URL) {
+    const db = createDbClient({ DATABASE_URL: c.env.DATABASE_URL });
+    usageRepository = new PostgresUsageRepository(db);
+  }
+  await next();
+});
 
 // Validate environment variables using runtime env
 app.use('/api/*', async (c, next) => {
@@ -171,11 +178,16 @@ app.use('/api/*', async (c, next) => {
 mountAuth(app);
 
 // Mount UsageMonitor middleware (blocks at 80% of 1000 requests per hour)
-app.use('/api/*', UsageMonitor({
-  limit: 1000,
-  periodMs: 3600000, // 1 hour
-  usageRepository,
-}));
+app.use('/api/*', async (c, next) => {
+  if (usageRepository) {
+    return UsageMonitor({
+      limit: 1000,
+      periodMs: 3600000, // 1 hour
+      usageRepository,
+    })(c, next);
+  }
+  await next();
+});
 
 // Mount rate limiting middleware (60 requests per minute per user)
 app.use('/api/*', async (c, next) => {

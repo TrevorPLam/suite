@@ -45,9 +45,6 @@ export { setTenantContext, getTenantIdFromHeaders, getTenantIdFromToken, isValid
 // Factory function
 export { createDbClient } from './database-factory.js';
 
-// Connection exports (deprecated - use createDbClient instead)
-export { getDb, getDbOrNull, closeDb } from './connection.js';
-
 // Schema exports
 export * from './schema/index.js';
 

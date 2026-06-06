@@ -22,8 +22,13 @@ export class WorkerDatabase implements Database {
       throw new Error('HYPERDRIVE binding with connectionString is required for WorkerDatabase');
     }
 
-    // Use Hyperdrive connection string
-    this.pool = postgres(hyperdriveBinding.connectionString);
+    // Use Hyperdrive connection string with Workers-safe configuration
+    // max: 1 - Workers runtime manages connection pooling via Hyperdrive
+    // prepare: false - Disable prepared statements for compatibility with Hyperdrive
+    this.pool = postgres(hyperdriveBinding.connectionString, {
+      max: 1,
+      prepare: false,
+    });
     this.db = drizzle(this.pool);
   }
 

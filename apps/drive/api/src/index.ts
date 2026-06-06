@@ -25,7 +25,7 @@ import { wireRepositories, getR2Adapter } from './bootstrap.js';
 import { validateDriveEnv, type DriveEnv } from '@suite/env-config';
 import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
-import { PostgresUsageRepository, getDbOrNull } from '@suite/db';
+import { PostgresUsageRepository, createDbClient } from '@suite/db';
 import {
   uploadFileBodySchema,
   renameFileBodySchema,
@@ -69,7 +69,8 @@ app.use('/api/*', async (c, next) => {
 let usageRepository: PostgresUsageRepository | null = null;
 app.use('/api/*', async (c, next) => {
   if (!usageRepository && c.env.DATABASE_URL) {
-    usageRepository = new PostgresUsageRepository();
+    const db = createDbClient({ DATABASE_URL: c.env.DATABASE_URL });
+    usageRepository = new PostgresUsageRepository(db);
   }
   await next();
 });
@@ -183,7 +184,7 @@ app.use('/api/*', async (c, next) => {
 
 // Middleware to create auth instance per request
 app.use('/api/*', async (c, next) => {
-  const db = getDbOrNull();
+  const db = c.env.DATABASE_URL ? createDbClient({ DATABASE_URL: c.env.DATABASE_URL }) : null;
   const auth = createAuth({
     db,
     env: {
@@ -269,14 +270,14 @@ function readDriveError(error: unknown): { status: 400 | 404 | 500; body: Record
 }
 
 app.get('/api/v1/health', async (c) => {
-  const db = getDbOrNull();
+  const db = c.env.DATABASE_URL ? createDbClient({ DATABASE_URL: c.env.DATABASE_URL }) : null;
   let dbStatus = 'ok';
   let dbLatency: number | undefined;
 
   if (db) {
     try {
       const start = performance.now();
-      await db.execute('SELECT 1');
+      await db.query('SELECT 1');
       dbLatency = performance.now() - start;
     } catch (_error) {
       dbStatus = 'error';

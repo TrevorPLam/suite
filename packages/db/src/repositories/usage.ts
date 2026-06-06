@@ -1,15 +1,17 @@
-import { getDb } from '../connection.js';
 import { usage } from '../schema/usage.js';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import type { UsageRepository, UsageRecord } from '@suite/shared-kernel';
+import type { Database } from '../database.interface.js';
 
 export class PostgresUsageRepository implements UsageRepository {
+  constructor(private db: Database) {}
+
   async findOrCreateUsage(userId: string, periodStart: Date, periodEnd: Date): Promise<UsageRecord> {
-    const db = getDb();
+    const drizzleDb = this.db.getDrizzleDb();
     const now = new Date();
 
     // Try to find existing usage record for this period
-    const existingUsage = await db
+    const existingUsage = await drizzleDb
       .select()
       .from(usage)
       .where(
@@ -36,7 +38,7 @@ export class PostgresUsageRepository implements UsageRepository {
     }
 
     // Create new usage record
-    const inserted = await db
+    const inserted = await drizzleDb
       .insert(usage)
       .values({
         userId,
@@ -60,8 +62,8 @@ export class PostgresUsageRepository implements UsageRepository {
   }
 
   async incrementUsage(id: string): Promise<void> {
-    const db = getDb();
-    await db
+    const drizzleDb = this.db.getDrizzleDb();
+    await drizzleDb
       .update(usage)
       .set({
         requestCount: sql`${usage.requestCount} + 1`,
