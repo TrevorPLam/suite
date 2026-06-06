@@ -77,7 +77,7 @@ describe('Tasks App', () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    const postCall = fetchMock.mock.calls[1];
+    const postCall = fetchMock.mock.calls[1]!;
     expect(postCall[0]).toBe('/api/tasks');
     const postOptions = postCall[1] as RequestInit;
     expect(postOptions?.method).toBe('POST');

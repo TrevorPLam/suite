@@ -142,9 +142,9 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] CI-002-bug — Fix Tasks web TypeScript errors
+### [x] CI-002-bug — Fix Tasks web TypeScript errors
 
-**Status:** pending  
+**Status:** done  
 **Depends on:** none  
 **Blocks:** CI-003
 
@@ -183,7 +183,7 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| CI-002-bug-a | `apps/tasks/web/src/App.test.tsx` | Fix TypeScript errors at lines 81-82 (likely fetchMock type assertions). | `pnpm --filter @suite/tasks-web typecheck` |
+| CI-002-bug-a | `apps/tasks/web/src/App.test.tsx` | Fix TypeScript errors at lines 81-82 (likely fetchMock type assertions). | `pnpm --filter @suite/tasks-web typecheck` ✅ |
 
 ---
 
