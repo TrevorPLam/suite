@@ -8,37 +8,46 @@ Suite is a TypeScript monorepo using pnpm workspaces, implementing Domain-Driven
 
 ## Current State
 
-### Completed Features
+### Runtime MVP (In-Memory Implementation)
 
-**Phase 1: Shared Infrastructure**
-- PostgreSQL integration with Drizzle ORM
-- Environment configuration with Zod validation
-- E2EE crypto utilities with Web Crypto API (AES-256-GCM)
-- Authentication with Better Auth
-- Shared UI component library (shadcn/ui patterns)
+The suite currently runs with in-memory repositories for local development. All three apps (Calendar, Tasks, Drive) are fully functional with domain logic, validation, and web UIs.
 
-**Phase 2: Domain Packages**
-- Calendar domain with database integration
-- Tasks domain with database integration
-- Drive domain with database integration
-
-**Phase 3: Tasks App**
-- Task due dates, priorities, and tags
-- Task search and batch operations
+**Calendar App**
+- Event CRUD with conflict detection
+- Event range queries
 - API endpoints with validation
-- Web app with full UI
+- Web app with event management
 
-**Phase 4: Drive App**
+**Tasks App**
+- Task CRUD with due dates, priorities, and tags
+- Task search and batch operations
+- Task filtering (all, active, completed, archived)
+- API endpoints with validation
+- Web app with full task management UI
+
+**Drive App**
+- File upload, rename, delete
 - Folder hierarchy and navigation
-- File metadata tracking
 - File search and folder operations
 - API endpoints with validation
 - Web app with folder tree and file management
 
-**Phase 5: Technical Debt**
-- Cross-platform UUID generation
-- API proxy configuration for development
-- Error code standardization across domains
+### Shared Packages (Unwired)
+
+Infrastructure packages exist but are not yet integrated into the runtime. These will be wired in future phases (see TODO.md).
+
+- **@suite/db** - Drizzle ORM with PostgreSQL schema definitions (not yet wired to APIs)
+- **@suite/auth** - Better Auth integration (not yet mounted on APIs)
+- **@suite/crypto** - E2EE crypto utilities with AES-256-GCM (not yet applied to user content)
+- **@suite/env-config** - Environment validation with Zod schemas (not yet called at API startup)
+- **@suite/ui** - Shared UI component library (shadcn/ui patterns)
+
+### Not Started
+
+- PostgreSQL persistence (domains use in-memory repos by default)
+- Authentication on API routes
+- End-to-end encryption of user content
+- Multi-tenant data isolation
 
 ## Architecture
 
@@ -154,7 +163,7 @@ pnpm test:coverage
 
 ## Contributing
 
-1. Check TODO.md for the current task list
+1. Check [TODO.md](TODO.md) for the current task list and implementation roadmap
 2. Follow the spec-first development workflow
 3. Adhere to AGENTS.md rules and patterns
 4. Ensure all tests pass before committing

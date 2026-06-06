@@ -32,6 +32,49 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ## Phase 0 — CI and test harness integrity
 
+### [ ] CI-001-regression — Fix Tasks web test fetch call count
+
+**Status:** pending  
+**Depends on:** none  
+**Blocks:** CI-003
+
+#### Related paths
+
+- `apps/tasks/web/src/App.test.tsx`
+
+#### Definition of done
+
+- `pnpm --filter @suite/tasks-web test:run` exits 0.
+- Test `creates a new task and shows it in the list` passes without fetch call count mismatch.
+
+#### Out of scope
+
+- Changing test behavior or assertions beyond fixing the count.
+
+#### Rules to follow
+
+- AGENTS.md rule 8: affected targets must pass before merge.
+
+#### Advanced coding pattern
+
+- **Deterministic async tests:** ensure fetch mock call count matches actual behavior.
+
+#### Anti-patterns
+
+- Increasing expected call count without understanding why extra call occurs.
+
+#### Imports / exports
+
+- Test file only.
+
+#### Subtasks
+
+| ID | File | Action | Validate |
+|----|------|--------|----------|
+| CI-001-regression-a | `apps/tasks/web/src/App.test.tsx` | Investigate why fetch is called 3 times instead of 2 in the create task test. Update assertion to match actual behavior or fix App to avoid extra call. | `pnpm --filter @suite/tasks-web test:run -- src/App.test.tsx` |
+
+---
+
 ### [x] CI-001 — Fix Tasks web coverage flake
 
 **Status:** done  
@@ -290,9 +333,9 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ---
 
-### [ ] DOC-002 — Correct README current-state claims
+### [x] DOC-002 — Correct README current-state claims
 
-**Status:** pending  
+**Status:** done  
 **Depends on:** DOC-001  
 **Blocks:** none
 
