@@ -5,10 +5,12 @@ packages:
   - "packages/domain-*"
 
 catalog:
+  '@playwright/test': ^1.60.0
   '@radix-ui/react-dialog': ^1.1.15
   '@radix-ui/react-select': ^2.2.6
   '@testing-library/jest-dom': ^6.9.1
   '@testing-library/react': ^16.3.2
+  '@types/node': ^22.19.19
   class-variance-authority: ^0.7.1
   clsx: ^2.1.1
   drizzle-kit: ^0.31.10

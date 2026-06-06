@@ -281,10 +281,10 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-010: Add E2E Tests with Playwright
+### [x] P2-010: Add E2E Tests with Playwright
 
-**Status**: Pending  
-**Priority**: P2  
+**Status**: Completed
+**Priority**: P2
 **Bounded Context**: Testing
 
 **Related Files**:
@@ -327,32 +327,46 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Implementation Notes**:
+- Installed @playwright/test and @types/node as dev dependencies
+- Created playwright.config.ts with webServer configuration for all three apps (calendar on 5173, tasks on 5174, drive on 5175)
+- Created E2E test files for calendar, tasks, and drive web apps
+- Tests follow Playwright best practices: use locators, web-first assertions, test isolation
+- Added E2E job to CI workflow that runs on push, installs Chromium, runs tests, uploads reports
+- Lint passed with 0 errors (only warnings)
+- Pre-existing typecheck errors in drive-api and tasks-api test files (unrelated to this task)
+
 **Subtasks**:
 
 #### P2-010-01: Install and configure Playwright
 **Target File**: `playwright.config.ts`
 **Action**: Create playwright.config.ts with webServer configuration for all three apps
 **Validate Command**: `npx playwright test --list`
+**Status**: ✅ Complete
 
 #### P2-010-02: Create calendar E2E test
 **Target File**: `apps/calendar/web/e2e/calendar.spec.ts`
 **Action**: Create test that signs in, creates event, verifies event appears
 **Validate Command**: `npx playwright test calendar.spec.ts`
+**Status**: ✅ Complete
 
 #### P2-010-03: Create tasks E2E test
 **Target File**: `apps/tasks/web/e2e/tasks.spec.ts`
 **Action**: Create test that signs in, creates task, verifies task appears
 **Validate Command**: `npx playwright test tasks.spec.ts`
+**Status**: ✅ Complete
 
 #### P2-010-04: Create drive E2E test
 **Target File**: `apps/drive/web/e2e/drive.spec.ts`
 **Action**: Create test that signs in, uploads file, verifies file appears
 **Validate Command**: `npx playwright test drive.spec.ts`
+**Status**: ✅ Complete
 
 #### P2-010-05: Add E2E to CI workflow
 **Target File**: `.github/workflows/ci.yml`
 **Action**: Add e2e job that runs Playwright tests after build
 **Validate Command**: `gh workflow view ci.yml | grep playwright`
+**Status**: ✅ Complete
 
 ---
 
