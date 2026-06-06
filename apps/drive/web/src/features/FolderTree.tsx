@@ -21,7 +21,7 @@ export function FolderTree({ folders, currentFolderId, onFolderClick, onCreateFo
   };
 
   const rootFolders = buildTree();
-  const currentFolder = folders.find((f) => f.id === currentFolderId);
+  const _currentFolder = folders.find((f) => f.id === currentFolderId);
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>

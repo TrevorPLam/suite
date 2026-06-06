@@ -1556,9 +1556,9 @@ Target File**: `.github/workflows/deploy.yml`
 
 ---
 
-### [ ] P1-017: Fix Drive Web Lint Errors
+### [x] P1-017: Fix Drive Web Lint Errors
 
-**Status**: Pending
+**Status**: Complete
 **Priority**: P2
 **Bounded Context**: Code Quality
 
@@ -1597,10 +1597,14 @@ Target File**: `.github/workflows/deploy.yml`
 
 **Issue Context**:
 Discovered during P1-001 QA. apps/drive/web has 2 lint errors:
-1. App.tsx line 25:127 - 'currentFolder' is not defined
-2. DriveFileList.tsx line 24:9 - 'currentFolder' is not defined
+1. DriveFileList.tsx line 25:127 - 'currentFolderId' is defined but never used
+2. FolderTree.tsx line 24:9 - 'currentFolder' is assigned a value but never used
 
-These appear to be typos where 'currentFolderId' was intended.
+**Implementation Notes**:
+- Fixed DriveFileList.tsx by prefixing unused currentFolderId parameter with underscore: currentFolderId: _currentFolderId
+- Fixed FolderTree.tsx by prefixing unused currentFolder variable with underscore: _currentFolder
+- Lint now passes with 0 errors (13 warnings remain, which are out of scope per task definition)
+- Changes are minimal and preserve existing functionality
 
 ---
 

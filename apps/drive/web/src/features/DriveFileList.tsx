@@ -22,7 +22,7 @@ function formatDate(dateString: string) {
   return new Date(dateString).toLocaleString();
 }
 
-export function DriveFileList({ files, loading, error, errorDetails, onRefresh, onRename, onDelete, onMoveFile, folders = [], currentFolderId }: DriveFileListProps) {
+export function DriveFileList({ files, loading, error, errorDetails, onRefresh, onRename, onDelete, onMoveFile, folders = [], currentFolderId: _currentFolderId }: DriveFileListProps) {
   return (
     <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24 }}>
       <div style={{ display: 'grid', gap: 16 }}>
