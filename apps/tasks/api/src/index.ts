@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { secureHeaders } from 'hono/secure-headers';
 import {
   TaskError,
   createTask,
@@ -44,6 +45,21 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://local
 app.use('/api/*', cors({
   origin: allowedOrigins,
   credentials: true,
+}));
+
+// Mount security headers middleware
+app.use('/api/*', secureHeaders({
+  contentSecurityPolicy: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", "data:", "https:"],
+    connectSrc: ["'self'"],
+    fontSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    mediaSrc: ["'self'"],
+    frameSrc: ["'none'"],
+  },
 }));
 
 // Mount Better Auth handler
