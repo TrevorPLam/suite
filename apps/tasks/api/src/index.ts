@@ -8,10 +8,16 @@ import {
   updateTask,
   archiveTask,
   deleteTask,
+  searchTasks,
+  batchComplete,
+  batchArchive,
   type CreateTaskInput,
   type UpdateTaskCompletionInput,
   type UpdateTaskInput,
   type ArchiveTaskInput,
+  type TaskPriority,
+  type SearchTasksInput,
+  type BatchOperationInput,
 } from '@suite/domain-tasks';
 
 const app = new Hono();
@@ -25,7 +31,7 @@ function parseCreateTaskBody(body: unknown): CreateTaskInput | null {
     return null;
   }
 
-  const { title, completed } = body as Record<string, unknown>;
+  const { title, completed, dueDate, priority, tags } = body as Record<string, unknown>;
 
   if (!isNonEmptyString(title)) {
     return null;
@@ -35,12 +41,40 @@ function parseCreateTaskBody(body: unknown): CreateTaskInput | null {
     return null;
   }
 
+  if (dueDate !== undefined && dueDate !== null && typeof dueDate !== 'string') {
+    return null;
+  }
+
+  if (priority !== undefined && !['low', 'medium', 'high'].includes(priority as string)) {
+    return null;
+  }
+
+  if (tags !== undefined && !Array.isArray(tags)) {
+    return null;
+  }
+
+  if (tags !== undefined && !tags.every((tag: unknown) => typeof tag === 'string')) {
+    return null;
+  }
+
   const payload: CreateTaskInput = {
     title: title.trim(),
   };
 
   if (completed !== undefined) {
     payload.completed = completed;
+  }
+
+  if (dueDate !== undefined) {
+    payload.dueDate = dueDate === null ? null : dueDate;
+  }
+
+  if (priority !== undefined) {
+    payload.priority = priority as TaskPriority;
+  }
+
+  if (tags !== undefined) {
+    payload.tags = tags as string[];
   }
 
   return payload;
@@ -65,13 +99,51 @@ function parseUpdateTaskBody(body: unknown): UpdateTaskInput | null {
     return null;
   }
 
-  const { title } = body as Record<string, unknown>;
+  const { title, dueDate, priority, tags } = body as Record<string, unknown>;
 
-  if (!isNonEmptyString(title)) {
+  if (title !== undefined && !isNonEmptyString(title)) {
     return null;
   }
 
-  return { title: title.trim() };
+  if (dueDate !== undefined && dueDate !== null && typeof dueDate !== 'string') {
+    return null;
+  }
+
+  if (priority !== undefined && !['low', 'medium', 'high'].includes(priority as string)) {
+    return null;
+  }
+
+  if (tags !== undefined && !Array.isArray(tags)) {
+    return null;
+  }
+
+  if (tags !== undefined && !tags.every((tag: unknown) => typeof tag === 'string')) {
+    return null;
+  }
+
+  const payload: UpdateTaskInput = {};
+
+  if (title !== undefined) {
+    payload.title = title.trim();
+  }
+
+  if (dueDate !== undefined) {
+    payload.dueDate = dueDate === null ? null : dueDate;
+  }
+
+  if (priority !== undefined) {
+    payload.priority = priority as TaskPriority;
+  }
+
+  if (tags !== undefined) {
+    payload.tags = tags as string[];
+  }
+
+  if (Object.keys(payload).length === 0) {
+    return null;
+  }
+
+  return payload;
 }
 
 function parseArchiveTaskBody(body: unknown): ArchiveTaskInput | null {
@@ -119,7 +191,24 @@ function readTaskError(error: unknown): { status: 400 | 404 | 500; body: Record<
 
 app.get('/api/health', (c) => c.json({ ok: true, app: 'tasks' }));
 
-app.get('/api/tasks', (c) => c.json({ tasks: listTasks() }));
+app.get('/api/tasks', async (c) => c.json({ tasks: await listTasks() }));
+
+app.get('/api/tasks/search', async (c) => {
+  const query = c.req.query('q');
+  const tagsParam = c.req.query('tags');
+  const tags = tagsParam ? tagsParam.split(',').map(t => t.trim()) : undefined;
+
+  const searchInput: SearchTasksInput = {};
+  if (query) {
+    searchInput.query = query;
+  }
+  if (tags && tags.length > 0) {
+    searchInput.tags = tags;
+  }
+
+  const results = await searchTasks(searchInput);
+  return c.json({ tasks: results });
+});
 
 app.post('/api/tasks', async (c) => {
   let body: unknown;
@@ -140,7 +229,7 @@ app.post('/api/tasks', async (c) => {
   }
 
   try {
-    return c.json({ task: createTask(payload) }, 201);
+    return c.json({ task: await createTask(payload) }, 201);
   } catch (error) {
     const response = readTaskError(error);
 
@@ -148,8 +237,8 @@ app.post('/api/tasks', async (c) => {
   }
 });
 
-app.get('/api/tasks/:id', (c) => {
-  const task = getTask(c.req.param('id').trim());
+app.get('/api/tasks/:id', async (c) => {
+  const task = await getTask(c.req.param('id').trim());
 
   if (!task) {
     return c.json({ error: 'Task not found' }, 404);
@@ -180,7 +269,7 @@ app.put('/api/tasks/:id/completion', async (c) => {
   }
 
   try {
-    return c.json({ task: updateTaskCompletion(id, payload) });
+    return c.json({ task: await updateTaskCompletion(id, payload) });
   } catch (error) {
     const response = readTaskError(error);
 
@@ -210,7 +299,7 @@ app.put('/api/tasks/:id', async (c) => {
   }
 
   try {
-    return c.json({ task: updateTask(id, payload) });
+    return c.json({ task: await updateTask(id, payload) });
   } catch (error) {
     const response = readTaskError(error);
 
@@ -240,7 +329,7 @@ app.put('/api/tasks/:id/archive', async (c) => {
   }
 
   try {
-    return c.json({ task: archiveTask(id, payload) });
+    return c.json({ task: await archiveTask(id, payload) });
   } catch (error) {
     const response = readTaskError(error);
 
@@ -248,7 +337,7 @@ app.put('/api/tasks/:id/archive', async (c) => {
   }
 });
 
-app.delete('/api/tasks/:id', (c) => {
+app.delete('/api/tasks/:id', async (c) => {
   const id = c.req.param('id').trim();
 
   if (!id) {
@@ -256,8 +345,82 @@ app.delete('/api/tasks/:id', (c) => {
   }
 
   try {
-    deleteTask(id);
+    await deleteTask(id);
     return c.json({ success: true });
+  } catch (error) {
+    const response = readTaskError(error);
+
+    return c.json(response.body, response.status);
+  }
+});
+
+function parseBatchOperationBody(body: unknown): BatchOperationInput | null {
+  if (typeof body !== 'object' || body === null) {
+    return null;
+  }
+
+  const { taskIds } = body as Record<string, unknown>;
+
+  if (!Array.isArray(taskIds)) {
+    return null;
+  }
+
+  if (!taskIds.every((id: unknown) => typeof id === 'string' && id.trim().length > 0)) {
+    return null;
+  }
+
+  return { taskIds: taskIds as string[] };
+}
+
+app.post('/api/tasks/batch/complete', async (c) => {
+  let body: unknown;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const payload = parseBatchOperationBody(body);
+
+  if (!payload) {
+    return c.json({
+      error: 'Invalid batch operation payload',
+      expected: ['taskIds: string[]'],
+    }, 400);
+  }
+
+  try {
+    const results = await batchComplete(payload);
+    return c.json({ tasks: results });
+  } catch (error) {
+    const response = readTaskError(error);
+
+    return c.json(response.body, response.status);
+  }
+});
+
+app.post('/api/tasks/batch/archive', async (c) => {
+  let body: unknown;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const payload = parseBatchOperationBody(body);
+
+  if (!payload) {
+    return c.json({
+      error: 'Invalid batch operation payload',
+      expected: ['taskIds: string[]'],
+    }, 400);
+  }
+
+  try {
+    const results = await batchArchive(payload);
+    return c.json({ tasks: results });
   } catch (error) {
     const response = readTaskError(error);
 

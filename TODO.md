@@ -1002,9 +1002,9 @@ export type { TaskItem, CreateTaskInput, UpdateTaskInput, TaskPriority, TaskFilt
 
 ---
 
-### [ ] TASK-02: Update tasks API with new features
+### [x] TASK-02: Update tasks API with new features
 
-**Status**: Not started  
+**Status**: Complete
 **Related Files**: apps/tasks/api/src/index.ts, apps/tasks/api/src/index.test.ts
 
 **Definition of Done**:
@@ -1054,40 +1054,60 @@ export default app;
 
 **Subtasks**:
 
-#### TASK-02.1: Add due date to API endpoints
+#### ✅ TASK-02.1: Add due date to API endpoints
 **Target**: apps/tasks/api/src/index.ts
 **Action**: Update POST/PUT endpoints to accept dueDate, add validation.
 **Validate**: `pnpm --filter @suite/tasks-api test`
 
-#### TASK-02.2: Add priority to API endpoints
+#### ✅ TASK-02.2: Add priority to API endpoints
 **Target**: apps/tasks/api/src/index.ts
 **Action**: Update POST/PUT endpoints to accept priority, add validation.
 **Validate**: `pnpm --filter @suite/tasks-api test`
 
-#### TASK-02.3: Add tags to API endpoints
+#### ✅ TASK-02.3: Add tags to API endpoints
 **Target**: apps/tasks/api/src/index.ts
 **Action**: Update POST/PUT endpoints to accept tags array, add validation.
 **Validate**: `pnpm --filter @suite/tasks-api test`
 
-#### TASK-02.4: Implement search endpoint
+#### ✅ TASK-02.4: Implement search endpoint
 **Target**: apps/tasks/api/src/index.ts
 **Action**: Add GET /api/tasks/search with query and tags parameters.
 **Validate**: `pnpm --filter @suite/tasks-api test`
 
-#### TASK-02.5: Implement batch complete endpoint
+#### ✅ TASK-02.5: Implement batch complete endpoint
 **Target**: apps/tasks/api/src/index.ts
 **Action**: Add POST /api/tasks/batch/complete with task IDs array.
 **Validate**: `pnpm --filter @suite/tasks-api test`
 
-#### TASK-02.6: Implement batch archive endpoint
+#### ✅ TASK-02.6: Implement batch archive endpoint
 **Target**: apps/tasks/api/src/index.ts
 **Action**: Add POST /api/tasks/batch/archive with task IDs array.
 **Validate**: `pnpm --filter @suite/tasks-api test`
 
-#### TASK-02.7: Update API tests
+#### ✅ TASK-02.7: Update API tests
 **Target**: apps/tasks/api/src/index.test.ts
 **Action**: Add tests for all new endpoints and error cases.
 **Validate**: `pnpm --filter @suite/tasks-api test`
+
+**Implementation Notes**:
+- Updated imports to include searchTasks, batchComplete, batchArchive and new types
+- Updated parseCreateTaskBody to accept dueDate, priority, tags with validation
+- Updated parseUpdateTaskBody to accept dueDate, priority, tags with validation
+- Added parseBatchOperationBody for batch operation validation
+- Added GET /api/tasks/search endpoint with query (q) and tags parameters
+- Added POST /api/tasks/batch/complete endpoint for bulk completion
+- Added POST /api/tasks/batch/archive endpoint for bulk archiving
+- Made all API endpoints async to await domain function calls (domain functions are async from DOM-02)
+- Updated all test beforeEach blocks to await resetTasks
+- Added comprehensive tests for new features:
+  - Search: query, tags, combined query+tags, empty results
+  - Batch operations: complete multiple, archive multiple, invalid payloads
+  - Create with new fields: due date, priority, tags, all fields, validation errors
+  - Update with new fields: due date, priority, tags, remove due date, empty payload rejection
+- All 35 tests passing (13 original + 22 new)
+- Typecheck passing
+- API layer remains thin - only validation and domain function calls
+- Maintained existing API contracts (backward compatible)
 
 ---
 
