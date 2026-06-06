@@ -218,10 +218,10 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-009: Increase Test Coverage Thresholds
+### [x] P2-009: Increase Test Coverage Thresholds
 
-**Status**: Pending  
-**Priority**: P2  
+**Status**: Completed
+**Priority**: P2
 **Bounded Context**: Testing
 
 **Related Files**:
@@ -258,17 +258,26 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Implementation Notes**:
+- Updated coverage thresholds from 0 to 80% for all metrics (lines, functions, branches, statements)
+- Subtask P2-009-02 was already complete - CI workflow already had codecov upload configured
+- Lint passed with 0 errors (only warnings)
+- Pre-existing typecheck errors in drive-api and tasks-api test files (unrelated to this task)
+- Pre-existing test failures in calendar-web (AuthProvider context issue, unrelated to this task)
+
 **Subtasks**:
 
 #### P2-009-01: Update coverage thresholds in vitest config
 **Target File**: `vitest.config.ts`
 **Action**: Change coverage.thresholds from 0 to 80 for lines, functions, branches, statements
 **Validate Command**: `pnpm test --coverage`
+**Status**: ✅ Complete
 
 #### P2-009-02: Add coverage upload to CI
 **Target File**: `.github/workflows/ci.yml`
 **Action**: Add step to upload coverage report to codecov or similar service
 **Validate Command**: `gh workflow view ci.yml | grep coverage`
+**Status**: ✅ Already complete (codecov upload existed at lines 91-96)
 
 ---
 
@@ -1092,6 +1101,52 @@ This occurs because `drizzle-orm` or another dependency is pulling the `postgres
 **Target File**: `apps/calendar/web/vite.config.ts`, `apps/tasks/web/vite.config.ts`, `apps/drive/web/vite.config.ts`
 **Action**: Configure Vite to exclude `postgres` from bundling or alias it to an empty module
 **Validate Command**: `pnpm --filter @suite/calendar-web build`
+
+---
+
+### [ ] INF-003: Fix Calendar Web Test Failures
+
+**Status**: Pending  
+**Priority**: P1  
+**Bounded Context**: Testing
+
+**Related Files**:
+- `apps/calendar/web/src/App.test.tsx`
+- `apps/calendar/web/src/auth-provider.tsx`
+
+**Definition of Done**:
+- `pnpm --filter @suite/calendar-web test` passes
+- `pnpm --filter @suite/calendar-web test:coverage` passes
+- All 5 tests in App.test.tsx pass
+
+**Issue Description**:
+Calendar web tests fail with "useAuth must be used within AuthProvider" error. The test file does not wrap components in AuthProvider context, causing all 5 tests to fail.
+
+**Out of Scope**:
+- Modifying production code (only test files)
+- Changing test logic (only context wrapper fix)
+
+**Rules to Follow**:
+- Wrap test components in required providers
+- Maintain test behavior
+
+**Anti-Patterns**:
+- Skipping tests instead of fixing them
+- Removing tests that verify important behavior
+
+**Depends On**:
+- None
+
+**Blocks**:
+- `pnpm -r run test:coverage` workflow validation
+- Any PR requiring full test suite
+
+**Subtasks**:
+
+#### INF-003-01: Add AuthProvider wrapper to calendar web tests
+**Target File**: `apps/calendar/web/src/App.test.tsx`
+**Action**: Wrap test components in AuthProvider to fix context errors
+**Validate Command**: `pnpm --filter @suite/calendar-web test`
 
 ---
 
