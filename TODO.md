@@ -126,10 +126,10 @@ Discovered during SEC-001 validation. better-auth/kysely-adapter imports DEFAULT
 
 ---
 
-### [ ] SEC-002: Create Deploy Workflow
+### [x] SEC-002: Create Deploy Workflow
 
-**Status**: Pending  
-**Priority**: P0  
+**Status**: Complete
+**Priority**: P0
 **Bounded Context**: CI/CD
 
 **Related Files**:
@@ -170,25 +170,38 @@ Discovered during SEC-001 validation. better-auth/kysely-adapter imports DEFAULT
 
 **Subtasks**:
 
-#### SEC-002-01: Create deploy workflow skeleton
+#### SEC-002-01: Create deploy workflow skeleton ✅
 **Target File**: `.github/workflows/deploy.yml`
 **Action**: Create workflow with name="Deploy", on: push: branches: [main], jobs: deploy with checkout, setup-pnpm, setup-node steps
 **Validate Command**: `gh workflow view deploy.yml`
 
-#### SEC-002-02: Add migration job for each domain
+#### SEC-002-02: Add migration job for each domain ✅
 **Target File**: `.github/workflows/deploy.yml`
 **Action**: Add migration-calendar, migration-tasks, migration-drive jobs that run APP_DOMAIN=calendar pnpm --filter @suite/db run db:migrate when respective apps changed
 **Validate Command**: `gh workflow view deploy.yml | grep migration`
 
-#### SEC-002-03: Add Worker deployment jobs
+#### SEC-002-03: Add Worker deployment jobs ✅
 **Target File**: `.github/workflows/deploy.yml`
 **Action**: Add deploy-calendar-api, deploy-tasks-api, deploy-drive-api jobs that depend on respective migrations and run pnpm nx run <app>-api:deploy
 **Validate Command**: `gh workflow view deploy.yml | grep deploy.*api`
 
-#### SEC-002-04: Add Pages deployment jobs
+#### SEC-002-04: Add Pages deployment jobs ✅
 **Target File**: `.github/workflows/deploy.yml`
 **Action**: Add deploy-calendar-web, deploy-tasks-web, deploy-drive-web jobs that depend on respective API deployments and run pnpm nx run <app>-web:deploy
 **Validate Command**: `gh workflow view deploy.yml | grep deploy.*web`
+
+**Implementation Notes**:
+- Created comprehensive deploy workflow at `.github/workflows/deploy.yml`
+- Workflow triggers on push to main branch
+- Added detect-changes job using Nx affected to efficiently determine which projects changed
+- Migration jobs (calendar, tasks, drive) run before API deployments and only when respective apps or db package changed
+- Worker deployment jobs use cloudflare/wrangler-action@v3 with proper dependency chain (needs migration)
+- Pages deployment jobs included but disabled with `if: false` since web apps not yet implemented
+- All jobs use pnpm 9 and Node.js 20.x with caching
+- Follows AGENTS.md rule 5: migrations run in CI, never in Workers
+- Typecheck passed with no errors
+- Lint passed with pre-existing warnings (unrelated to workflow)
+- Tests passed successfully
 
 ---
 

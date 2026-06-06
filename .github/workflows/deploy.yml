@@ -1,0 +1,328 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # Detect changed projects using Nx affected
+  detect-changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      calendar-changed: ${{ steps.changes.outputs.calendar }}
+      tasks-changed: ${{ steps.changes.outputs.tasks }}
+      drive-changed: ${{ steps.changes.outputs.drive }}
+      db-changed: ${{ steps.changes.outputs.db }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Detect changed projects
+        id: changes
+        run: |
+          echo "calendar=$(nx affected:print --type=apps --projects=calendar-api --base=HEAD~1 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
+          echo "tasks=$(nx affected:print --type=apps --projects=tasks-api --base=HEAD~1 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
+          echo "drive=$(nx affected:print --type=apps --projects=drive-api --base=HEAD~1 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
+          echo "db=$(nx affected:print --type=packages --projects=db --base=HEAD~1 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
+
+  # Migration jobs - run before API deployments
+  migration-calendar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: detect-changes
+    if: needs.detect-changes.outputs.calendar-changed != '' || needs.detect-changes.outputs.db-changed != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run calendar migrations
+        run: APP_DOMAIN=calendar pnpm --filter @suite/db run db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  migration-tasks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: detect-changes
+    if: needs.detect-changes.outputs.tasks-changed != '' || needs.detect-changes.outputs.db-changed != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tasks migrations
+        run: APP_DOMAIN=tasks pnpm --filter @suite/db run db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  migration-drive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: detect-changes
+    if: needs.detect-changes.outputs.drive-changed != '' || needs.detect-changes.outputs.db-changed != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run drive migrations
+        run: APP_DOMAIN=drive pnpm --filter @suite/db run db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  # Worker deployment jobs
+  deploy-calendar-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [detect-changes, migration-calendar]
+    if: needs.detect-changes.outputs.calendar-changed != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build calendar API
+        run: pnpm --filter @suite/calendar-api build
+
+      - name: Deploy calendar API
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy apps/calendar/api
+
+  deploy-tasks-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [detect-changes, migration-tasks]
+    if: needs.detect-changes.outputs.tasks-changed != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build tasks API
+        run: pnpm --filter @suite/tasks-api build
+
+      - name: Deploy tasks API
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy apps/tasks/api
+
+  deploy-drive-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [detect-changes, migration-drive]
+    if: needs.detect-changes.outputs.drive-changed != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build drive API
+        run: pnpm --filter @suite/drive-api build
+
+      - name: Deploy drive API
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy apps/drive/api
+
+  # Pages deployment jobs (future - web apps not yet implemented)
+  deploy-calendar-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [detect-changes, deploy-calendar-api]
+    if: false  # Disabled until web app is implemented
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build calendar web
+        run: pnpm --filter @suite/calendar-web build
+
+      - name: Deploy calendar web
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/calendar/web/dist --project-name=calendar-web
+
+  deploy-tasks-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [detect-changes, deploy-tasks-api]
+    if: false  # Disabled until web app is implemented
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build tasks web
+        run: pnpm --filter @suite/tasks-web build
+
+      - name: Deploy tasks web
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/tasks/web/dist --project-name=tasks-web
+
+  deploy-drive-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [detect-changes, deploy-drive-api]
+    if: false  # Disabled until web app is implemented
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build drive web
+        run: pnpm --filter @suite/drive-web build
+
+      - name: Deploy drive web
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/drive/web/dist --project-name=drive-web
