@@ -7,6 +7,8 @@
  * @module wasm-backend
  */
 
+/// <reference path="./libsodium.d.ts" />
+
 import { createCryptoError, CryptoErrorCode } from './errors.js';
 
 // Type for libsodium module (loaded dynamically)

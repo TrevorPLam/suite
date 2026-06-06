@@ -329,15 +329,16 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] CRYPTO-013: Fix Libsodium Type Declarations
+### [x] CRYPTO-013: Fix Libsodium Type Declarations
 
 **Priority**: P1
 **Bounded Context**: Type Safety
-**Status**: Pending
+**Status**: Complete
 
 **Related Files**:
 - `packages/crypto/src/wasm-backend.ts`
-- `packages/crypto/package.json`
+- `packages/crypto/src/pqc.ts`
+- `packages/crypto/src/libsodium.d.ts`
 
 **Definition of Done**:
 - Type declarations for libsodium added or properly handled
@@ -356,14 +357,21 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 **Depends On**: CRYPTO-008
 **Blocks**: Typecheck
 
+**Implementation Notes**:
+- Custom type declaration file (libsodium.d.ts) already existed in src directory
+- Added `/// <reference path="./libsodium.d.ts" />` to wasm-backend.ts and pqc.ts
+- @types/libsodium does not exist in npm registry, so custom declarations are required
+- Typecheck now passes successfully across all packages
+- Optional dependency pattern maintained - libsodium remains in optionalDependencies
+
 **Subtasks**:
 
-#### CRYPTO-013-01: Add type declarations for libsodium
-**Target File**: `packages/crypto/package.json`
-**Action**: Add @types/libsodium as optional dev dependency or create custom type declarations for libsodium module.
+#### CRYPTO-013-01: Add type declarations for libsodium ✅
+**Target File**: `packages/crypto/src/wasm-backend.ts`, `packages/crypto/src/pqc.ts`
+**Action**: Added `/// <reference path="./libsodium.d.ts" />` to both files that import libsodium.
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-013-02: Verify typecheck passes
+#### CRYPTO-013-02: Verify typecheck passes ✅
 **Target File**: Root directory
-**Action**: Run typecheck to verify libsodium type error is resolved.
+**Action**: Verified typecheck passes with no errors.
 **Validate Command**: `pnpm typecheck`

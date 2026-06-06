@@ -17,6 +17,8 @@
  * - UK NCSC PQC Migration Timelines: https://www.ncsc.gov.uk/guidance/pqc-migration-timelines
  */
 
+/// <reference path="./libsodium.d.ts" />
+
 import { createCryptoError, CryptoErrorCode } from './errors.js';
 import { generateKeyPair } from './keypair.js';
 import { deriveSharedSecret, deriveAESKeyFromSharedSecret } from './ecdh.js';
