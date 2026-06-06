@@ -33,7 +33,7 @@ function mapToDomain(schema: TaskSchema): TaskItem {
 }
 
 // Map domain type to DB schema (for create/update)
-function mapToSchema(domain: Omit<TaskItem, 'id'>): Omit<TaskSchema, 'id'> {
+function mapToSchema(domain: Omit<TaskItem, 'id'>): Omit<TaskSchema, 'id' | 'userId'> {
   return {
     title: domain.title,
     completed: domain.completed,
@@ -46,8 +46,10 @@ function mapToSchema(domain: Omit<TaskItem, 'id'>): Omit<TaskSchema, 'id'> {
 
 export class PostgresTaskRepository implements TaskRepository {
   private db: ReturnType<typeof getDb>;
+  private userId: string;
 
-  constructor(db?: ReturnType<typeof getDb>) {
+  constructor(userId: string, db?: ReturnType<typeof getDb>) {
+    this.userId = userId;
     this.db = db ?? getDb();
   }
 
@@ -55,13 +57,16 @@ export class PostgresTaskRepository implements TaskRepository {
     const results = await this.db
       .select()
       .from(tasks)
-      .where(eq(tasks.id, id))
+      .where(and(eq(tasks.id, id), eq(tasks.userId, this.userId)))
       .limit(1);
     return results[0] ? mapToDomain(results[0]) : null;
   }
 
   async findAll(): Promise<TaskItem[]> {
-    const results = await this.db.select().from(tasks);
+    const results = await this.db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.userId, this.userId));
     return results.map(mapToDomain);
   }
 
@@ -69,7 +74,13 @@ export class PostgresTaskRepository implements TaskRepository {
     const schemaEntity = mapToSchema(entity);
     const newEntity: NewTaskSchema = {
       id: generateUUID(),
-      ...schemaEntity,
+      userId: this.userId,
+      title: schemaEntity.title,
+      completed: schemaEntity.completed,
+      archived: schemaEntity.archived,
+      dueDate: schemaEntity.dueDate,
+      priority: schemaEntity.priority,
+      tags: schemaEntity.tags,
     };
     const results = await this.db.insert(tasks).values(newEntity).returning();
     if (!results[0]) {
@@ -90,7 +101,7 @@ export class PostgresTaskRepository implements TaskRepository {
     const results = await this.db
       .update(tasks)
       .set(schemaEntity)
-      .where(eq(tasks.id, id))
+      .where(and(eq(tasks.id, id), eq(tasks.userId, this.userId)))
       .returning();
     return results[0] ? mapToDomain(results[0]) : null;
   }
@@ -98,32 +109,29 @@ export class PostgresTaskRepository implements TaskRepository {
   async delete(id: string): Promise<boolean> {
     const results = await this.db
       .delete(tasks)
-      .where(eq(tasks.id, id))
+      .where(and(eq(tasks.id, id), eq(tasks.userId, this.userId)))
       .returning();
     return results.length > 0;
   }
 
   async findWhere(criteria: Partial<TaskItem>): Promise<TaskItem[]> {
-    const conditions = Object.entries(criteria).map(([key, value]) => 
-      eq(tasks[key as keyof TaskSchema] as any, value as any)
+    const conditions = [eq(tasks.userId, this.userId)];
+    Object.entries(criteria).forEach(([key, value]) => 
+      conditions.push(eq(tasks[key as keyof TaskSchema] as any, value as any))
     );
     
-    if (conditions.length === 0) {
+    if (conditions.length === 1) {
       return this.findAll();
     }
 
-    // Use and() for multiple conditions
-    const whereClause = conditions.length === 1 
-      ? conditions[0]! 
-      : and(...conditions);
-    
+    const whereClause = and(...conditions);
     const results = await this.db.select().from(tasks).where(whereClause);
     return results.map(mapToDomain);
   }
 
   async count(criteria?: Partial<TaskItem>): Promise<number> {
     if (!criteria || Object.keys(criteria).length === 0) {
-      const result = await this.db.select({ count: tasks.id }).from(tasks);
+      const result = await this.db.select({ count: tasks.id }).from(tasks).where(eq(tasks.userId, this.userId));
       return result.length;
     }
     const results = await this.findWhere(criteria);

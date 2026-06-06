@@ -1,7 +1,9 @@
-import { pgTable, text, integer, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { users } from './users.js';
 
 export const driveFiles = pgTable('drive_files', {
   id: text('id').primaryKey(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   size: integer('size').notNull(),
   folderId: text('folder_id'),
@@ -12,6 +14,7 @@ export const driveFiles = pgTable('drive_files', {
 
 export const driveFolders = pgTable('drive_folders', {
   id: text('id').primaryKey(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   parentId: text('parent_id'),
   createdAt: timestamp('created_at').notNull().defaultNow(),

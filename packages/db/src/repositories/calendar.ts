@@ -27,7 +27,7 @@ function mapToDomain(schema: CalendarEventSchema): CalendarEvent {
 }
 
 // Map domain type to DB schema (for create/update)
-function mapToSchema(domain: Omit<CalendarEvent, 'id'>): Omit<CalendarEventSchema, 'id'> {
+function mapToSchema(domain: Omit<CalendarEvent, 'id'>): Omit<CalendarEventSchema, 'id' | 'userId'> {
   return {
     title: domain.title,
     startAt: new Date(domain.startAt),
@@ -37,8 +37,10 @@ function mapToSchema(domain: Omit<CalendarEvent, 'id'>): Omit<CalendarEventSchem
 
 export class PostgresCalendarEventRepository implements CalendarEventRepository {
   private db: ReturnType<typeof getDb>;
+  private userId: string;
 
-  constructor(db?: ReturnType<typeof getDb>) {
+  constructor(userId: string, db?: ReturnType<typeof getDb>) {
+    this.userId = userId;
     this.db = db ?? getDb();
   }
 
@@ -46,13 +48,16 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
     const results = await this.db
       .select()
       .from(calendarEvents)
-      .where(eq(calendarEvents.id, id))
+      .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, this.userId)))
       .limit(1);
     return results[0] ? mapToDomain(results[0]) : null;
   }
 
   async findAll(): Promise<CalendarEvent[]> {
-    const results = await this.db.select().from(calendarEvents);
+    const results = await this.db
+      .select()
+      .from(calendarEvents)
+      .where(eq(calendarEvents.userId, this.userId));
     return results.map(mapToDomain);
   }
 
@@ -60,7 +65,10 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
     const schemaEntity = mapToSchema(entity);
     const newEntity: NewCalendarEventSchema = {
       id: generateUUID(),
-      ...schemaEntity,
+      userId: this.userId,
+      title: schemaEntity.title,
+      startAt: schemaEntity.startAt,
+      endAt: schemaEntity.endAt,
     };
     const results = await this.db.insert(calendarEvents).values(newEntity).returning();
     if (!results[0]) {
@@ -78,7 +86,7 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
     const results = await this.db
       .update(calendarEvents)
       .set(schemaEntity)
-      .where(eq(calendarEvents.id, id))
+      .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, this.userId)))
       .returning();
     return results[0] ? mapToDomain(results[0]) : null;
   }
@@ -86,7 +94,7 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
   async delete(id: string): Promise<boolean> {
     const results = await this.db
       .delete(calendarEvents)
-      .where(eq(calendarEvents.id, id))
+      .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, this.userId)))
       .returning();
     return results.length > 0;
   }
@@ -95,6 +103,7 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
     // Find events that overlap with the given range
     // Overlap condition: (event.start < candidate.end) AND (event.end > candidate.start)
     const conditions = [
+      eq(calendarEvents.userId, this.userId),
       lt(calendarEvents.startAt, endAt),
       gt(calendarEvents.endAt, startAt),
     ];

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { getDb } from '../connection.js';
 import { driveFiles, driveFolders, type DriveFileSchema, type NewDriveFileSchema, type DriveFolderSchema, type NewDriveFolderSchema } from '../schema/drive.js';
 import type { QueryRepository } from '../index.js';
@@ -56,7 +56,7 @@ function mapFolderToDomain(schema: DriveFolderSchema): DriveFolder {
 }
 
 // Map domain type to DB schema (for create/update)
-function mapFileToSchema(domain: Omit<DriveFile, 'id'>): Omit<DriveFileSchema, 'id'> {
+function mapFileToSchema(domain: Omit<DriveFile, 'id'>): Omit<DriveFileSchema, 'id' | 'userId'> {
   return {
     name: domain.name,
     size: domain.size,
@@ -67,7 +67,7 @@ function mapFileToSchema(domain: Omit<DriveFile, 'id'>): Omit<DriveFileSchema, '
   };
 }
 
-function mapFolderToSchema(domain: Omit<DriveFolder, 'id'>): Omit<DriveFolderSchema, 'id'> {
+function mapFolderToSchema(domain: Omit<DriveFolder, 'id'>): Omit<DriveFolderSchema, 'id' | 'userId'> {
   return {
     name: domain.name,
     parentId: domain.parentId ?? null,
@@ -77,8 +77,10 @@ function mapFolderToSchema(domain: Omit<DriveFolder, 'id'>): Omit<DriveFolderSch
 
 export class PostgresDriveFileRepository implements DriveFileRepository {
   private db: ReturnType<typeof getDb>;
+  private userId: string;
 
-  constructor(db?: ReturnType<typeof getDb>) {
+  constructor(userId: string, db?: ReturnType<typeof getDb>) {
+    this.userId = userId;
     this.db = db ?? getDb();
   }
 
@@ -86,13 +88,16 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
     const results = await this.db
       .select()
       .from(driveFiles)
-      .where(eq(driveFiles.id, id))
+      .where(and(eq(driveFiles.id, id), eq(driveFiles.userId, this.userId)))
       .limit(1);
     return results[0] ? mapFileToDomain(results[0]) : null;
   }
 
   async findAll(): Promise<DriveFile[]> {
-    const results = await this.db.select().from(driveFiles);
+    const results = await this.db
+      .select()
+      .from(driveFiles)
+      .where(eq(driveFiles.userId, this.userId));
     return results.map(mapFileToDomain);
   }
 
@@ -100,7 +105,13 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
     const schemaEntity = mapFileToSchema(entity);
     const newEntity: NewDriveFileSchema = {
       id: generateUUID(),
-      ...schemaEntity,
+      userId: this.userId,
+      name: schemaEntity.name,
+      size: schemaEntity.size,
+      folderId: schemaEntity.folderId,
+      mimeType: schemaEntity.mimeType,
+      createdAt: schemaEntity.createdAt,
+      modifiedAt: schemaEntity.modifiedAt,
     };
     const results = await this.db.insert(driveFiles).values(newEntity).returning();
     if (!results[0]) {
@@ -121,7 +132,7 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
     const results = await this.db
       .update(driveFiles)
       .set(schemaEntity)
-      .where(eq(driveFiles.id, id))
+      .where(and(eq(driveFiles.id, id), eq(driveFiles.userId, this.userId)))
       .returning();
     return results[0] ? mapFileToDomain(results[0]) : null;
   }
@@ -129,28 +140,29 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
   async delete(id: string): Promise<boolean> {
     const results = await this.db
       .delete(driveFiles)
-      .where(eq(driveFiles.id, id))
+      .where(and(eq(driveFiles.id, id), eq(driveFiles.userId, this.userId)))
       .returning();
     return results.length > 0;
   }
 
   async findWhere(criteria: Partial<DriveFile>): Promise<DriveFile[]> {
-    const conditions = Object.entries(criteria).map(([key, value]) => 
-      eq(driveFiles[key as keyof DriveFileSchema] as any, value as any)
+    const conditions = [eq(driveFiles.userId, this.userId)];
+    Object.entries(criteria).forEach(([key, value]) => 
+      conditions.push(eq(driveFiles[key as keyof DriveFileSchema] as any, value as any))
     );
     
-    if (conditions.length === 0) {
+    if (conditions.length === 1) {
       return this.findAll();
     }
 
-    // For now, simple implementation - in production would use and() for multiple conditions
-    const results = await this.db.select().from(driveFiles).where(conditions[0]!);
+    const whereClause = and(...conditions);
+    const results = await this.db.select().from(driveFiles).where(whereClause);
     return results.map(mapFileToDomain);
   }
 
   async count(criteria?: Partial<DriveFile>): Promise<number> {
     if (!criteria || Object.keys(criteria).length === 0) {
-      const result = await this.db.select({ count: driveFiles.id }).from(driveFiles);
+      const result = await this.db.select({ count: driveFiles.id }).from(driveFiles).where(eq(driveFiles.userId, this.userId));
       return result.length;
     }
     const results = await this.findWhere(criteria);
@@ -160,8 +172,10 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
 
 export class PostgresDriveFolderRepository implements DriveFolderRepository {
   private db: ReturnType<typeof getDb>;
+  private userId: string;
 
-  constructor(db?: ReturnType<typeof getDb>) {
+  constructor(userId: string, db?: ReturnType<typeof getDb>) {
+    this.userId = userId;
     this.db = db ?? getDb();
   }
 
@@ -169,13 +183,16 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
     const results = await this.db
       .select()
       .from(driveFolders)
-      .where(eq(driveFolders.id, id))
+      .where(and(eq(driveFolders.id, id), eq(driveFolders.userId, this.userId)))
       .limit(1);
     return results[0] ? mapFolderToDomain(results[0]) : null;
   }
 
   async findAll(): Promise<DriveFolder[]> {
-    const results = await this.db.select().from(driveFolders);
+    const results = await this.db
+      .select()
+      .from(driveFolders)
+      .where(eq(driveFolders.userId, this.userId));
     return results.map(mapFolderToDomain);
   }
 
@@ -183,7 +200,10 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
     const schemaEntity = mapFolderToSchema(entity);
     const newEntity: NewDriveFolderSchema = {
       id: generateUUID(),
-      ...schemaEntity,
+      userId: this.userId,
+      name: schemaEntity.name,
+      parentId: schemaEntity.parentId,
+      createdAt: schemaEntity.createdAt,
     };
     const results = await this.db.insert(driveFolders).values(newEntity).returning();
     if (!results[0]) {
@@ -201,7 +221,7 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
     const results = await this.db
       .update(driveFolders)
       .set(schemaEntity)
-      .where(eq(driveFolders.id, id))
+      .where(and(eq(driveFolders.id, id), eq(driveFolders.userId, this.userId)))
       .returning();
     return results[0] ? mapFolderToDomain(results[0]) : null;
   }
@@ -209,28 +229,29 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
   async delete(id: string): Promise<boolean> {
     const results = await this.db
       .delete(driveFolders)
-      .where(eq(driveFolders.id, id))
+      .where(and(eq(driveFolders.id, id), eq(driveFolders.userId, this.userId)))
       .returning();
     return results.length > 0;
   }
 
   async findWhere(criteria: Partial<DriveFolder>): Promise<DriveFolder[]> {
-    const conditions = Object.entries(criteria).map(([key, value]) => 
-      eq(driveFolders[key as keyof DriveFolderSchema] as any, value as any)
+    const conditions = [eq(driveFolders.userId, this.userId)];
+    Object.entries(criteria).forEach(([key, value]) => 
+      conditions.push(eq(driveFolders[key as keyof DriveFolderSchema] as any, value as any))
     );
     
-    if (conditions.length === 0) {
+    if (conditions.length === 1) {
       return this.findAll();
     }
 
-    // For now, simple implementation - in production would use and() for multiple conditions
-    const results = await this.db.select().from(driveFolders).where(conditions[0]!);
+    const whereClause = and(...conditions);
+    const results = await this.db.select().from(driveFolders).where(whereClause);
     return results.map(mapFolderToDomain);
   }
 
   async count(criteria?: Partial<DriveFolder>): Promise<number> {
     if (!criteria || Object.keys(criteria).length === 0) {
-      const result = await this.db.select({ count: driveFolders.id }).from(driveFolders);
+      const result = await this.db.select({ count: driveFolders.id }).from(driveFolders).where(eq(driveFolders.userId, this.userId));
       return result.length;
     }
     const results = await this.findWhere(criteria);

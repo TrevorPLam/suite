@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@suite/auth": "workspace:*",
     "@suite/domain-tasks": "workspace:*",
     "@suite/ui": "workspace:*",
     "react": "^19.0.0",

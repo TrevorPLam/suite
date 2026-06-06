@@ -6,8 +6,13 @@ import { FolderTree } from './features/FolderTree';
 import { UploadDialog } from './features/UploadDialog';
 import { RenameDialog } from './features/RenameDialog';
 import { DeleteConfirmDialog } from './features/DeleteConfirmDialog';
+import { useAuth } from './auth-provider';
 
 export function App() {
+  const { user, loading: authLoading, signIn, signOut } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState('');
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [folders, setFolders] = useState<DriveFolder[]>([]);
   const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
@@ -582,6 +587,112 @@ export function App() {
 
   const displayFiles = searchQuery.trim() ? searchResults : files;
 
+  async function handleSignIn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAuthError('');
+    try {
+      await signIn(email, password);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Sign in failed');
+    }
+  }
+
+  async function handleSignOut() {
+    await signOut();
+  }
+
+  if (authLoading) {
+    return (
+      <main
+        style={{
+          minHeight: '100%',
+          background: '#050507',
+          color: '#f9fafb',
+          padding: 24,
+          fontFamily: 'system-ui, sans-serif',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <p>Loading...</p>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main
+        style={{
+          minHeight: '100%',
+          background: '#050507',
+          color: '#f9fafb',
+          padding: 24,
+          fontFamily: 'system-ui, sans-serif',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24, maxWidth: 400, width: '100%' }}>
+          <h2 style={{ margin: 0, fontSize: 24, marginBottom: 8 }}>Sign in to Drive</h2>
+          <p style={{ margin: '0 0 24', color: 'rgba(249, 250, 251, 0.72)' }}>
+            Enter your credentials to access your files.
+          </p>
+          <form onSubmit={handleSignIn} style={{ display: 'grid', gap: 16 }}>
+            <label style={{ display: 'grid', gap: 8 }}>
+              <span>Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{
+                  borderRadius: 12,
+                  border: '1px solid rgba(255, 255, 255, 0.14)',
+                  background: '#0a0a0a',
+                  color: 'inherit',
+                  padding: '12px 14px',
+                }}
+              />
+            </label>
+            <label style={{ display: 'grid', gap: 8 }}>
+              <span>Password</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={{
+                  borderRadius: 12,
+                  border: '1px solid rgba(255, 255, 255, 0.14)',
+                  background: '#0a0a0a',
+                  color: 'inherit',
+                  padding: '12px 14px',
+                }}
+              />
+            </label>
+            <Button type="submit">Sign in</Button>
+            {authError ? (
+              <div
+                role="alert"
+                style={{
+                  borderRadius: 12,
+                  border: '1px solid rgba(248, 113, 113, 0.35)',
+                  background: 'rgba(127, 29, 29, 0.3)',
+                  padding: 16,
+                  color: '#fecaca',
+                }}
+              >
+                <p style={{ margin: 0, fontWeight: 600 }}>{authError}</p>
+              </div>
+            ) : null}
+          </form>
+        </article>
+      </main>
+    );
+  }
+
   return (
     <main
       style={{
@@ -594,9 +705,14 @@ export function App() {
     >
       <div style={{ margin: '0 auto', maxWidth: 1120 }}>
         <header style={{ display: 'grid', gap: 12 }}>
-          <p style={{ margin: 0, color: '#7dd3fc', textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: 12 }}>
-            Drive
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p style={{ margin: 0, color: '#7dd3fc', textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: 12 }}>
+              Drive
+            </p>
+            <Button type="button" onClick={handleSignOut} className="bg-white/10 text-white">
+              Sign out
+            </Button>
+          </div>
           <h1 style={{ margin: 0, fontSize: 40, lineHeight: 1.1 }}>Upload and browse file records</h1>
           <p style={{ margin: 0, color: 'rgba(249, 250, 251, 0.72)', maxWidth: 720 }}>
             Upload a simple file record, then immediately see it in the browsable file list backed by the shared in-memory domain store.

@@ -27,13 +27,23 @@ import {
 // Validate environment variables at startup
 validateTasksEnv();
 
-// Wire repositories before mounting routes
-await wireRepositories();
+type Variables = {
+  userId: string | null;
+};
 
-const app = new Hono();
+const app = new Hono<{ Variables: Variables }>();
 
 // Mount Better Auth handler
 mountAuth(app);
+
+// Middleware to wire repositories with userId from auth context
+app.use('/api/*', async (c, next) => {
+  const userId = c.get('userId') as string | undefined;
+  if (userId) {
+    await wireRepositories(userId);
+  }
+  await next();
+});
 
 function readTaskError(error: unknown): { status: 400 | 404 | 500; body: Record<string, unknown> } {
   if (error instanceof TaskError) {

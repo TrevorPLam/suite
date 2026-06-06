@@ -15,13 +15,23 @@ import { mountAuth, requireAuth } from '@suite/auth';
 // Validate environment variables at startup
 validateCalendarEnv();
 
-// Wire repositories (Postgres if DATABASE_URL set, otherwise in-memory)
-await wireRepositories();
+type Variables = {
+  userId: string | null;
+};
 
-const app = new Hono();
+const app = new Hono<{ Variables: Variables }>();
 
 // Mount Better Auth handler
 mountAuth(app);
+
+// Middleware to wire repositories with userId from auth context
+app.use('/api/*', async (c, next) => {
+  const userId = c.get('userId') as string | undefined;
+  if (userId) {
+    await wireRepositories(userId);
+  }
+  await next();
+});
 
 type CalendarResponseStatus = 400 | 404 | 409 | 500;
 

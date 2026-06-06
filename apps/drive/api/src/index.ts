@@ -25,13 +25,23 @@ import { mountAuth, requireAuth } from '@suite/auth';
 // Validate environment variables at startup
 validateDriveEnv();
 
-// Wire repositories before mounting routes
-await wireRepositories();
+type Variables = {
+  userId: string | null;
+};
 
-const app = new Hono();
+const app = new Hono<{ Variables: Variables }>();
 
 // Mount Better Auth handler
 mountAuth(app);
+
+// Middleware to wire repositories with userId from auth context
+app.use('/api/*', async (c, next) => {
+  const userId = c.get('userId') as string | undefined;
+  if (userId) {
+    await wireRepositories(userId);
+  }
+  await next();
+});
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;

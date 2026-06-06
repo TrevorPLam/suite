@@ -107,6 +107,9 @@ importers:
 
   apps/calendar/web:
     dependencies:
+      '@suite/auth':
+        specifier: workspace:*
+        version: link:../../../packages/auth
       '@suite/domain-calendar':
         specifier: workspace:*
         version: link:../../../packages/domain-calendar
@@ -189,6 +192,9 @@ importers:
 
   apps/drive/web:
     dependencies:
+      '@suite/auth':
+        specifier: workspace:*
+        version: link:../../../packages/auth
       '@suite/domain-drive':
         specifier: workspace:*
         version: link:../../../packages/domain-drive
@@ -274,6 +280,9 @@ importers:
 
   apps/tasks/web:
     dependencies:
+      '@suite/auth':
+        specifier: workspace:*
+        version: link:../../../packages/auth
       '@suite/domain-tasks':
         specifier: workspace:*
         version: link:../../../packages/domain-tasks

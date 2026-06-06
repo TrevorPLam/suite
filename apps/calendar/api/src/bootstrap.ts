@@ -1,7 +1,7 @@
 import { setCalendarEventRepository, setCalendarKeyProviderFromEnv } from '@suite/domain-calendar';
 import { PostgresCalendarEventRepository } from '@suite/db';
 
-export async function wireRepositories(): Promise<void> {
+export async function wireRepositories(userId: string): Promise<void> {
   // Set up encryption key provider from environment
   await setCalendarKeyProviderFromEnv();
   
@@ -9,7 +9,7 @@ export async function wireRepositories(): Promise<void> {
 
   if (databaseUrl) {
     // Use Postgres repository when DATABASE_URL is configured
-    setCalendarEventRepository(new PostgresCalendarEventRepository());
+    setCalendarEventRepository(new PostgresCalendarEventRepository(userId));
   }
   // Otherwise, domain uses default in-memory repository (local dev without Postgres)
 }

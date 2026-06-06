@@ -14,7 +14,7 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   beforeAll(async () => {
     client = postgres(dbUrl!);
     db = drizzle(client);
-    repository = new PostgresTaskRepository(db);
+    repository = new PostgresTaskRepository('test-user-id', db);
   });
 
   afterAll(async () => {

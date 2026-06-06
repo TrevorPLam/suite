@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@suite/ui';
 import { TaskRow } from './components/TaskRow';
 import { EmptyState } from './components/EmptyState';
+import { useAuth } from './auth-provider';
 
 type TaskItem = {
   id: string;
@@ -82,6 +83,10 @@ function extractErrorDetails(value: unknown): string[] {
 type TaskFilter = 'all' | 'active' | 'completed' | 'archived';
 
 export function App() {
+  const { user, loading: authLoading, signIn, signOut } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState('');
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [title, setTitle] = useState('Draft spec');
   const [completed, setCompleted] = useState(false);
@@ -108,6 +113,20 @@ export function App() {
   useEffect(() => {
     void loadTasks();
   }, []);
+
+  async function handleSignIn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAuthError('');
+    try {
+      await signIn(email, password);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Sign in failed');
+    }
+  }
+
+  async function handleSignOut() {
+    await signOut();
+  }
 
   // Debounced search
   useEffect(() => {
@@ -521,9 +540,106 @@ export function App() {
     }
   }
 
+  if (authLoading) {
+    return (
+      <main
+        style={{
+          minHeight: '100%',
+          background: '#050507',
+          color: '#f9fafb',
+          padding: 24,
+          fontFamily: 'system-ui, sans-serif',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <p>Loading...</p>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main
+        style={{
+          minHeight: '100%',
+          background: '#050507',
+          color: '#f9fafb',
+          padding: 24,
+          fontFamily: 'system-ui, sans-serif',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <article style={{ border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 20, background: '#111111', padding: 24, maxWidth: 400, width: '100%' }}>
+          <h2 style={{ margin: 0, fontSize: 24, marginBottom: 8 }}>Sign in to Tasks</h2>
+          <p style={{ margin: '0 0 24', color: 'rgba(249, 250, 251, 0.72)' }}>
+            Enter your credentials to access your tasks.
+          </p>
+          <form onSubmit={handleSignIn} style={{ display: 'grid', gap: 16 }}>
+            <label style={{ display: 'grid', gap: 8 }}>
+              <span>Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{
+                  borderRadius: 12,
+                  border: '1px solid rgba(255, 255, 255, 0.14)',
+                  background: '#0a0a0a',
+                  color: 'inherit',
+                  padding: '12px 14px',
+                }}
+              />
+            </label>
+            <label style={{ display: 'grid', gap: 8 }}>
+              <span>Password</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={{
+                  borderRadius: 12,
+                  border: '1px solid rgba(255, 255, 255, 0.14)',
+                  background: '#0a0a0a',
+                  color: 'inherit',
+                  padding: '12px 14px',
+                }}
+              />
+            </label>
+            <Button type="submit">Sign in</Button>
+            {authError ? (
+              <div
+                role="alert"
+                style={{
+                  borderRadius: 12,
+                  border: '1px solid rgba(248, 113, 113, 0.35)',
+                  background: 'rgba(127, 29, 29, 0.3)',
+                  padding: 16,
+                  color: '#fecaca',
+                }}
+              >
+                <p style={{ margin: 0, fontWeight: 600 }}>{authError}</p>
+              </div>
+            ) : null}
+          </form>
+        </article>
+      </main>
+    );
+  }
+
   return (
     <main style={{ padding: 24, fontFamily: 'system-ui, sans-serif', maxWidth: 960 }}>
-      <h1>Tasks</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h1 style={{ margin: 0 }}>Tasks</h1>
+        <Button type="button" onClick={handleSignOut} className="bg-white/10 text-white">
+          Sign out
+        </Button>
+      </div>
       <p>Create a task, then toggle completion state without leaving the screen.</p>
 
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, marginTop: 24 }}>
