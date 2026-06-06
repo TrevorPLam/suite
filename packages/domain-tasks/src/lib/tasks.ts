@@ -1,6 +1,6 @@
 import type { QueryRepository } from '@suite/db';
 import { generateUUID } from '@suite/shared-kernel';
-import { sealTask, unsealTask, sealTasks, unsealTasks, setTaskKeyProvider, isEncryptionEnabled, type EncryptedTaskItem } from './tasks-crypto.js';
+import { sealTask, unsealTask, unsealTasks, isEncryptionEnabled, type EncryptedTaskItem } from './tasks-crypto.js';
 
 export type TaskPriority = 'low' | 'medium' | 'high';
 
@@ -134,8 +134,6 @@ export function setTaskRepository(repository: TaskRepository): void {
 export function getTaskRepository(): TaskRepository {
   return currentRepository;
 }
-
-const taskItems = new Map<string, TaskItem>();
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -543,7 +541,7 @@ export async function batchComplete(input: BatchOperationInput): Promise<TaskIte
     try {
       const updated = await updateTaskCompletion(taskId, { completed: true });
       results.push(updated);
-    } catch (error) {
+    } catch (_error) {
       // Continue with other tasks even if one fails
       // In a production system, we might want to collect errors
     }
@@ -559,7 +557,7 @@ export async function batchArchive(input: BatchOperationInput): Promise<TaskItem
     try {
       const updated = await archiveTask(taskId, { archived: true });
       results.push(updated);
-    } catch (error) {
+    } catch (_error) {
       // Continue with other tasks even if one fails
     }
   }

@@ -56,7 +56,7 @@ export async function sealEvent(event: CalendarEvent): Promise<EncryptedCalendar
   const key = await currentKeyProvider();
   const encryptedTitle = await encryptItem(event.title, key);
 
-  const { title, ...rest } = event;
+  const { title: _title, ...rest } = event;
   return {
     ...rest,
     encryptedTitle,
@@ -72,7 +72,7 @@ export async function unsealEvent(encryptedEvent: EncryptedCalendarEvent): Promi
   const key = await currentKeyProvider();
   const title = await decryptItem(encryptedEvent.encryptedTitle, key);
 
-  const { encryptedTitle, ...rest } = encryptedEvent;
+  const { encryptedTitle: _encryptedTitle, ...rest } = encryptedEvent;
   return {
     ...rest,
     title,

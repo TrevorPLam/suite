@@ -17,9 +17,6 @@ import {
   type UploadDriveFileInput,
   type RenameDriveFileInput,
   type CreateFolderInput,
-  type RenameFolderInput,
-  type MoveFileInput,
-  type SearchFilesInput,
 } from './index.js';
 
 describe('drive - upload', () => {

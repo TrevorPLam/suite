@@ -1,7 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import { getDb } from '../connection.js';
 import { tasks, type TaskSchema, type NewTaskSchema } from '../schema/tasks.js';
-import type { Repository, QueryRepository } from '../index.js';
+import type { QueryRepository } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
 
 // Domain type (from @suite/domain-tasks)

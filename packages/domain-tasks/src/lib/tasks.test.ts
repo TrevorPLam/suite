@@ -407,7 +407,7 @@ describe('tasks - query', () => {
     };
 
     const firstTask = await createTask(firstInput);
-    const secondTask = await createTask(secondInput);
+    await createTask(secondInput);
 
     await archiveTask(firstTask.id, { archived: true });
 
@@ -749,7 +749,7 @@ describe('tasks - batch operations', () => {
   it('should batch complete multiple tasks', async () => {
     const task1 = await createTask({ title: 'First task' });
     const task2 = await createTask({ title: 'Second task' });
-    const task3 = await createTask({ title: 'Third task' });
+    const _task3 = await createTask({ title: 'Third task' });
 
     const input: BatchOperationInput = {
       taskIds: [task1.id, task2.id],
@@ -765,7 +765,7 @@ describe('tasks - batch operations', () => {
   it('should batch archive multiple tasks', async () => {
     const task1 = await createTask({ title: 'First task' });
     const task2 = await createTask({ title: 'Second task' });
-    const task3 = await createTask({ title: 'Third task' });
+    const _task3 = await createTask({ title: 'Third task' });
 
     const input: BatchOperationInput = {
       taskIds: [task1.id, task2.id],

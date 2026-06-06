@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:run": "vitest run",
-    "lint": "echo \"No lint configured yet\"",
+    "lint": "eslint src",
     "drizzle-kit": "drizzle-kit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"

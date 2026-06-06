@@ -9,6 +9,6 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests configured yet\"",
-    "lint": "echo \"No lint configured yet\""
+    "lint": "eslint src"
   }
 }

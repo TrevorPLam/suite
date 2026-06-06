@@ -32,7 +32,7 @@
     "lint": {
       "inputs": [
         "default",
-        "{workspaceRoot}/.eslintrc.json"
+        "{workspaceRoot}/eslint.config.js"
       ]
     }
   },

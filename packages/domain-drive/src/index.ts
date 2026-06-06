@@ -429,8 +429,7 @@ export async function renameDriveFile(input: RenameDriveFileInput): Promise<Driv
   };
   if (_isEncryptionEnabled()) {
     const encrypted = await _sealFile({ id: input.id, name, size: 0, createdAt: '', modifiedAt: '' } as DriveFile);
-    const { encryptedName, ...rest } = encrypted;
-    updateData = { ...updateData, name: encryptedName as any };
+    updateData = { ...updateData, name: encrypted.encryptedName as any };
   } else {
     updateData.name = name;
   }

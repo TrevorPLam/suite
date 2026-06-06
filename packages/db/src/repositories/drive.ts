@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '../connection.js';
 import { driveFiles, driveFolders, type DriveFileSchema, type NewDriveFileSchema, type DriveFolderSchema, type NewDriveFolderSchema } from '../schema/drive.js';
-import type { Repository, QueryRepository } from '../index.js';
+import type { QueryRepository } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
 
 // Domain types (from @suite/domain-drive)

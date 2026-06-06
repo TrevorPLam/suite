@@ -3,7 +3,6 @@ import { PostgresTaskRepository } from './tasks.js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { tasks } from '../schema/tasks.js';
-import { eq } from 'drizzle-orm';
 
 // Skip tests if DATABASE_URL is not set
 const dbUrl = process.env.DATABASE_URL;

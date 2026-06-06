@@ -60,7 +60,7 @@ export async function sealFile(file: DriveFile): Promise<EncryptedDriveFile> {
   const key = await currentKeyProvider();
   const encryptedName = await encryptItem(file.name, key);
 
-  const { name, ...rest } = file;
+  const { name: _name, ...rest } = file;
   return {
     ...rest,
     encryptedName,
@@ -76,7 +76,7 @@ export async function unsealFile(encryptedFile: EncryptedDriveFile): Promise<Dri
   const key = await currentKeyProvider();
   const name = await decryptItem(encryptedFile.encryptedName, key);
 
-  const { encryptedName, ...rest } = encryptedFile;
+  const { encryptedName: _encryptedName, ...rest } = encryptedFile;
   return {
     ...rest,
     name,
@@ -92,7 +92,7 @@ export async function sealFolder(folder: DriveFolder): Promise<EncryptedDriveFol
   const key = await currentKeyProvider();
   const encryptedName = await encryptItem(folder.name, key);
 
-  const { name, ...rest } = folder;
+  const { name: _name, ...rest } = folder;
   return {
     ...rest,
     encryptedName,
@@ -108,7 +108,7 @@ export async function unsealFolder(encryptedFolder: EncryptedDriveFolder): Promi
   const key = await currentKeyProvider();
   const name = await decryptItem(encryptedFolder.encryptedName, key);
 
-  const { encryptedName, ...rest } = encryptedFolder;
+  const { encryptedName: _encryptedName, ...rest } = encryptedFolder;
   return {
     ...rest,
     name,

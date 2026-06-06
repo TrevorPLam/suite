@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest --run",
     "test:run": "vitest run",
-    "lint": "echo \"No lint configured yet\""
+    "lint": "eslint src"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "catalog:",

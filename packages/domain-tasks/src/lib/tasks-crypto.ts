@@ -62,7 +62,7 @@ export async function sealTask(task: TaskItem): Promise<EncryptedTaskItem> {
     ? await encryptItem(JSON.stringify(task.tags), key)
     : null;
 
-  const { title, tags, ...rest } = task;
+  const { title: _title, tags: _tags, ...rest } = task;
   return {
     ...rest,
     encryptedTitle,
@@ -84,7 +84,7 @@ export async function unsealTask(encryptedTask: EncryptedTaskItem): Promise<Task
     ? JSON.parse(await decryptItem(encryptedTask.encryptedTags, key))
     : [];
 
-  const { encryptedTitle, encryptedTags, ...rest } = encryptedTask;
+  const { encryptedTitle: _encryptedTitle, encryptedTags: _encryptedTags, ...rest } = encryptedTask;
   return {
     ...rest,
     title,

@@ -20,6 +20,6 @@
     "test": "vitest --run",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "lint": "echo \"No lint configured yet\""
+    "lint": "eslint src"
   }
 }

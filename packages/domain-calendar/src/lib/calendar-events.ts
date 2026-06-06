@@ -1,6 +1,6 @@
 import type { Repository } from '@suite/db';
 import { generateUUID } from '@suite/shared-kernel';
-import { sealEvent, unsealEvent, sealEvents, unsealEvents, setCalendarKeyProvider, isEncryptionEnabled, type EncryptedCalendarEvent } from './calendar-crypto.js';
+import { sealEvent, unsealEvent, unsealEvents, isEncryptionEnabled, type EncryptedCalendarEvent } from './calendar-crypto.js';
 
 export type CalendarEvent = {
   id: string;

@@ -6,7 +6,7 @@ import {
   Button,
   Input,
   Dialog,
-  DialogTrigger,
+  DialogTrigger as _DialogTrigger,
   DialogContent,
   DialogTitle,
   Card,
