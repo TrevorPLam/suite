@@ -5,7 +5,16 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "echo \"No tests configured yet\"",
+    "test": "vitest --run",
     "lint": "echo \"No lint configured yet\""
+  },
+  "dependencies": {
+    "better-auth": "^1.1.10",
+    "hono": "^4.6.0",
+    "@suite/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "vitest": "^2.1.8"
   }
 }

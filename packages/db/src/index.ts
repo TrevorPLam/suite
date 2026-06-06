@@ -37,6 +37,7 @@ export { getDb, closeDb } from './connection.js';
 export * from './schema/calendar.js';
 export * from './schema/tasks.js';
 export * from './schema/drive.js';
+export * from './schema/users.js';
 
 // Repository exports
 export * from './repositories/index.js';

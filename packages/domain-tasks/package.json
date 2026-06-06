@@ -8,7 +8,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest",
+    "test": "vitest --run",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "echo \"No lint configured yet\""
