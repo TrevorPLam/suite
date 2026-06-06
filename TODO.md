@@ -444,10 +444,10 @@ Machine- and human-readable task registry derived from repository quality assess
 
 ## Phase 2 — Database foundation
 
-### [ ] DB-001 — Add db:migrate script to @suite/db
+### [x] DB-001 — Add db:migrate script to @suite/db
 
-**Status:** pending  
-**Depends on:** none  
+**Status:** done
+**Depends on:** none
 **Blocks:** DB-002, DB-004, DB-005, DB-006
 
 #### Related paths
@@ -488,9 +488,17 @@ Machine- and human-readable task registry derived from repository quality assess
 
 | ID | File | Action | Validate |
 |----|------|--------|----------|
-| DB-001-a | `packages/db/package.json` | Add scripts: `"db:generate": "drizzle-kit generate"`, `"db:migrate": "drizzle-kit migrate"`. | `pnpm --filter @suite/db run db:migrate --help` |
-| DB-001-b | `.env.example` | Create root `.env.example` with `DATABASE_URL=postgresql://localhost:5432/suite`. | `type .env.example` |
-| DB-001-c | `README.md` | Add migrate instructions referencing AGENTS.md rule 5. | `findstr /n "db:migrate" README.md` |
+| DB-001-a | `packages/db/package.json` | Add scripts: `"db:generate": "drizzle-kit generate"`, `"db:migrate": "drizzle-kit migrate"`. | `pnpm --filter @suite/db run db:migrate --help` ✅ |
+| DB-001-b | `.env.example` | Create root `.env.example` with `DATABASE_URL=postgresql://localhost:5432/suite`. | `type .env.example` ✅ |
+| DB-001-c | `README.md` | Add migrate instructions referencing AGENTS.md rule 5. | `findstr /n "db:migrate" README.md` ✅ |
+
+#### Implementation notes
+
+- Added `db:generate` and `db:migrate` scripts to @suite/db package.json
+- Created .env.example with DATABASE_URL template
+- Updated .gitignore to allow .env.example while blocking .env and .env.local
+- Updated README.md with migration instructions and AGENTS.md rule 5 reference
+- All validation commands pass
 
 ---
 

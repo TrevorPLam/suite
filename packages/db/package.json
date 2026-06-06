@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests configured yet\"",
     "lint": "echo \"No lint configured yet\"",
-    "drizzle-kit": "drizzle-kit"
+    "drizzle-kit": "drizzle-kit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

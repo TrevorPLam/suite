@@ -87,7 +87,7 @@ suite/
 
 - Node.js 18+
 - pnpm 8+
-- PostgreSQL 14+
+- PostgreSQL 14+ (optional for local dev with in-memory repos)
 
 ### Installation
 
@@ -98,6 +98,11 @@ pnpm install
 # Set up environment variables
 # Create .env file with required variables for your environment
 # See individual app specs for required environment variables
+
+# For PostgreSQL persistence (optional for local dev):
+# Copy .env.example to .env and set DATABASE_URL
+# Run migrations: APP_DOMAIN=<domain> pnpm --filter @suite/db run db:migrate
+# See AGENTS.md rule 5: migrations run in CI, never in Workers
 ```
 
 ### Development
