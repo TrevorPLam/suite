@@ -1277,12 +1277,12 @@ projects: [
 
 ## TEST-013: Add Contract Tests for Domain Boundaries
 
-Status: [ ]
+Status: [x]
 
 **Related Files**:
-- New: `packages/domain-calendar/src/contract.test.ts`
-- New: `packages/domain-drive/src/contract.test.ts`
-- New: `packages/domain-tasks/src/contract.test.ts`
+- New: `apps/calendar/api/src/contract.test.ts`
+- New: `apps/drive/api/src/contract.test.ts`
+- New: `apps/tasks/api/src/contract.test.ts`
 
 **Definition of Done**:
 - Contract tests for HTTP service bindings between domains
@@ -1333,24 +1333,28 @@ it('calendar API contract', async () => {
 ### Subtasks
 
 #### TEST-013-01: Add contract tests for calendar domain
-**Target File**: New: `packages/domain-calendar/src/contract.test.ts`
+**Target File**: New: `apps/calendar/api/src/contract.test.ts`
 **Action**: Create contract tests for calendar domain HTTP service bindings. Validate request/response formats, status codes, and error responses.
-**Validation**: Run `pnpm test packages/domain-calendar/src/contract.test.ts` and verify contract tests pass.
+**Validation**: Run `pnpm test apps/calendar/api/src/contract.test.ts` and verify contract tests pass.
+**Status**: ✅ Complete
 
 #### TEST-013-02: Add contract tests for drive domain
-**Target File**: New: `packages/domain-drive/src/contract.test.ts`
+**Target File**: New: `apps/drive/api/src/contract.test.ts`
 **Action**: Create contract tests for drive domain HTTP service bindings. Validate request/response formats, status codes, and error responses.
-**Validation**: Run `pnpm test packages/domain-drive/src/contract.test.ts` and verify contract tests pass.
+**Validation**: Run `pnpm test apps/drive/api/src/contract.test.ts` and verify contract tests pass.
+**Status**: ✅ Complete
 
 #### TEST-013-03: Add contract tests for tasks domain
-**Target File**: New: `packages/domain-tasks/src/contract.test.ts`
+**Target File**: New: `apps/tasks/api/src/contract.test.ts`
 **Action**: Create contract tests for tasks domain HTTP service bindings. Validate request/response formats, status codes, and error responses.
-**Validation**: Run `pnpm test packages/domain-tasks/src/contract.test.ts` and verify contract tests pass.
+**Validation**: Run `pnpm test apps/tasks/api/src/contract.test.ts` and verify contract tests pass.
+**Status**: ✅ Complete
 
 #### TEST-013-04: Add contract tests to CI
 **Target File**: `.github/workflows/ci.yml`
 **Action**: Add contract test step to CI workflow. Run contract tests before deployment.
 **Validation**: Run CI workflow and verify contract tests execute.
+**Status**: ✅ Complete - Contract tests automatically run via pnpm test:run in CI workflow
 
 ---
 
