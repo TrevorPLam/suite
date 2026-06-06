@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 
@@ -93,7 +93,7 @@ describe('Drive App', () => {
     });
   });
 
-  it('rename dialog has proper accessibility attributes', async () => {
+  it('shows rename dialog with proper accessibility when rename button clicked', async () => {
     const user = userEvent.setup();
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
 
@@ -129,7 +129,7 @@ describe('Drive App', () => {
     });
   });
 
-  it('delete dialog has proper accessibility attributes', async () => {
+  it('shows delete dialog with proper accessibility when delete button clicked', async () => {
     const user = userEvent.setup();
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
 
@@ -147,7 +147,7 @@ describe('Drive App', () => {
     await waitFor(() => screen.getByText('Old name.pdf'));
 
     const deleteButton = screen.getByRole('button', { name: /delete/i });
-    fireEvent.click(deleteButton);
+    await user.click(deleteButton);
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveAttribute('aria-modal', 'true');

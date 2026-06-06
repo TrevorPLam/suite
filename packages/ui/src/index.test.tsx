@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import * as React from 'react';
 import {
@@ -27,42 +27,43 @@ import {
 
 describe('UI Components', () => {
   describe('Button', () => {
-    it('renders button', () => {
-      const { container } = render(<Button>Click me</Button>);
-      expect(container.querySelector('button')).toBeInTheDocument();
+    it('displays button text to user', () => {
+      render(<Button>Click me</Button>);
+      expect(screen.getByRole('button', { name: 'Click me' })).toBeInTheDocument();
     });
   });
 
   describe('Input', () => {
-    it('renders input', () => {
-      const { container } = render(<Input placeholder="Enter text" />);
-      expect(container.querySelector('input')).toBeInTheDocument();
+    it('displays input with placeholder text', () => {
+      render(<Input placeholder="Enter text" />);
+      expect(screen.getByPlaceholderText('Enter text')).toBeInTheDocument();
     });
 
-    it('applies variant classes', () => {
-      const { container } = render(<Input variant="error" />);
-      const input = container.querySelector('input');
+    it('applies error variant styling', () => {
+      render(<Input variant="error" />);
+      const input = screen.getByRole('textbox');
       expect(input).toBeInTheDocument();
-      expect(input?.className).toContain('border');
+      expect(input.className).toContain('border');
     });
   });
 
   describe('Dialog', () => {
-    it('renders dialog components', () => {
-      const { container } = render(
+    it('displays dialog with title when open', () => {
+      render(
         <Dialog open>
           <DialogContent>
             <DialogTitle>Test</DialogTitle>
           </DialogContent>
         </Dialog>
       );
-      expect(container).toBeTruthy();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByText('Test')).toBeInTheDocument();
     });
   });
 
   describe('Card', () => {
-    it('renders card with subcomponents', () => {
-      const { container } = render(
+    it('displays card with title, description, content, and footer', () => {
+      render(
         <Card>
           <CardHeader>
             <CardTitle>Title</CardTitle>
@@ -72,27 +73,30 @@ describe('UI Components', () => {
           <CardFooter>Footer</CardFooter>
         </Card>
       );
-      expect(container.querySelector('div')).toBeInTheDocument();
+      expect(screen.getByText('Title')).toBeInTheDocument();
+      expect(screen.getByText('Description')).toBeInTheDocument();
+      expect(screen.getByText('Content')).toBeInTheDocument();
+      expect(screen.getByText('Footer')).toBeInTheDocument();
     });
   });
 
   describe('Badge', () => {
-    it('renders badge', () => {
-      const { container } = render(<Badge>Test</Badge>);
-      expect(container.querySelector('div')).toBeInTheDocument();
+    it('displays badge text to user', () => {
+      render(<Badge>Test</Badge>);
+      expect(screen.getByText('Test')).toBeInTheDocument();
     });
 
-    it('applies variant classes', () => {
-      const { container } = render(<Badge variant="success">Success</Badge>);
-      const badge = container.querySelector('div');
+    it('applies success variant styling', () => {
+      render(<Badge variant="success">Success</Badge>);
+      const badge = screen.getByText('Success');
       expect(badge).toBeInTheDocument();
-      expect(badge?.className).toContain('inline-flex');
+      expect(badge.className).toContain('inline-flex');
     });
   });
 
   describe('Select', () => {
-    it('renders select components', () => {
-      const { container } = render(
+    it('displays select with placeholder when open', () => {
+      render(
         <Select open>
           <SelectTrigger>
             <SelectValue placeholder="Select" />
@@ -102,30 +106,31 @@ describe('UI Components', () => {
           </SelectContent>
         </Select>
       );
-      expect(container).toBeTruthy();
+      expect(screen.getByText('Select')).toBeInTheDocument();
+      expect(screen.getByText('Option 1')).toBeInTheDocument();
     });
   });
 
   describe('Textarea', () => {
-    it('renders textarea', () => {
-      const { container } = render(<Textarea placeholder="Enter text" />);
-      expect(container.querySelector('textarea')).toBeInTheDocument();
+    it('displays textarea with placeholder text', () => {
+      render(<Textarea placeholder="Enter text" />);
+      expect(screen.getByPlaceholderText('Enter text')).toBeInTheDocument();
     });
 
-    it('applies resize variant', () => {
-      const { container } = render(<Textarea resize="none" />);
-      const textarea = container.querySelector('textarea');
+    it('applies resize-none variant styling', () => {
+      render(<Textarea resize="none" />);
+      const textarea = screen.getByRole('textbox');
       expect(textarea).toBeInTheDocument();
-      expect(textarea?.className).toContain('resize-none');
+      expect(textarea.className).toContain('resize-none');
     });
   });
 
   describe('cn utility', () => {
-    it('merges class names', () => {
+    it('merges class names into single string', () => {
       expect(cn('class1', 'class2')).toBe('class1 class2');
     });
 
-    it('handles conditional classes', () => {
+    it('excludes falsy conditional classes from output', () => {
       expect(cn('class1', false && 'class2', 'class3')).toBe('class1 class3');
     });
   });

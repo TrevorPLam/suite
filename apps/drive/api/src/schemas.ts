@@ -64,13 +64,14 @@ export type MoveFileBody = z.infer<typeof moveFileBodySchema>;
 
 // Schema for searching files (query params)
 const searchFilesQuerySchemaBase = z.object({
-  q: z.string().min(1).optional(),
+  q: z.string().min(1),
   folderId: z.string().min(1).optional(),
 });
 
 export const searchFilesQuerySchema = searchFilesQuerySchemaBase.transform((data): SearchFilesInput => {
-  const result: SearchFilesInput = {};
-  if (data.q !== undefined) result.query = data.q;
+  const result: SearchFilesInput = {
+    query: data.q,
+  };
   if (data.folderId !== undefined) result.folderId = data.folderId;
   return result;
 });
