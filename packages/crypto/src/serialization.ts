@@ -3,13 +3,23 @@
  * Uses Web Crypto API (subtle.crypto) available in both Node.js and browsers
  */
 
+import { createCryptoError, CryptoErrorCode } from './errors.js';
+
 /**
  * Serializes a CryptoKey to JWK format
  * @param key - CryptoKey to serialize
  * @returns JWK representation of the key
  */
 export async function serializeKey(key: CryptoKey): Promise<JsonWebKey> {
-  return crypto.subtle.exportKey('jwk', key);
+  try {
+    return await crypto.subtle.exportKey('jwk', key);
+  } catch (_error) {
+    throw createCryptoError(
+      CryptoErrorCode.KEY_EXPORT_FAILED,
+      'Failed to serialize key to JWK format',
+      { operation: 'serializeKey', format: 'JWK' }
+    );
+  }
 }
 
 /**
@@ -33,16 +43,28 @@ export async function deserializeKey(
   } else if (algorithm === 'X25519') {
     algorithmParams = { name: 'X25519' };
   } else {
-    throw new Error(`Unsupported algorithm: ${algorithm}`);
+    throw createCryptoError(
+      CryptoErrorCode.UNSUPPORTED_ALGORITHM,
+      `Unsupported algorithm: ${algorithm}`,
+      { operation: 'deserializeKey', algorithm }
+    );
   }
 
-  return crypto.subtle.importKey(
-    'jwk',
-    jwk,
-    algorithmParams,
-    extractable,
-    keyUsages
-  );
+  try {
+    return await crypto.subtle.importKey(
+      'jwk',
+      jwk,
+      algorithmParams,
+      extractable,
+      keyUsages
+    );
+  } catch (_error) {
+    throw createCryptoError(
+      CryptoErrorCode.KEY_IMPORT_FAILED,
+      'Failed to deserialize key from JWK format',
+      { operation: 'deserializeKey', format: 'JWK', algorithm }
+    );
+  }
 }
 
 /**
@@ -51,7 +73,15 @@ export async function deserializeKey(
  * @returns Raw bytes of the key
  */
 export async function serializeKeyRaw(key: CryptoKey): Promise<ArrayBuffer> {
-  return crypto.subtle.exportKey('raw', key);
+  try {
+    return await crypto.subtle.exportKey('raw', key);
+  } catch (_error) {
+    throw createCryptoError(
+      CryptoErrorCode.KEY_EXPORT_FAILED,
+      'Failed to serialize key to raw format',
+      { operation: 'serializeKeyRaw', format: 'raw' }
+    );
+  }
 }
 
 /**
@@ -73,14 +103,26 @@ export async function deserializeKeyRaw(
   if (algorithm === 'X25519') {
     algorithmParams = { name: 'X25519' };
   } else {
-    throw new Error(`Unsupported algorithm for raw format: ${algorithm}`);
+    throw createCryptoError(
+      CryptoErrorCode.UNSUPPORTED_ALGORITHM,
+      `Unsupported algorithm for raw format: ${algorithm}`,
+      { operation: 'deserializeKeyRaw', algorithm }
+    );
   }
 
-  return crypto.subtle.importKey(
-    'raw',
-    rawBytes,
-    algorithmParams,
-    extractable,
-    keyUsages
-  );
+  try {
+    return await crypto.subtle.importKey(
+      'raw',
+      rawBytes,
+      algorithmParams,
+      extractable,
+      keyUsages
+    );
+  } catch (_error) {
+    throw createCryptoError(
+      CryptoErrorCode.KEY_IMPORT_FAILED,
+      'Failed to deserialize key from raw format',
+      { operation: 'deserializeKeyRaw', format: 'raw', algorithm }
+    );
+  }
 }

@@ -46,3 +46,15 @@ export {
   validateKeyMetadata,
 } from './key-lifecycle.js';
 export type { KeyMetadata, KeyStatus, KeyUsage } from './key-lifecycle.js';
+
+// Error handling
+export {
+  CryptoError,
+  CryptoErrorCode,
+  ErrorCategory,
+  ErrorContext,
+  createCryptoError,
+  isCryptoError,
+  isRetriable,
+  wrapError,
+} from './errors.js';

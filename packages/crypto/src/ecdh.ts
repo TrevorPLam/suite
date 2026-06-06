@@ -3,6 +3,8 @@
  * Uses Web Crypto API (subtle.crypto) available in both Node.js and browsers
  */
 
+import { createCryptoError, CryptoErrorCode } from './errors.js';
+
 /**
  * Derives a shared secret from a private key and a public key using ECDH
  * @param privateKey - Private key from the key pair
@@ -13,11 +15,19 @@ export async function deriveSharedSecret(
   privateKey: CryptoKey,
   publicKey: CryptoKey
 ): Promise<ArrayBuffer> {
-  return crypto.subtle.deriveBits(
-    { name: 'X25519', public: publicKey },
-    privateKey,
-    256 // 256-bit shared secret
-  );
+  try {
+    return await crypto.subtle.deriveBits(
+      { name: 'X25519', public: publicKey },
+      privateKey,
+      256 // 256-bit shared secret
+    );
+  } catch (_error) {
+    throw createCryptoError(
+      CryptoErrorCode.ECDH_DERIVATION_FAILED,
+      'Failed to derive shared secret',
+      { operation: 'deriveSharedSecret', algorithm: 'X25519' }
+    );
+  }
 }
 
 /**
@@ -34,26 +44,34 @@ export async function deriveAESKeyFromSharedSecret(
   info: ArrayBuffer = new ArrayBuffer(0),
   extractable = false
 ): Promise<CryptoKey> {
-  // Import the shared secret as a key
-  const baseKey = await crypto.subtle.importKey(
-    'raw',
-    sharedSecret,
-    { name: 'HKDF' },
-    false,
-    ['deriveKey']
-  );
+  try {
+    // Import the shared secret as a key
+    const baseKey = await crypto.subtle.importKey(
+      'raw',
+      sharedSecret,
+      { name: 'HKDF' },
+      false,
+      ['deriveKey']
+    );
 
-  // Derive an AES-GCM key using HKDF
-  return crypto.subtle.deriveKey(
-    {
-      name: 'HKDF',
-      hash: 'SHA-256',
-      salt,
-      info,
-    },
-    baseKey,
-    { name: 'AES-GCM', length: 256 },
-    extractable,
-    ['encrypt', 'decrypt']
-  );
+    // Derive an AES-GCM key using HKDF
+    return await crypto.subtle.deriveKey(
+      {
+        name: 'HKDF',
+        hash: 'SHA-256',
+        salt,
+        info,
+      },
+      baseKey,
+      { name: 'AES-GCM', length: 256 },
+      extractable,
+      ['encrypt', 'decrypt']
+    );
+  } catch (_error) {
+    throw createCryptoError(
+      CryptoErrorCode.KEY_DERIVATION_FAILED,
+      'Failed to derive AES key from shared secret',
+      { operation: 'deriveAESKeyFromSharedSecret', algorithm: 'HKDF' }
+    );
+  }
 }

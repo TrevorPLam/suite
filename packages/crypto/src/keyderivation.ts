@@ -4,6 +4,7 @@
  */
 
 import { secureZeroize } from './memory.js';
+import { createCryptoError, CryptoErrorCode } from './errors.js';
 
 /**
  * Derives a cryptographic key from a password using PBKDF2
@@ -19,33 +20,41 @@ export async function deriveKeyFromPassword(
   iterations = 310000,
   extractable = false
 ): Promise<CryptoKey> {
-  const passwordBuffer = new TextEncoder().encode(password);
+  try {
+    const passwordBuffer = new TextEncoder().encode(password);
 
-  // Import password as a key
-  const baseKey = await crypto.subtle.importKey(
-    'raw',
-    passwordBuffer,
-    { name: 'PBKDF2' },
-    false,
-    ['deriveKey']
-  );
+    // Import password as a key
+    const baseKey = await crypto.subtle.importKey(
+      'raw',
+      passwordBuffer,
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
 
-  // Zeroize password buffer after use to prevent memory disclosure
-  secureZeroize(passwordBuffer);
+    // Zeroize password buffer after use to prevent memory disclosure
+    secureZeroize(passwordBuffer);
 
-  // Derive an AES-GCM key using PBKDF2 with SHA-256
-  return crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt,
-      iterations,
-      hash: 'SHA-256',
-    },
-    baseKey,
-    { name: 'AES-GCM', length: 256 },
-    extractable,
-    ['encrypt', 'decrypt']
-  );
+    // Derive an AES-GCM key using PBKDF2 with SHA-256
+    return await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt,
+        iterations,
+        hash: 'SHA-256',
+      },
+      baseKey,
+      { name: 'AES-GCM', length: 256 },
+      extractable,
+      ['encrypt', 'decrypt']
+    );
+  } catch (_error) {
+    throw createCryptoError(
+      CryptoErrorCode.KEY_DERIVATION_FAILED,
+      'Failed to derive key from password',
+      { operation: 'deriveKey', algorithm: 'PBKDF2' }
+    );
+  }
 }
 
 /**
