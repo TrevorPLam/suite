@@ -132,11 +132,11 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 ---
 
-### [ ] CRYPTO-008: Add WebAssembly Backend
+### [x] CRYPTO-008: Add WebAssembly Backend
 
 **Priority**: P1
 **Bounded Context**: Infrastructure
-**Status**: Not Started
+**Status**: Complete
 
 **Related Files**:
 - `packages/crypto/package.json`
@@ -186,7 +186,7 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 
 **Subtasks**:
 
-#### CRYPTO-008-01: Add libsodium.js as optional dependency
+#### ✅ CRYPTO-008-01: Add libsodium.js as optional dependency
 **Assigned To**: HUMAN
 **Target File**: `packages/crypto/package.json`
 **Action**: Add libsodium.js as optional dependency in package.json. Use optionalDependencies field to avoid forcing installation. Document that this is optional for advanced features.
@@ -222,13 +222,13 @@ This task list follows Specification-Driven Development (SDD), Domain-Driven Des
 **Action**: Export argon2idHash, isWasmAvailable, enableWasmBackend, disableWasmBackend from wasm-backend module. Only export if module exists (optional dependency).
 **Validate Command**: `pnpm --filter @suite/crypto typecheck`
 
-#### CRYPTO-008-07: Document hybrid approach
+#### ✅ CRYPTO-008-07: Document hybrid approach
 **Assigned To**: HUMAN
 **Target File**: `packages/crypto/WASM-BACKEND.md` (create)
 **Action**: Create documentation for hybrid Web Crypto + WASM approach. Explain: when to use WASM backend, bundle size implications, feature flags, fallback behavior, Argon2id benefits. Provide usage examples.
 **Validate Command**: No validation needed
 
-#### CRYPTO-008-08: Update assessment document
+#### ✅ CRYPTO-008-08: Update assessment document
 **Assigned To**: HUMAN
 **Target File**: `packages/crypto/ASSESSMENT.md`
 **Action**: Update ASSESSMENT.md to mark WebAssembly backend as implemented. Update WebAssembly assessment section. Add to strengths section with noted trade-offs.

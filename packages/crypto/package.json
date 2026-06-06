@@ -12,6 +12,9 @@
     "test:run": "vitest run",
     "lint": "eslint src"
   },
+  "optionalDependencies": {
+    "libsodium": "^0.7.15"
+  },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "vitest": "catalog:"
