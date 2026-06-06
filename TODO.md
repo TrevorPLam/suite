@@ -1796,10 +1796,10 @@ export default defineConfig({
 
 ---
 
-### [ ] DEBT-03: Clean up obsolete .devin rules
+### [x] DEBT-03: Clean up obsolete .devin rules
 
-**Status**: Not started  
-**Related Files**: .devin/rules/
+**Status**: Complete
+**Related Files**: .devin/rules/, .devin/skills/, .devin/
 
 **Definition of Done**:
 - Delete YDM-branded obsolete rules
@@ -1840,25 +1840,34 @@ rm .devin/rules/tech-stack.md
 
 **Subtasks**:
 
-#### DEBT-03.1: Identify obsolete rules
+#### ✅ DEBT-03.1: Identify obsolete rules
 **Target**: .devin/rules/
 **Action**: List all YDM-branded rules that describe different architecture.
 **Validate**: Manual review
 
-#### DEBT-03.2: Delete obsolete rules
-**Target**: .devin/rules/
-**Action**: Delete YDM-branded rules (ydm-architecture.md, api-first-development.md, tech-stack.md, etc.).
+#### ✅ DEBT-03.2: Delete obsolete rules
+**Target**: .devin/skills/, .devin/
+**Action**: Delete YDM-branded motion-implementation skill and DEVIN_RULES_SKILLS_GUIDE.md.
 **Validate**: `git status`
 
-#### DEBT-03.3: Update AGENTS.md references
+#### ✅ DEBT-03.3: Update AGENTS.md references
 **Target**: AGENTS.md
 **Action**: Update AGENTS.md to reference only Suite-specific rules.
 **Validate**: Manual review
 
-#### DEBT-03.4: Verify no broken references
+#### ✅ DEBT-03.4: Verify no broken references
 **Target**: .devin/
 **Action**: Search for references to deleted rules in other files, update or remove.
-**Validate**: `grep -r "ydm-architecture" .devin/`
+**Validate**: `grep -r "motion-implementation" .devin/`
+
+**Implementation Notes**:
+- Identified YDM-branded obsolete files: motion-implementation skill (3 files) and DEVIN_RULES_SKILLS_GUIDE.md
+- Deleted .devin/skills/motion-implementation/ directory (SKILL.md, motion-checklist.md, motion-patterns.tsx)
+- Deleted .devin/DEVIN_RULES_SKILLS_GUIDE.md (665 lines of YDM-specific documentation)
+- Verified no broken references to deleted files using grep search
+- .devin/rules/ directory contains Suite-specific rules that were kept (all applicable to current architecture)
+- AGENTS.md does not reference any deleted files (no updates needed)
+- All remaining .devin skills are Suite-specific and relevant to current architecture
 
 ---
 
