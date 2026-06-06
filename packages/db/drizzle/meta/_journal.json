@@ -36,6 +36,13 @@
       "when": 1780733500968,
       "tag": "0004_lowly_exodus",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780766113059,
+      "tag": "0005_whole_ken_ellis",
+      "breakpoints": true
     }
   ]
 }

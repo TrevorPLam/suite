@@ -3,6 +3,7 @@ import { users } from './users.js';
 
 export const tasks = pgTable('tasks', {
   id: text('id').primaryKey(),
+  tenantId: uuid('tenant_id').notNull(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   completed: boolean('completed').notNull().default(false),
@@ -13,6 +14,7 @@ export const tasks = pgTable('tasks', {
   blindIndex: text('blind_index'),
 }, (table) => ({
   blindIndexIdx: index('blind_index_idx').on(table.blindIndex),
+  tenantIdIdx: index('tasks_tenant_id_idx').on(table.tenantId),
 }));
 
 export type TaskSchema = typeof tasks.$inferSelect;

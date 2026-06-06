@@ -59,8 +59,9 @@ function mapFolderToDomain(schema: DriveFolderSchema): DriveFolder {
 }
 
 // Map domain type to DB schema (for create/update)
-function mapFileToSchema(domain: Omit<DriveFile, 'id'>): Omit<DriveFileSchema, 'id' | 'userId'> {
+function mapFileToSchema(domain: Omit<DriveFile, 'id'>, tenantId: string): Omit<DriveFileSchema, 'id' | 'userId'> {
   const result: Omit<DriveFileSchema, 'id' | 'userId'> = {
+    tenantId,
     name: domain.name,
     size: domain.size,
     folderId: domain.folderId ?? null,
@@ -72,8 +73,9 @@ function mapFileToSchema(domain: Omit<DriveFile, 'id'>): Omit<DriveFileSchema, '
   return result;
 }
 
-function mapFolderToSchema(domain: Omit<DriveFolder, 'id'>): Omit<DriveFolderSchema, 'id' | 'userId'> {
+function mapFolderToSchema(domain: Omit<DriveFolder, 'id'>, tenantId: string): Omit<DriveFolderSchema, 'id' | 'userId'> {
   return {
+    tenantId,
     name: domain.name,
     parentId: domain.parentId ?? null,
     createdAt: new Date(domain.createdAt),
@@ -83,10 +85,12 @@ function mapFolderToSchema(domain: Omit<DriveFolder, 'id'>): Omit<DriveFolderSch
 export class PostgresDriveFileRepository implements DriveFileRepository {
   private db: ReturnType<Database['getDrizzleDb']>;
   private userId: string;
+  private tenantId: string;
 
-  constructor(db: Database, userId: string) {
+  constructor(db: Database, userId: string, tenantId: string) {
     this.db = db.getDrizzleDb();
     this.userId = userId;
+    this.tenantId = tenantId;
   }
 
   async findById(id: string, tx?: TransactionScope): Promise<DriveFile | null> {
@@ -110,9 +114,10 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
 
   async create(entity: Omit<DriveFile, 'id'>, tx?: TransactionScope): Promise<DriveFile> {
     const db = tx ?? this.db;
-    const schemaEntity = mapFileToSchema(entity);
+    const schemaEntity = mapFileToSchema(entity, this.tenantId);
     const newEntity: NewDriveFileSchema = {
       id: generateUUID(),
+      tenantId: this.tenantId,
       userId: this.userId,
       name: schemaEntity.name,
       size: schemaEntity.size,
@@ -120,6 +125,7 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
       mimeType: schemaEntity.mimeType,
       createdAt: schemaEntity.createdAt,
       modifiedAt: schemaEntity.modifiedAt,
+      blindIndex: schemaEntity.blindIndex,
     };
     const results = await db.insert(driveFiles).values(newEntity).returning();
     if (!results[0]) {
@@ -185,10 +191,12 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
 export class PostgresDriveFolderRepository implements DriveFolderRepository {
   private db: ReturnType<Database['getDrizzleDb']>;
   private userId: string;
+  private tenantId: string;
 
-  constructor(db: Database, userId: string) {
+  constructor(db: Database, userId: string, tenantId: string) {
     this.db = db.getDrizzleDb();
     this.userId = userId;
+    this.tenantId = tenantId;
   }
 
   async findById(id: string, tx?: TransactionScope): Promise<DriveFolder | null> {
@@ -212,9 +220,10 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
 
   async create(entity: Omit<DriveFolder, 'id'>, tx?: TransactionScope): Promise<DriveFolder> {
     const db = tx ?? this.db;
-    const schemaEntity = mapFolderToSchema(entity);
+    const schemaEntity = mapFolderToSchema(entity, this.tenantId);
     const newEntity: NewDriveFolderSchema = {
       id: generateUUID(),
+      tenantId: this.tenantId,
       userId: this.userId,
       name: schemaEntity.name,
       parentId: schemaEntity.parentId,

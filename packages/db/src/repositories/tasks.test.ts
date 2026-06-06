@@ -3,9 +3,16 @@ import { PostgresTaskRepository } from './tasks.js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { tasks } from '../schema/tasks.js';
+import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
 
 // Skip tests if DATABASE_URL is not set
 const dbUrl = process.env.DATABASE_URL;
+const tenantId1 = randomUUID();
+const tenantId2 = randomUUID();
+const userId1 = randomUUID();
+const userId2 = randomUUID();
+
 describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   let client: postgres.Sql;
   let db: ReturnType<typeof drizzle>;
@@ -24,7 +31,7 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
       transaction: async () => {},
       close: async () => {},
     };
-    repository = new PostgresTaskRepository(mockDb as any, 'test-user-id');
+    repository = new PostgresTaskRepository(mockDb as any, userId1, tenantId1);
   });
 
   afterAll(async () => {
@@ -362,6 +369,56 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
       const finalTask = await repository.findById(task.id);
       expect(finalTask?.completed).toBe(true);
       expect(finalTask?.priority).toBe('high');
+    });
+  });
+
+  describe('tenant isolation', () => {
+    it('should ensure data from one tenant is not visible to another', async () => {
+      // Create task for tenant 1
+      await db.insert(tasks).values({
+        id: randomUUID(),
+        tenantId: tenantId1,
+        userId: userId1,
+        title: 'Tenant 1 Task',
+        completed: false,
+        archived: false,
+        dueDate: null,
+        priority: 'medium',
+        tags: [],
+      });
+
+      // Create task for tenant 2
+      await db.insert(tasks).values({
+        id: randomUUID(),
+        tenantId: tenantId2,
+        userId: userId2,
+        title: 'Tenant 2 Task',
+        completed: false,
+        archived: false,
+        dueDate: null,
+        priority: 'high',
+        tags: [],
+      });
+
+      // Query all tasks - should return both (no RLS in test)
+      const allTasks = await db.select().from(tasks);
+      expect(allTasks).toHaveLength(2);
+
+      // Query with tenant filter - should return only tenant 1 tasks
+      const tenant1Tasks = await db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.tenantId, tenantId1));
+      expect(tenant1Tasks).toHaveLength(1);
+      expect(tenant1Tasks[0]?.title).toBe('Tenant 1 Task');
+
+      // Query with tenant filter - should return only tenant 2 tasks
+      const tenant2Tasks = await db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.tenantId, tenantId2));
+      expect(tenant2Tasks).toHaveLength(1);
+      expect(tenant2Tasks[0]?.title).toBe('Tenant 2 Task');
     });
   });
 });

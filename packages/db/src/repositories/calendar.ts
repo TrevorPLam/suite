@@ -26,8 +26,9 @@ function mapToDomain(schema: CalendarEventSchema): CalendarEvent {
 }
 
 // Map domain type to DB schema (for create/update)
-function mapToSchema(domain: Omit<CalendarEvent, 'id'>): Omit<CalendarEventSchema, 'id' | 'userId'> {
+function mapToSchema(domain: Omit<CalendarEvent, 'id'>, tenantId: string): Omit<CalendarEventSchema, 'id' | 'userId'> {
   return {
+    tenantId,
     title: domain.title,
     startAt: new Date(domain.startAt),
     endAt: new Date(domain.endAt),
@@ -37,10 +38,12 @@ function mapToSchema(domain: Omit<CalendarEvent, 'id'>): Omit<CalendarEventSchem
 export class PostgresCalendarEventRepository implements CalendarEventRepository {
   private db: ReturnType<Database['getDrizzleDb']>;
   private userId: string;
+  private tenantId: string;
 
-  constructor(db: Database, userId: string) {
+  constructor(db: Database, userId: string, tenantId: string) {
     this.db = db.getDrizzleDb();
     this.userId = userId;
+    this.tenantId = tenantId;
   }
 
   async findById(id: string, tx?: TransactionScope): Promise<CalendarEvent | null> {
@@ -64,9 +67,10 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
 
   async create(entity: Omit<CalendarEvent, 'id'>, tx?: TransactionScope): Promise<CalendarEvent> {
     const db = tx ?? this.db;
-    const schemaEntity = mapToSchema(entity);
+    const schemaEntity = mapToSchema(entity, this.tenantId);
     const newEntity: NewCalendarEventSchema = {
       id: generateUUID(),
+      tenantId: this.tenantId,
       userId: this.userId,
       title: schemaEntity.title,
       startAt: schemaEntity.startAt,

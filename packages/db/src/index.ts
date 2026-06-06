@@ -39,6 +39,9 @@ export { WorkerDatabase } from './worker-database.js';
 export type { TransactionScope, TransactionConfig, IsolationLevel, AccessMode } from './transaction-scope.js';
 export { UnitOfWork } from './unit-of-work.js';
 
+// Tenant context for multi-tenancy
+export { setTenantContext, getTenantIdFromHeaders, getTenantIdFromToken, isValidTenantId } from './tenant-context.js';
+
 // Factory function
 export { createDbClient } from './database-factory.js';
 

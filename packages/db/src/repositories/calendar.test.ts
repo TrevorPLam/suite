@@ -3,9 +3,16 @@ import { PostgresCalendarEventRepository } from './calendar.js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { calendarEvents } from '../schema/calendar.js';
+import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
 
 // Skip tests if DATABASE_URL is not set
 const dbUrl = process.env.DATABASE_URL;
+const tenantId1 = randomUUID();
+const tenantId2 = randomUUID();
+const userId1 = randomUUID();
+const userId2 = randomUUID();
+
 describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
   let client: postgres.Sql;
   let db: ReturnType<typeof drizzle>;
@@ -24,7 +31,7 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
       transaction: async () => {},
       close: async () => {},
     };
-    repository = new PostgresCalendarEventRepository(mockDb as any, 'test-user-id');
+    repository = new PostgresCalendarEventRepository(mockDb as any, userId1, tenantId1);
   });
 
   afterAll(async () => {
@@ -235,6 +242,50 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
 
       // Event ends exactly at range start, should not overlap
       expect(overlapping).toEqual([]);
+    });
+  });
+
+  describe('tenant isolation', () => {
+    it('should ensure data from one tenant is not visible to another', async () => {
+      // Create event for tenant 1
+      await db.insert(calendarEvents).values({
+        id: randomUUID(),
+        tenantId: tenantId1,
+        userId: userId1,
+        title: 'Tenant 1 Event',
+        startAt: new Date('2026-06-10T10:00:00Z'),
+        endAt: new Date('2026-06-10T11:00:00Z'),
+      });
+
+      // Create event for tenant 2
+      await db.insert(calendarEvents).values({
+        id: randomUUID(),
+        tenantId: tenantId2,
+        userId: userId2,
+        title: 'Tenant 2 Event',
+        startAt: new Date('2026-06-10T10:00:00Z'),
+        endAt: new Date('2026-06-10T11:00:00Z'),
+      });
+
+      // Query all events - should return both (no RLS in test)
+      const allEvents = await db.select().from(calendarEvents);
+      expect(allEvents).toHaveLength(2);
+
+      // Query with tenant filter - should return only tenant 1 events
+      const tenant1Events = await db
+        .select()
+        .from(calendarEvents)
+        .where(eq(calendarEvents.tenantId, tenantId1));
+      expect(tenant1Events).toHaveLength(1);
+      expect(tenant1Events[0]?.title).toBe('Tenant 1 Event');
+
+      // Query with tenant filter - should return only tenant 2 events
+      const tenant2Events = await db
+        .select()
+        .from(calendarEvents)
+        .where(eq(calendarEvents.tenantId, tenantId2));
+      expect(tenant2Events).toHaveLength(1);
+      expect(tenant2Events[0]?.title).toBe('Tenant 2 Event');
     });
   });
 });

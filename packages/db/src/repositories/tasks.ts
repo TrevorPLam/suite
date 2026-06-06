@@ -37,8 +37,9 @@ function mapToDomain(schema: TaskSchema): TaskItem {
 }
 
 // Map domain type to DB schema (for create/update)
-function mapToSchema(domain: Omit<TaskItem, 'id'>): Omit<TaskSchema, 'id' | 'userId'> {
+function mapToSchema(domain: Omit<TaskItem, 'id'>, tenantId: string): Omit<TaskSchema, 'id' | 'userId'> {
   const result: Omit<TaskSchema, 'id' | 'userId'> = {
+    tenantId,
     title: domain.title,
     completed: domain.completed,
     archived: domain.archived,
@@ -53,10 +54,12 @@ function mapToSchema(domain: Omit<TaskItem, 'id'>): Omit<TaskSchema, 'id' | 'use
 export class PostgresTaskRepository implements TaskRepository {
   private db: ReturnType<Database['getDrizzleDb']>;
   private userId: string;
+  private tenantId: string;
 
-  constructor(db: Database, userId: string) {
+  constructor(db: Database, userId: string, tenantId: string) {
     this.db = db.getDrizzleDb();
     this.userId = userId;
+    this.tenantId = tenantId;
   }
 
   async findById(id: string, tx?: TransactionScope): Promise<TaskItem | null> {
@@ -80,9 +83,10 @@ export class PostgresTaskRepository implements TaskRepository {
 
   async create(entity: Omit<TaskItem, 'id'>, tx?: TransactionScope): Promise<TaskItem> {
     const db = tx ?? this.db;
-    const schemaEntity = mapToSchema(entity);
+    const schemaEntity = mapToSchema(entity, this.tenantId);
     const newEntity: NewTaskSchema = {
       id: generateUUID(),
+      tenantId: this.tenantId,
       userId: this.userId,
       title: schemaEntity.title,
       completed: schemaEntity.completed,
@@ -90,6 +94,7 @@ export class PostgresTaskRepository implements TaskRepository {
       dueDate: schemaEntity.dueDate,
       priority: schemaEntity.priority,
       tags: schemaEntity.tags,
+      blindIndex: schemaEntity.blindIndex,
     };
     const results = await db.insert(tasks).values(newEntity).returning();
     if (!results[0]) {

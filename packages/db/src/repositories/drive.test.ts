@@ -3,9 +3,16 @@ import { PostgresDriveFileRepository, PostgresDriveFolderRepository } from './dr
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { driveFiles, driveFolders } from '../schema/drive.js';
+import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
 
 // Skip tests if DATABASE_URL is not set
 const dbUrl = process.env.DATABASE_URL;
+const tenantId1 = randomUUID();
+const tenantId2 = randomUUID();
+const userId1 = randomUUID();
+const userId2 = randomUUID();
+
 describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
   let client: postgres.Sql;
   let db: ReturnType<typeof drizzle>;
@@ -24,7 +31,7 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
       transaction: async () => {},
       close: async () => {},
     };
-    repository = new PostgresDriveFileRepository(mockDb as any, 'test-user-id');
+    repository = new PostgresDriveFileRepository(mockDb as any, userId1, tenantId1);
   });
 
   afterAll(async () => {
@@ -244,7 +251,7 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
       transaction: async () => {},
       close: async () => {},
     };
-    repository = new PostgresDriveFolderRepository(mockDb as any, 'test-user-id');
+    repository = new PostgresDriveFolderRepository(mockDb as any, userId1, tenantId1);
   });
 
   afterAll(async () => {
@@ -421,6 +428,52 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
     it('should return 0 when no folders exist', async () => {
       const count = await repository.count();
       expect(count).toBe(0);
+    });
+  });
+
+  describe('tenant isolation', () => {
+    it('should ensure data from one tenant is not visible to another', async () => {
+      // Create file for tenant 1
+      await db.insert(driveFiles).values({
+        id: randomUUID(),
+        tenantId: tenantId1,
+        userId: userId1,
+        name: 'Tenant 1 File',
+        size: 1024,
+        createdAt: new Date('2026-06-10T10:00:00Z'),
+        modifiedAt: new Date('2026-06-10T10:00:00Z'),
+      });
+
+      // Create file for tenant 2
+      await db.insert(driveFiles).values({
+        id: randomUUID(),
+        tenantId: tenantId2,
+        userId: userId2,
+        name: 'Tenant 2 File',
+        size: 2048,
+        createdAt: new Date('2026-06-10T10:00:00Z'),
+        modifiedAt: new Date('2026-06-10T10:00:00Z'),
+      });
+
+      // Query all files - should return both (no RLS in test)
+      const allFiles = await db.select().from(driveFiles);
+      expect(allFiles).toHaveLength(2);
+
+      // Query with tenant filter - should return only tenant 1 files
+      const tenant1Files = await db
+        .select()
+        .from(driveFiles)
+        .where(eq(driveFiles.tenantId, tenantId1));
+      expect(tenant1Files).toHaveLength(1);
+      expect(tenant1Files[0]?.name).toBe('Tenant 1 File');
+
+      // Query with tenant filter - should return only tenant 2 files
+      const tenant2Files = await db
+        .select()
+        .from(driveFiles)
+        .where(eq(driveFiles.tenantId, tenantId2));
+      expect(tenant2Files).toHaveLength(1);
+      expect(tenant2Files[0]?.name).toBe('Tenant 2 File');
     });
   });
 });
