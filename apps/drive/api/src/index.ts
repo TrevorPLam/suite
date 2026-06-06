@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { swaggerUI } from '@hono/swagger-ui';
+import { timeout } from 'hono/timeout';
+import { HTTPException } from 'hono/http-exception';
 import {
   createFolder,
   deleteDriveFile,
@@ -59,6 +61,23 @@ const metrics = {
 
 // Mount request ID middleware (must be before logger to ensure logs include request ID)
 app.use('/api/*', requestId());
+
+// Custom timeout exception that returns standardized error format
+const timeoutException = () => new HTTPException(408, {
+  res: new Response(
+    JSON.stringify({
+      error: {
+        code: ERROR_CODES.GLOBAL_REQUEST_TIMEOUT,
+        message: 'Request timeout',
+        timestamp: new Date().toISOString(),
+      },
+    }),
+    { status: 408, headers: { 'Content-Type': 'application/json' } }
+  ),
+});
+
+// Mount timeout middleware (30 second default)
+app.use('/api/*', timeout(30000, timeoutException));
 
 // Middleware to collect metrics (must be early to track all requests)
 app.use('/api/*', async (c, next) => {
@@ -260,7 +279,8 @@ app.get('/api/v1/files', async (c) => {
   return c.json({ files });
 });
 
-app.post('/api/v1/files', requireAuth, async (c) => {
+// Upload endpoint with longer timeout (5 minutes for file uploads)
+app.post('/api/v1/files', requireAuth, timeout(300000, timeoutException), async (c) => {
   const contentType = c.req.header('content-type') || '';
 
   // Handle multipart/form-data for file uploads

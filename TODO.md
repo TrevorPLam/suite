@@ -764,16 +764,17 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 
 ---
 
-### [ ] P2-016: Add Request Timeout Middleware
+### [x] P2-016: Add Request Timeout Middleware
 
-**Status**: Pending  
-**Priority**: P2  
+**Status**: Completed
+**Priority**: P2
 **Bounded Context**: API Performance
 
 **Related Files**:
 - `apps/calendar/api/src/index.ts`
 - `apps/tasks/api/src/index.ts`
 - `apps/drive/api/src/index.ts`
+- `packages/shared-kernel/src/errors.ts`
 
 **Definition of Done**:
 - Request timeout middleware mounted
@@ -807,22 +808,35 @@ This task list follows Domain-Driven Design (DDD), Test-Driven Development (TDD)
 **Blocks**:
 - None
 
+**Implementation Notes**:
+- Added GLOBAL_REQUEST_TIMEOUT error code to shared-kernel errors.ts
+- Used Hono's built-in timeout middleware with custom HTTPException
+- Custom timeout exception returns standardized error format with code, message, and timestamp
+- Calendar API: 30s timeout on all /api/* routes
+- Tasks API: 30s timeout on all /api/* routes
+- Drive API: 30s timeout on all /api/* routes, 5 minute timeout on POST /api/v1/files (upload)
+- Typecheck passes for calendar-api, tasks-api, and shared-kernel
+- Pre-existing typecheck errors in drive-api test file (unrelated to this task)
+
 **Subtasks**:
 
 #### P2-016-01: Add timeout middleware to calendar API
 **Target File**: `apps/calendar/api/src/index.ts`
 **Action**: Add timeout middleware with 30s default; return 408 on timeout
 **Validate Command**: `pnpm --filter @suite/calendar-api typecheck`
+**Status**: ✅ Complete
 
 #### P2-016-02: Add timeout middleware to tasks API
 **Target File**: `apps/tasks/api/src/index.ts`
 **Action**: Add timeout middleware with 30s default; return 408 on timeout
 **Validate Command**: `pnpm --filter @suite/tasks-api typecheck`
+**Status**: ✅ Complete
 
 #### P2-016-03: Add timeout middleware to drive API
 **Target File**: `apps/drive/api/src/index.ts`
 **Action**: Add timeout middleware with 30s default; return 408 on timeout; longer timeout for upload routes
 **Validate Command**: `pnpm --filter @suite/drive-api typecheck`
+**Status**: ✅ Complete
 
 ---
 
