@@ -31,7 +31,7 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
       transaction: async () => {},
       close: async () => {},
     };
-    repository = new PostgresCalendarEventRepository(mockDb as any, userId1, tenantId1);
+    repository = new PostgresCalendarEventRepository(mockDb as never, userId1, tenantId1);
   });
 
   afterAll(async () => {
@@ -286,6 +286,66 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
         .where(eq(calendarEvents.tenantId, tenantId2));
       expect(tenant2Events).toHaveLength(1);
       expect(tenant2Events[0]?.title).toBe('Tenant 2 Event');
+    });
+  });
+
+  describe('composite index performance', () => {
+    it('should use composite index for tenant+user queries', async () => {
+      // Create test data
+      await db.insert(calendarEvents).values({
+        id: randomUUID(),
+        tenantId: tenantId1,
+        userId: userId1,
+        title: 'Test Event',
+        startAt: new Date('2026-06-10T10:00:00Z'),
+        endAt: new Date('2026-06-10T11:00:00Z'),
+      });
+
+      // Run EXPLAIN ANALYZE on tenant+user query
+      const explainResult = await client`
+        EXPLAIN ANALYZE
+        SELECT * FROM calendar.calendar_events
+        WHERE tenant_id = ${tenantId1} AND user_id = ${userId1}
+      `;
+
+      const explainText = explainResult.map((row: Record<string, unknown>) => row['QUERY PLAN'] as string).join('\n');
+
+      // Verify index is used (should contain "Index Scan")
+      expect(explainText).toContain('Index Scan');
+      expect(explainText).toContain('calendar_events_tenant_user_idx');
+
+      // Verify query is fast (should complete in <100ms)
+      // EXPLAIN ANALYZE output includes execution time in format "Planning Time: X ms, Execution Time: Y ms"
+      const executionTimeMatch = explainText.match(/Execution Time: ([\d.]+) ms/);
+      if (executionTimeMatch && executionTimeMatch[1]) {
+        const executionTime = parseFloat(executionTimeMatch[1]);
+        expect(executionTime).toBeLessThan(100);
+      }
+    });
+
+    it('should use composite index for tenant+time queries', async () => {
+      // Create test data
+      await db.insert(calendarEvents).values({
+        id: randomUUID(),
+        tenantId: tenantId1,
+        userId: userId1,
+        title: 'Test Event',
+        startAt: new Date('2026-06-10T10:00:00Z'),
+        endAt: new Date('2026-06-10T11:00:00Z'),
+      });
+
+      // Run EXPLAIN ANALYZE on tenant+time query
+      const explainResult = await client`
+        EXPLAIN ANALYZE
+        SELECT * FROM calendar.calendar_events
+        WHERE tenant_id = ${tenantId1} AND start_at >= '2026-06-10T00:00:00Z' AND start_at < '2026-06-11T00:00:00Z'
+      `;
+
+      const explainText = explainResult.map((row: Record<string, unknown>) => row['QUERY PLAN'] as string).join('\n');
+
+      // Verify index is used
+      expect(explainText).toContain('Index Scan');
+      expect(explainText).toContain('calendar_events_tenant_start_at_idx');
     });
   });
 });

@@ -10,6 +10,8 @@ export const calendarEvents = pgTable('calendar_events', {
   endAt: timestamp('end_at').notNull(),
 }, (table) => ({
   tenantIdIdx: index('calendar_events_tenant_id_idx').on(table.tenantId),
+  tenantUserIdIdx: index('calendar_events_tenant_user_idx').on(table.tenantId, table.userId),
+  tenantStartAtIdx: index('calendar_events_tenant_start_at_idx').on(table.tenantId, table.startAt),
 }));
 
 export type CalendarEventSchema = typeof calendarEvents.$inferSelect;

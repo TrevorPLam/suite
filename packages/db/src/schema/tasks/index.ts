@@ -15,6 +15,8 @@ export const tasks = pgTable('tasks', {
 }, (table) => ({
   blindIndexIdx: index('blind_index_idx').on(table.blindIndex),
   tenantIdIdx: index('tasks_tenant_id_idx').on(table.tenantId),
+  tenantUserIdIdx: index('tasks_tenant_user_idx').on(table.tenantId, table.userId),
+  tenantBlindIndexIdx: index('tasks_tenant_blind_index_idx').on(table.tenantId, table.blindIndex),
 }));
 
 export type TaskSchema = typeof tasks.$inferSelect;

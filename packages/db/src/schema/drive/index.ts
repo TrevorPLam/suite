@@ -15,6 +15,8 @@ export const driveFiles = pgTable('drive_files', {
 }, (table) => ({
   blindIndexIdx: index('drive_blind_index_idx').on(table.blindIndex),
   tenantIdIdx: index('drive_files_tenant_id_idx').on(table.tenantId),
+  tenantUserIdIdx: index('drive_files_tenant_user_idx').on(table.tenantId, table.userId),
+  tenantBlindIndexIdx: index('drive_files_tenant_blind_index_idx').on(table.tenantId, table.blindIndex),
 }));
 
 export const driveFolders = pgTable('drive_folders', {
@@ -26,6 +28,7 @@ export const driveFolders = pgTable('drive_folders', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({
   tenantIdIdx: index('drive_folders_tenant_id_idx').on(table.tenantId),
+  tenantUserIdIdx: index('drive_folders_tenant_user_idx').on(table.tenantId, table.userId),
 }));
 
 export type DriveFileSchema = typeof driveFiles.$inferSelect;
