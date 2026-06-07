@@ -30,11 +30,12 @@ export type {
 } from './lib/calendar-events.js';
 
 import { listCalendarEvents } from './lib/calendar-events.js';
+import type { RepositoryContext } from '@suite/db';
 
-export function getCalendarOverview() {
+export function getCalendarOverview(context?: RepositoryContext) {
   return {
     name: 'Calendar',
     description: 'Starter calendar domain package',
-    events: listCalendarEvents(),
+    events: context ? listCalendarEvents(undefined, context) : [],
   };
 }

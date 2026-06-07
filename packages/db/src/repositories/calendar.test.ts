@@ -5,6 +5,7 @@ import postgres from 'postgres';
 import { calendarEvents } from '../schema/calendar/index.js';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
+import type { RepositoryContext } from '../index.js';
 
 // Skip tests if DATABASE_URL is not set
 const dbUrl = process.env.DATABASE_URL;
@@ -17,6 +18,8 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
   let client: postgres.Sql;
   let db: ReturnType<typeof drizzle>;
   let repository: PostgresCalendarEventRepository;
+  let context1: RepositoryContext;
+  let _context2: RepositoryContext;
 
   beforeAll(async () => {
     if (!dbUrl) {
@@ -31,7 +34,17 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
       transaction: async () => {},
       close: async () => {},
     };
-    repository = new PostgresCalendarEventRepository(mockDb as never, userId1, tenantId1);
+    repository = new PostgresCalendarEventRepository(mockDb as never);
+    context1 = {
+      userId: userId1,
+      tenantId: tenantId1,
+      requestId: randomUUID(),
+    };
+    _context2 = {
+      userId: userId2,
+      tenantId: tenantId2,
+      requestId: randomUUID(),
+    };
   });
 
   afterAll(async () => {
@@ -49,7 +62,7 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
         title: 'Test Event',
         startAt: '2026-06-10T10:00:00Z',
         endAt: '2026-06-10T11:00:00Z',
-      });
+      }, context1);
 
       expect(event).toBeDefined();
       expect(event.id).toBeDefined();
@@ -63,13 +76,13 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
         title: 'Meeting',
         startAt: '2026-06-10T10:00:00Z',
         endAt: '2026-06-10T11:00:00Z',
-      });
+      }, context1);
 
       const event2 = await repository.create({
         title: 'Meeting',
         startAt: '2026-06-10T14:00:00Z',
         endAt: '2026-06-10T15:00:00Z',
-      });
+      }, context1);
 
       expect(event1.id).not.toBe(event2.id);
       expect(event1.title).toBe(event2.title);
@@ -82,9 +95,9 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
         title: 'Find Me',
         startAt: '2026-06-10T10:00:00Z',
         endAt: '2026-06-10T11:00:00Z',
-      });
+      }, context1);
 
-      const found = await repository.findById(created.id);
+      const found = await repository.findById(created.id, context1);
 
       expect(found).toBeDefined();
       expect(found?.id).toBe(created.id);
@@ -92,25 +105,25 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
     });
 
     it('should return null for non-existent id', async () => {
-      const found = await repository.findById('non-existent-id');
+      const found = await repository.findById('non-existent-id', context1);
       expect(found).toBeNull();
     });
   });
 
   describe('findAll', () => {
     it('should return all events', async () => {
-      await repository.create({ title: 'Event 1', startAt: '2026-06-10T10:00:00Z', endAt: '2026-06-10T11:00:00Z' });
-      await repository.create({ title: 'Event 2', startAt: '2026-06-10T14:00:00Z', endAt: '2026-06-10T15:00:00Z' });
-      await repository.create({ title: 'Event 3', startAt: '2026-06-10T16:00:00Z', endAt: '2026-06-10T17:00:00Z' });
+      await repository.create({ title: 'Event 1', startAt: '2026-06-10T10:00:00Z', endAt: '2026-06-10T11:00:00Z' }, context1);
+      await repository.create({ title: 'Event 2', startAt: '2026-06-10T14:00:00Z', endAt: '2026-06-10T15:00:00Z' }, context1);
+      await repository.create({ title: 'Event 3', startAt: '2026-06-10T16:00:00Z', endAt: '2026-06-10T17:00:00Z' }, context1);
 
-      const allEvents = await repository.findAll();
+      const allEvents = await repository.findAll(context1);
 
       expect(allEvents).toHaveLength(3);
       expect(allEvents.map(e => e.title)).toEqual(['Event 1', 'Event 2', 'Event 3']);
     });
 
     it('should return empty array when no events exist', async () => {
-      const allEvents = await repository.findAll();
+      const allEvents = await repository.findAll(context1);
       expect(allEvents).toEqual([]);
     });
   });
@@ -121,12 +134,12 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
         title: 'Original Title',
         startAt: '2026-06-10T10:00:00Z',
         endAt: '2026-06-10T11:00:00Z',
-      });
+      }, context1);
 
       const updated = await repository.update(created.id, {
         title: 'Updated Title',
         startAt: '2026-06-10T12:00:00Z',
-      });
+      }, context1);
 
       expect(updated).toBeDefined();
       expect(updated?.id).toBe(created.id);
@@ -135,7 +148,7 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
     });
 
     it('should return null when updating non-existent event', async () => {
-      const updated = await repository.update('non-existent-id', { title: 'New Title' });
+      const updated = await repository.update('non-existent-id', { title: 'New Title' }, context1);
       expect(updated).toBeNull();
     });
 
@@ -144,11 +157,11 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
         title: 'Event',
         startAt: '2026-06-10T10:00:00Z',
         endAt: '2026-06-10T11:00:00Z',
-      });
+      }, context1);
 
       const updated = await repository.update(created.id, {
         endAt: '2026-06-10T12:00:00Z',
-      });
+      }, context1);
 
       expect(updated).toBeDefined();
       expect(updated?.endAt).toBe('2026-06-10T12:00:00Z');
@@ -162,32 +175,33 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
         title: 'To Delete',
         startAt: '2026-06-10T10:00:00Z',
         endAt: '2026-06-10T11:00:00Z',
-      });
+      }, context1);
 
-      const deleted = await repository.delete(created.id);
+      const deleted = await repository.delete(created.id, context1);
 
       expect(deleted).toBe(true);
 
-      const found = await repository.findById(created.id);
+      const found = await repository.findById(created.id, context1);
       expect(found).toBeNull();
     });
 
     it('should return false when deleting non-existent event', async () => {
-      const deleted = await repository.delete('non-existent-id');
+      const deleted = await repository.delete('non-existent-id', context1);
       expect(deleted).toBe(false);
     });
   });
 
   describe('findOverlapping', () => {
     it('should find events that overlap with given range', async () => {
-      await repository.create({ title: 'Event 1', startAt: '2026-06-10T10:00:00Z', endAt: '2026-06-10T11:00:00Z' });
-      await repository.create({ title: 'Event 2', startAt: '2026-06-10T10:30:00Z', endAt: '2026-06-10T11:30:00Z' });
-      await repository.create({ title: 'Event 3', startAt: '2026-06-10T12:00:00Z', endAt: '2026-06-10T13:00:00Z' });
+      await repository.create({ title: 'Event 1', startAt: '2026-06-10T10:00:00Z', endAt: '2026-06-10T11:00:00Z' }, context1);
+      await repository.create({ title: 'Event 2', startAt: '2026-06-10T10:30:00Z', endAt: '2026-06-10T11:30:00Z' }, context1);
+      await repository.create({ title: 'Event 3', startAt: '2026-06-10T12:00:00Z', endAt: '2026-06-10T13:00:00Z' }, context1);
 
       // Query for 10:15-11:15, should overlap with Event 1 and Event 2
       const overlapping = await repository.findOverlapping(
         new Date('2026-06-10T10:15:00Z'),
-        new Date('2026-06-10T11:15:00Z')
+        new Date('2026-06-10T11:15:00Z'),
+        context1
       );
 
       expect(overlapping).toHaveLength(2);
@@ -195,12 +209,13 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
     });
 
     it('should exclude event with given id from results', async () => {
-      const event1 = await repository.create({ title: 'Event 1', startAt: '2026-06-10T10:00:00Z', endAt: '2026-06-10T11:00:00Z' });
-      await repository.create({ title: 'Event 2', startAt: '2026-06-10T10:30:00Z', endAt: '2026-06-10T11:30:00Z' });
+      const event1 = await repository.create({ title: 'Event 1', startAt: '2026-06-10T10:00:00Z', endAt: '2026-06-10T11:00:00Z' }, context1);
+      await repository.create({ title: 'Event 2', startAt: '2026-06-10T10:30:00Z', endAt: '2026-06-10T11:30:00Z' }, context1);
 
       const overlapping = await repository.findOverlapping(
         new Date('2026-06-10T10:15:00Z'),
         new Date('2026-06-10T11:15:00Z'),
+        context1,
         event1.id
       );
 
@@ -209,23 +224,25 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
     });
 
     it('should return empty array when no events overlap', async () => {
-      await repository.create({ title: 'Event 1', startAt: '2026-06-10T10:00:00Z', endAt: '2026-06-10T11:00:00Z' });
-      await repository.create({ title: 'Event 2', startAt: '2026-06-10T14:00:00Z', endAt: '2026-06-10T15:00:00Z' });
+      await repository.create({ title: 'Event 1', startAt: '2026-06-10T10:00:00Z', endAt: '2026-06-10T11:00:00Z' }, context1);
+      await repository.create({ title: 'Event 2', startAt: '2026-06-10T14:00:00Z', endAt: '2026-06-10T15:00:00Z' }, context1);
 
       const overlapping = await repository.findOverlapping(
         new Date('2026-06-10T12:00:00Z'),
-        new Date('2026-06-10T13:00:00Z')
+        new Date('2026-06-10T13:00:00Z'),
+        context1
       );
 
       expect(overlapping).toEqual([]);
     });
 
     it('should detect edge case: event starts exactly at range end', async () => {
-      await repository.create({ title: 'Event', startAt: '2026-06-10T11:00:00Z', endAt: '2026-06-10T12:00:00Z' });
+      await repository.create({ title: 'Event', startAt: '2026-06-10T11:00:00Z', endAt: '2026-06-10T12:00:00Z' }, context1);
 
       const overlapping = await repository.findOverlapping(
         new Date('2026-06-10T10:00:00Z'),
-        new Date('2026-06-10T11:00:00Z')
+        new Date('2026-06-10T11:00:00Z'),
+        context1
       );
 
       // Event starts exactly at range end, should not overlap
@@ -233,11 +250,12 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
     });
 
     it('should detect edge case: event ends exactly at range start', async () => {
-      await repository.create({ title: 'Event', startAt: '2026-06-10T09:00:00Z', endAt: '2026-06-10T10:00:00Z' });
+      await repository.create({ title: 'Event', startAt: '2026-06-10T09:00:00Z', endAt: '2026-06-10T10:00:00Z' }, context1);
 
       const overlapping = await repository.findOverlapping(
         new Date('2026-06-10T10:00:00Z'),
-        new Date('2026-06-10T11:00:00Z')
+        new Date('2026-06-10T11:00:00Z'),
+        context1
       );
 
       // Event ends exactly at range start, should not overlap

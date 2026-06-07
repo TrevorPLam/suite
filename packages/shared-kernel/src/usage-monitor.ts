@@ -8,9 +8,15 @@ export interface UsageRecord {
   periodEnd: Date;
 }
 
+export interface RepositoryContext {
+  userId: string;
+  tenantId: string;
+  requestId: string;
+}
+
 export interface UsageRepository {
-  findOrCreateUsage(userId: string, periodStart: Date, periodEnd: Date): Promise<UsageRecord>;
-  incrementUsage(id: string): Promise<void>;
+  findOrCreateUsage(userId: string, periodStart: Date, periodEnd: Date, context: RepositoryContext): Promise<UsageRecord>;
+  incrementUsage(id: string, context: RepositoryContext): Promise<void>;
 }
 
 export interface UsageMonitorOptions {
@@ -36,6 +42,8 @@ export function UsageMonitor(options: UsageMonitorOptions): MiddlewareHandler {
 
   return async (c, next) => {
     const userId = c.get('userId') as string | undefined;
+    const tenantId = c.get('tenantId') as string | undefined;
+    const requestId = c.get('requestId') as string | undefined;
 
     // Skip usage monitoring for unauthenticated requests or health checks
     if (!userId || c.req.path === '/api/health') {
@@ -46,11 +54,18 @@ export function UsageMonitor(options: UsageMonitorOptions): MiddlewareHandler {
     const now = new Date();
 
     try {
+      // Create repository context
+      const context: RepositoryContext = {
+        userId,
+        tenantId: tenantId || 'default-tenant',
+        requestId: requestId || generateRequestId(),
+      };
+
       // Get or create usage record for current period
       const newPeriodStart = new Date(now.getTime() - (now.getTime() % periodMs));
       const newPeriodEnd = new Date(newPeriodStart.getTime() + periodMs);
 
-      const currentUsage = await usageRepository.findOrCreateUsage(userId, newPeriodStart, newPeriodEnd);
+      const currentUsage = await usageRepository.findOrCreateUsage(userId, newPeriodStart, newPeriodEnd, context);
 
       // Check if user has exceeded 80% threshold
       if (currentUsage.requestCount >= blockThreshold) {
@@ -70,11 +85,15 @@ export function UsageMonitor(options: UsageMonitorOptions): MiddlewareHandler {
       await next();
 
       // Increment usage count after successful request
-      await usageRepository.incrementUsage(currentUsage.id);
+      await usageRepository.incrementUsage(currentUsage.id, context);
     } catch (error) {
       // Log error but don't block requests on database failures
       console.error('UsageMonitor error:', error);
       await next();
     }
   };
+}
+
+function generateRequestId(): string {
+  return crypto.randomUUID();
 }

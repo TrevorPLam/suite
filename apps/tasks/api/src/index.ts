@@ -23,7 +23,7 @@ import {
   setTaskKeyProviderFromEnv,
   isEncryptionEnabled,
 } from '@suite/domain-tasks';
-import { PostgresTaskRepository, createDbClient } from '@suite/db';
+import { PostgresTaskRepository, createDbClient, type RepositoryContext } from '@suite/db';
 import { validateTasksEnv, type TasksEnv } from '@suite/env-config';
 import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
 import {
@@ -33,7 +33,7 @@ import {
   archiveTaskBodySchema,
   batchOperationBodySchema,
 } from './schemas.js';
-import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace, requireRepositoryContext } from '@suite/shared-kernel';
 import { PostgresUsageRepository } from '@suite/db';
 import { openApiDoc } from './openapi.js';
 
@@ -48,6 +48,7 @@ type Variables = {
   userId: string | null;
   auth: ReturnType<typeof createAuth>;
   taskRepo: TaskRepository;
+  repositoryContext: RepositoryContext | null;
 };
 
 const app = new Hono<{ Variables: Variables; Bindings: Env }>();
@@ -251,7 +252,17 @@ app.use('/api/*', async (c, next) => {
 
   if (userId) {
     // Use organizationId from auth context as tenantId, fallback to 'default' for single-tenant
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const organizationId = (c.get('auth') as any)?.session?.organizationId || 'default';
+    
+    // Create repository context
+    const requestId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+    const repositoryContext: RepositoryContext = {
+      userId,
+      tenantId: organizationId,
+      requestId,
+    };
+    c.set('repositoryContext', repositoryContext);
     
     // Use HYPERDRIVE if available (Workers), otherwise DATABASE_URL (Node.js)
     const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
@@ -263,11 +274,14 @@ app.use('/api/*', async (c, next) => {
       throw new Error('Either HYPERDRIVE or DATABASE_URL must be set');
     }
     const db = createDbClient(dbEnv);
-    const repo = new PostgresTaskRepository(db, userId, organizationId);
+    const repo = new PostgresTaskRepository(db);
     c.set('taskRepo', repo);
   }
   await next();
 });
+
+// Validate repository context for all API routes
+app.use('/api/*', requireRepositoryContext());
 
 function readTaskError(error: unknown): { status: 400 | 404 | 500; body: Record<string, unknown> } {
   if (error instanceof TaskError) {
@@ -396,7 +410,20 @@ http_error_rate{app="tasks"} ${errorRate}
 
 app.get('/api/v1/tasks', async (c) => {
   const repo = c.get('taskRepo');
-  return c.json({ tasks: await listTasks(repo) });
+  const repositoryContext = c.get('repositoryContext');
+  if (!repositoryContext) {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Repository context not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      500,
+    );
+  }
+  return c.json({ tasks: await listTasks(repo, repositoryContext) });
 });
 
 app.get('/api/v1/tasks/search', async (c) => {
@@ -412,7 +439,21 @@ app.get('/api/v1/tasks/search', async (c) => {
     searchInput.tags = tags;
   }
 
-  const results = await searchTasks(searchInput);
+  const repo = c.get('taskRepo');
+  const repositoryContext = c.get('repositoryContext');
+  if (!repositoryContext) {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Repository context not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      500,
+    );
+  }
+  const results = await searchTasks(searchInput, repo, repositoryContext);
   return c.json({ tasks: results });
 });
 
@@ -447,7 +488,20 @@ app.post('/api/v1/tasks', requireAuth, requireOrganization, async (c) => {
 
   try {
     const repo = c.get('taskRepo');
-    return c.json({ task: await createTask(result.data, repo) }, 201);
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    return c.json({ task: await createTask(result.data, repo, repositoryContext) }, 201);
   } catch (error) {
     const response = readTaskError(error);
 
@@ -457,7 +511,20 @@ app.post('/api/v1/tasks', requireAuth, requireOrganization, async (c) => {
 
 app.get('/api/v1/tasks/:id', async (c) => {
   const repo = c.get('taskRepo');
-  const task = await getTask(c.req.param('id').trim(), repo);
+  const repositoryContext = c.get('repositoryContext');
+  if (!repositoryContext) {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Repository context not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      500,
+    );
+  }
+  const task = await getTask(c.req.param('id').trim(), repo, repositoryContext);
 
   if (!task) {
     return c.json(
@@ -527,7 +594,20 @@ app.put('/api/v1/tasks/:id/completion', requireAuth, requireOrganization, async 
 
   try {
     const repo = c.get('taskRepo');
-    return c.json({ task: await updateTaskCompletion(id, result.data, repo) });
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    return c.json({ task: await updateTaskCompletion(id, result.data, repo, repositoryContext) });
   } catch (error) {
     const response = readTaskError(error);
 
@@ -587,7 +667,20 @@ app.put('/api/v1/tasks/:id', requireAuth, requireOrganization, async (c) => {
 
   try {
     const repo = c.get('taskRepo');
-    return c.json({ task: await updateTask(id, result.data, repo) });
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    return c.json({ task: await updateTask(id, result.data, repo, repositoryContext) });
   } catch (error) {
     const response = readTaskError(error);
 
@@ -647,7 +740,20 @@ app.put('/api/v1/tasks/:id/archive', requireAuth, requireOrganization, async (c)
 
   try {
     const repo = c.get('taskRepo');
-    return c.json({ task: await archiveTask(id, result.data, repo) });
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    return c.json({ task: await archiveTask(id, result.data, repo, repositoryContext) });
   } catch (error) {
     const response = readTaskError(error);
 
@@ -674,7 +780,20 @@ app.delete('/api/v1/tasks/:id', requireAuth, requireOrganization, async (c) => {
 
   try {
     const repo = c.get('taskRepo');
-    await deleteTask(id, repo);
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    await deleteTask(id, repo, repositoryContext);
     return c.json({ success: true });
   } catch (error) {
     const response = readTaskError(error);
@@ -718,7 +837,21 @@ app.post('/api/v1/tasks/batch/complete', requireAuth, requireOrganization, async
   }
 
   try {
-    const results = await batchComplete(result.data);
+    const repo = c.get('taskRepo');
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext || !repo) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context or repository not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    const results = await batchComplete(result.data, repo, repositoryContext);
     return c.json({ tasks: results });
   } catch (error) {
     const response = readTaskError(error);
@@ -762,7 +895,21 @@ app.post('/api/v1/tasks/batch/archive', requireAuth, requireOrganization, async 
   }
 
   try {
-    const results = await batchArchive(result.data);
+    const repo = c.get('taskRepo');
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    const results = await batchArchive(result.data, repo, repositoryContext);
     return c.json({ tasks: results });
   } catch (error) {
     const response = readTaskError(error);

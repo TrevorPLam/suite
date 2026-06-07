@@ -4,12 +4,26 @@
  * without knowing implementation details (repository pattern)
  */
 
+// Repository context for request-scoped data
+export interface RepositoryContext {
+  /** The authenticated user ID for the current request */
+  userId: string;
+  
+  /** The tenant/organization ID for multi-tenancy */
+  tenantId: string;
+  
+  /** Unique request ID for tracing and logging */
+  requestId: string;
+}
+
+export { validateRepositoryContext, createRepositoryContext } from './repository-context.js';
+
 export interface Repository<T, ID = string> {
-  findById(id: ID): Promise<T | null>;
-  findAll(): Promise<T[]>;
-  create(entity: Omit<T, 'id'>): Promise<T>;
-  update(id: ID, entity: Partial<T>): Promise<T | null>;
-  delete(id: ID): Promise<boolean>;
+  findById(id: ID, context: RepositoryContext): Promise<T | null>;
+  findAll(context: RepositoryContext): Promise<T[]>;
+  create(entity: Omit<T, 'id'>, context: RepositoryContext): Promise<T>;
+  update(id: ID, entity: Partial<T>, context: RepositoryContext): Promise<T | null>;
+  delete(id: ID, context: RepositoryContext): Promise<boolean>;
 }
 
 export interface QueryOptions {
@@ -20,8 +34,8 @@ export interface QueryOptions {
 }
 
 export interface QueryRepository<T, ID = string> extends Repository<T, ID> {
-  findWhere(criteria: Partial<T>, options?: QueryOptions): Promise<T[]>;
-  count(criteria?: Partial<T>): Promise<number>;
+  findWhere(criteria: Partial<T>, context: RepositoryContext, options?: QueryOptions): Promise<T[]>;
+  count(criteria: Partial<T>, context: RepositoryContext): Promise<number>;
 }
 
 export const dbPackageName = '@suite/db';

@@ -29,11 +29,11 @@ import {
   InMemoryDriveFileRepository,
   InMemoryDriveFolderRepository,
 } from '@suite/domain-drive';
-import { PostgresDriveFileRepository, PostgresDriveFolderRepository, createDbClient } from '@suite/db';
+import { PostgresDriveFileRepository, PostgresDriveFolderRepository, createDbClient, type RepositoryContext } from '@suite/db';
 import { R2StorageAdapter } from './bootstrap.js';
 import { validateDriveEnv, type DriveEnv } from '@suite/env-config';
 import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
-import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
+import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace, requireRepositoryContext } from '@suite/shared-kernel';
 import { PostgresUsageRepository } from '@suite/db';
 import {
   uploadFileBodySchema,
@@ -60,6 +60,7 @@ type Variables = {
   fileRepo: DriveFileRepository;
   folderRepo: DriveFolderRepository;
   storageAdapter: StorageAdapter | null;
+  repositoryContext: RepositoryContext | null;
 };
 
 const app = new Hono<{ Variables: Variables; Bindings: Env }>();
@@ -280,7 +281,17 @@ app.use('/api/*', async (c, next) => {
 
   if (userId) {
     // Use organizationId from auth context as tenantId, fallback to 'default' for single-tenant
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const organizationId = (c.get('auth') as any)?.session?.organizationId || 'default';
+    
+    // Create repository context
+    const requestId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+    const repositoryContext: RepositoryContext = {
+      userId,
+      tenantId: organizationId,
+      requestId,
+    };
+    c.set('repositoryContext', repositoryContext);
     
     // Use Postgres repositories if HYPERDRIVE or DATABASE_URL is set, otherwise use in-memory repositories
     if (c.env.HYPERDRIVE || c.env.DATABASE_URL) {
@@ -291,8 +302,8 @@ app.use('/api/*', async (c, next) => {
         dbEnv.DATABASE_URL = c.env.DATABASE_URL;
       }
       const db = createDbClient(dbEnv);
-      const fileRepo = new PostgresDriveFileRepository(db, userId, organizationId);
-      const folderRepo = new PostgresDriveFolderRepository(db, userId, organizationId);
+      const fileRepo = new PostgresDriveFileRepository(db);
+      const folderRepo = new PostgresDriveFolderRepository(db);
       c.set('fileRepo', fileRepo);
       c.set('folderRepo', folderRepo);
     } else {
@@ -306,6 +317,8 @@ app.use('/api/*', async (c, next) => {
   await next();
 });
 
+// Validate repository context for all API routes
+app.use('/api/*', requireRepositoryContext());
 
 function readDriveError(error: unknown): { status: 400 | 404 | 500; body: Record<string, unknown> } {
   if (error instanceof DriveError) {
@@ -435,7 +448,12 @@ http_error_rate{app="drive"} ${errorRate}
 app.get('/api/v1/files', async (c) => {
   // Use in-memory repositories for public endpoint (no auth required)
   const fileRepo = new InMemoryDriveFileRepository();
-  const files = await listDriveFiles(fileRepo);
+  const repositoryContext: RepositoryContext = {
+    userId: 'anonymous',
+    tenantId: 'default',
+    requestId: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
+  };
+  const files = await listDriveFiles(fileRepo, repositoryContext);
   return c.json({ files });
 });
 
@@ -527,7 +545,20 @@ app.post('/api/v1/files', requireAuth, requireOrganization, timeout(300000, time
         const fileRepo = c.get('fileRepo');
         const folderRepo = c.get('folderRepo');
         const storageAdapter = c.get('storageAdapter');
-        const uploadedFile = await uploadDriveFile(payload, fileRepo, folderRepo, storageAdapter);
+        const repositoryContext = c.get('repositoryContext');
+        if (!repositoryContext) {
+          return c.json(
+            {
+              error: {
+                code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+                message: 'Repository context not found',
+                timestamp: new Date().toISOString(),
+              },
+            },
+            500,
+          );
+        }
+        const uploadedFile = await uploadDriveFile(payload, fileRepo, folderRepo, storageAdapter, repositoryContext);
         return c.json({ file: uploadedFile }, 201);
       } catch (error) {
         const response = readDriveError(error);
@@ -601,7 +632,20 @@ app.post('/api/v1/files', requireAuth, requireOrganization, timeout(300000, time
     const fileRepo = c.get('fileRepo');
     const folderRepo = c.get('folderRepo');
     const storageAdapter = c.get('storageAdapter');
-    const file = await uploadDriveFile(result.data, fileRepo, folderRepo, storageAdapter);
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    const file = await uploadDriveFile(result.data, fileRepo, folderRepo, storageAdapter, repositoryContext);
     return c.json({ file }, 201);
   } catch (error) {
     const response = readDriveError(error);
@@ -661,7 +705,20 @@ app.put('/api/v1/files/:id', requireAuth, requireOrganization, async (c) => {
   try {
     const fileRepo = c.get('fileRepo');
     const payload = { id, name: result.data.name };
-    const renamed = await renameDriveFile(payload, fileRepo);
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    const renamed = await renameDriveFile(payload, fileRepo, repositoryContext);
     if (!renamed) {
       return c.json(
         {
@@ -699,7 +756,20 @@ app.delete('/api/v1/files/:id', requireAuth, requireOrganization, async (c) => {
 
   const fileRepo = c.get('fileRepo');
   const storageAdapter = c.get('storageAdapter');
-  const deleted = await deleteDriveFile(id, fileRepo, storageAdapter);
+  const repositoryContext = c.get('repositoryContext');
+  if (!repositoryContext) {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Repository context not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      500,
+    );
+  }
+  const deleted = await deleteDriveFile(id, fileRepo, storageAdapter, repositoryContext);
 
   if (!deleted) {
     return c.json(
@@ -734,7 +804,20 @@ app.get('/api/v1/files/:id/download', async (c) => {
   }
 
   const fileRepo = c.get('fileRepo');
-  const file = await getDriveFile(id, fileRepo);
+  const repositoryContext = c.get('repositoryContext');
+  if (!repositoryContext) {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Repository context not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      500,
+    );
+  }
+  const file = await getDriveFile(id, fileRepo, repositoryContext);
 
   if (!file) {
     return c.json(
@@ -792,7 +875,12 @@ app.get('/api/v1/folders', async (c) => {
   // Use in-memory repositories for public endpoint (no auth required)
   const folderRepo = new InMemoryDriveFolderRepository();
   const parentId = c.req.query('parentId');
-  const folders = await listFolders(parentId, folderRepo);
+  const repositoryContext: RepositoryContext = {
+    userId: 'anonymous',
+    tenantId: 'default',
+    requestId: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
+  };
+  const folders = await listFolders(folderRepo, repositoryContext, parentId);
   return c.json({ folders });
 });
 
@@ -832,7 +920,20 @@ app.post('/api/v1/folders', requireAuth, requireOrganization, async (c) => {
 
   try {
     const folderRepo = c.get('folderRepo');
-    const folder = await createFolder(result.data, folderRepo);
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    const folder = await createFolder(result.data, folderRepo, repositoryContext);
     return c.json({ folder }, 201);
   } catch (error) {
     const response = readDriveError(error);
@@ -892,7 +993,20 @@ app.put('/api/v1/folders/:id', requireAuth, requireOrganization, async (c) => {
   try {
     const folderRepo = c.get('folderRepo');
     const payload = { id, name: result.data.name };
-    const renamed = await renameFolder(payload, folderRepo);
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    const renamed = await renameFolder(payload, folderRepo, repositoryContext);
     if (!renamed) {
       return c.json(
         {
@@ -930,7 +1044,20 @@ app.delete('/api/v1/folders/:id', requireAuth, requireOrganization, async (c) =>
 
   const fileRepo = c.get('fileRepo');
   const folderRepo = c.get('folderRepo');
-  const deleted = await deleteFolder(id, fileRepo, folderRepo);
+  const repositoryContext = c.get('repositoryContext');
+  if (!repositoryContext) {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Repository context not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      500,
+    );
+  }
+  const deleted = await deleteFolder(id, fileRepo, folderRepo, repositoryContext);
 
   if (!deleted) {
     return c.json(
@@ -1001,11 +1128,24 @@ app.post('/api/v1/files/:id/move', requireAuth, requireOrganization, async (c) =
   try {
     const fileRepo = c.get('fileRepo');
     const folderRepo = c.get('folderRepo');
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
     const payload: { id: string; folderId?: string } = { id };
     if (result.data.folderId !== undefined) {
       payload.folderId = result.data.folderId;
     }
-    const moved = await moveFile(payload, fileRepo, folderRepo);
+    const moved = await moveFile(payload, fileRepo, folderRepo, repositoryContext);
     if (!moved) {
       return c.json(
         {
@@ -1046,7 +1186,12 @@ app.get('/api/v1/files/search', async (c) => {
     );
   }
 
-  const results = await searchFiles(result.data, fileRepo);
+  const repositoryContext: RepositoryContext = {
+    userId: 'anonymous',
+    tenantId: 'default',
+    requestId: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
+  };
+  const results = await searchFiles(result.data, fileRepo, repositoryContext);
   return c.json({ files: results });
 });
 

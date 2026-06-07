@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { tasks, type TaskSchema, type NewTaskSchema } from '../schema/tasks/index.js';
-import type { QueryRepository, Database, TransactionScope } from '../index.js';
+import type { QueryRepository, Database, RepositoryContext } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
 
 // Domain type (from @suite/domain-tasks)
@@ -53,50 +53,46 @@ function mapToSchema(domain: Omit<TaskItem, 'id'>, tenantId: string): Omit<TaskS
 
 export class PostgresTaskRepository implements TaskRepository {
   private db: ReturnType<Database['getDrizzleDb']>;
-  private userId: string;
-  private tenantId: string;
   private database: Database;
 
-  constructor(db: Database, userId: string, tenantId: string) {
+  constructor(db: Database) {
     this.database = db;
     this.db = db.getDrizzleDb();
-    this.userId = userId;
-    this.tenantId = tenantId;
   }
 
-  private async setContext(): Promise<void> {
-    await this.database.setTenantContext(this.tenantId, this.userId);
+  private async setContext(context: RepositoryContext): Promise<void> {
+    await this.database.setTenantContext(context.tenantId, context.userId);
   }
 
-  async findById(id: string, tx?: TransactionScope): Promise<TaskItem | null> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async findById(id: string, context: RepositoryContext): Promise<TaskItem | null> {
+    await this.setContext(context);
+    const db = this.db;
     const results = await db
       .select()
       .from(tasks)
-      .where(and(eq(tasks.id, id), eq(tasks.userId, this.userId)))
+      .where(and(eq(tasks.id, id), eq(tasks.userId, context.userId)))
       .limit(1);
     return results[0] ? mapToDomain(results[0]) : null;
   }
 
-  async findAll(tx?: TransactionScope): Promise<TaskItem[]> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async findAll(context: RepositoryContext): Promise<TaskItem[]> {
+    await this.setContext(context);
+    const db = this.db;
     const results = await db
       .select()
       .from(tasks)
-      .where(eq(tasks.userId, this.userId));
+      .where(eq(tasks.userId, context.userId));
     return results.map(mapToDomain);
   }
 
-  async create(entity: Omit<TaskItem, 'id'>, tx?: TransactionScope): Promise<TaskItem> {
-    await this.setContext();
-    const db = tx ?? this.db;
-    const schemaEntity = mapToSchema(entity, this.tenantId);
+  async create(entity: Omit<TaskItem, 'id'>, context: RepositoryContext): Promise<TaskItem> {
+    await this.setContext(context);
+    const db = this.db;
+    const schemaEntity = mapToSchema(entity, context.tenantId);
     const newEntity: NewTaskSchema = {
       id: generateUUID(),
-      tenantId: this.tenantId,
-      userId: this.userId,
+      tenantId: context.tenantId,
+      userId: context.userId,
       title: schemaEntity.title,
       completed: schemaEntity.completed,
       archived: schemaEntity.archived,
@@ -112,9 +108,9 @@ export class PostgresTaskRepository implements TaskRepository {
     return mapToDomain(results[0]);
   }
 
-  async update(id: string, entity: Partial<TaskItem>, tx?: TransactionScope): Promise<TaskItem | null> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async update(id: string, entity: Partial<TaskItem>, context: RepositoryContext): Promise<TaskItem | null> {
+    await this.setContext(context);
+    const db = this.db;
     const schemaEntity: Partial<TaskSchema> = {};
     if (entity.title !== undefined) schemaEntity.title = entity.title;
     if (entity.completed !== undefined) schemaEntity.completed = entity.completed;
@@ -126,31 +122,32 @@ export class PostgresTaskRepository implements TaskRepository {
     const results = await db
       .update(tasks)
       .set(schemaEntity)
-      .where(and(eq(tasks.id, id), eq(tasks.userId, this.userId)))
+      .where(and(eq(tasks.id, id), eq(tasks.userId, context.userId)))
       .returning();
     return results[0] ? mapToDomain(results[0]) : null;
   }
 
-  async delete(id: string, tx?: TransactionScope): Promise<boolean> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async delete(id: string, context: RepositoryContext): Promise<boolean> {
+    await this.setContext(context);
+    const db = this.db;
     const results = await db
       .delete(tasks)
-      .where(and(eq(tasks.id, id), eq(tasks.userId, this.userId)))
+      .where(and(eq(tasks.id, id), eq(tasks.userId, context.userId)))
       .returning();
     return results.length > 0;
   }
 
-  async findWhere(criteria: Partial<TaskItem>, options?: import('../index.js').QueryOptions, tx?: TransactionScope): Promise<TaskItem[]> {
-    await this.setContext();
-    const db = tx ?? this.db;
-    const conditions = [eq(tasks.userId, this.userId)];
+  async findWhere(criteria: Partial<TaskItem>, context: RepositoryContext, _options?: import('../index.js').QueryOptions): Promise<TaskItem[]> {
+    await this.setContext(context);
+    const db = this.db;
+    const conditions = [eq(tasks.userId, context.userId)];
     Object.entries(criteria).forEach(([key, value]) => 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       conditions.push(eq(tasks[key as keyof TaskSchema] as any, value as any))
     );
     
     if (conditions.length === 1) {
-      return this.findAll(tx);
+      return this.findAll(context);
     }
 
     const whereClause = and(...conditions);
@@ -158,14 +155,14 @@ export class PostgresTaskRepository implements TaskRepository {
     return results.map(mapToDomain);
   }
 
-  async count(criteria?: Partial<TaskItem>, tx?: TransactionScope): Promise<number> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async count(criteria: Partial<TaskItem>, context: RepositoryContext): Promise<number> {
+    await this.setContext(context);
+    const db = this.db;
     if (!criteria || Object.keys(criteria).length === 0) {
-      const result = await db.select({ count: tasks.id }).from(tasks).where(eq(tasks.userId, this.userId));
+      const result = await db.select({ count: tasks.id }).from(tasks).where(eq(tasks.userId, context.userId));
       return result.length;
     }
-    const results = await this.findWhere(criteria, undefined, tx);
+    const results = await this.findWhere(criteria, context);
     return results.length;
   }
 }

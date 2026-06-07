@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { driveFiles, driveFolders, type DriveFileSchema, type NewDriveFileSchema, type DriveFolderSchema, type NewDriveFolderSchema } from '../schema/drive/index.js';
-import type { QueryRepository, Database, TransactionScope } from '../index.js';
+import type { QueryRepository, Database, RepositoryContext } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
 
 // Domain types (from @suite/domain-drive)
@@ -84,50 +84,46 @@ function mapFolderToSchema(domain: Omit<DriveFolder, 'id'>, tenantId: string): O
 
 export class PostgresDriveFileRepository implements DriveFileRepository {
   private db: ReturnType<Database['getDrizzleDb']>;
-  private userId: string;
-  private tenantId: string;
   private database: Database;
 
-  constructor(db: Database, userId: string, tenantId: string) {
+  constructor(db: Database) {
     this.database = db;
     this.db = db.getDrizzleDb();
-    this.userId = userId;
-    this.tenantId = tenantId;
   }
 
-  private async setContext(): Promise<void> {
-    await this.database.setTenantContext(this.tenantId, this.userId);
+  private async setContext(context: RepositoryContext): Promise<void> {
+    await this.database.setTenantContext(context.tenantId, context.userId);
   }
 
-  async findById(id: string, tx?: TransactionScope): Promise<DriveFile | null> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async findById(id: string, context: RepositoryContext): Promise<DriveFile | null> {
+    await this.setContext(context);
+    const db = this.db;
     const results = await db
       .select()
       .from(driveFiles)
-      .where(and(eq(driveFiles.id, id), eq(driveFiles.userId, this.userId)))
+      .where(and(eq(driveFiles.id, id), eq(driveFiles.userId, context.userId)))
       .limit(1);
     return results[0] ? mapFileToDomain(results[0]) : null;
   }
 
-  async findAll(tx?: TransactionScope): Promise<DriveFile[]> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async findAll(context: RepositoryContext): Promise<DriveFile[]> {
+    await this.setContext(context);
+    const db = this.db;
     const results = await db
       .select()
       .from(driveFiles)
-      .where(eq(driveFiles.userId, this.userId));
+      .where(eq(driveFiles.userId, context.userId));
     return results.map(mapFileToDomain);
   }
 
-  async create(entity: Omit<DriveFile, 'id'>, tx?: TransactionScope): Promise<DriveFile> {
-    await this.setContext();
-    const db = tx ?? this.db;
-    const schemaEntity = mapFileToSchema(entity, this.tenantId);
+  async create(entity: Omit<DriveFile, 'id'>, context: RepositoryContext): Promise<DriveFile> {
+    await this.setContext(context);
+    const db = this.db;
+    const schemaEntity = mapFileToSchema(entity, context.tenantId);
     const newEntity: NewDriveFileSchema = {
       id: generateUUID(),
-      tenantId: this.tenantId,
-      userId: this.userId,
+      tenantId: context.tenantId,
+      userId: context.userId,
       name: schemaEntity.name,
       size: schemaEntity.size,
       folderId: schemaEntity.folderId,
@@ -143,9 +139,9 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
     return mapFileToDomain(results[0]);
   }
 
-  async update(id: string, entity: Partial<DriveFile>, tx?: TransactionScope): Promise<DriveFile | null> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async update(id: string, entity: Partial<DriveFile>, context: RepositoryContext): Promise<DriveFile | null> {
+    await this.setContext(context);
+    const db = this.db;
     const schemaEntity: Partial<DriveFileSchema> = {};
     if (entity.name !== undefined) schemaEntity.name = entity.name;
     if (entity.size !== undefined) schemaEntity.size = entity.size;
@@ -157,31 +153,32 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
     const results = await db
       .update(driveFiles)
       .set(schemaEntity)
-      .where(and(eq(driveFiles.id, id), eq(driveFiles.userId, this.userId)))
+      .where(and(eq(driveFiles.id, id), eq(driveFiles.userId, context.userId)))
       .returning();
     return results[0] ? mapFileToDomain(results[0]) : null;
   }
 
-  async delete(id: string, tx?: TransactionScope): Promise<boolean> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async delete(id: string, context: RepositoryContext): Promise<boolean> {
+    await this.setContext(context);
+    const db = this.db;
     const results = await db
       .delete(driveFiles)
-      .where(and(eq(driveFiles.id, id), eq(driveFiles.userId, this.userId)))
+      .where(and(eq(driveFiles.id, id), eq(driveFiles.userId, context.userId)))
       .returning();
     return results.length > 0;
   }
 
-  async findWhere(criteria: Partial<DriveFile>, options?: import('../index.js').QueryOptions, tx?: TransactionScope): Promise<DriveFile[]> {
-    await this.setContext();
-    const db = tx ?? this.db;
-    const conditions = [eq(driveFiles.userId, this.userId)];
+  async findWhere(criteria: Partial<DriveFile>, context: RepositoryContext, _options?: import('../index.js').QueryOptions): Promise<DriveFile[]> {
+    await this.setContext(context);
+    const db = this.db;
+    const conditions = [eq(driveFiles.userId, context.userId)];
     Object.entries(criteria).forEach(([key, value]) => 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       conditions.push(eq(driveFiles[key as keyof DriveFileSchema] as any, value as any))
     );
     
     if (conditions.length === 1) {
-      return this.findAll(tx);
+      return this.findAll(context);
     }
 
     const whereClause = and(...conditions);
@@ -189,64 +186,60 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
     return results.map(mapFileToDomain);
   }
 
-  async count(criteria?: Partial<DriveFile>, tx?: TransactionScope): Promise<number> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async count(criteria: Partial<DriveFile>, context: RepositoryContext): Promise<number> {
+    await this.setContext(context);
+    const db = this.db;
     if (!criteria || Object.keys(criteria).length === 0) {
-      const result = await db.select({ count: driveFiles.id }).from(driveFiles).where(eq(driveFiles.userId, this.userId));
+      const result = await db.select({ count: driveFiles.id }).from(driveFiles).where(eq(driveFiles.userId, context.userId));
       return result.length;
     }
-    const results = await this.findWhere(criteria, undefined, tx);
+    const results = await this.findWhere(criteria, context);
     return results.length;
   }
 }
 
 export class PostgresDriveFolderRepository implements DriveFolderRepository {
   private db: ReturnType<Database['getDrizzleDb']>;
-  private userId: string;
-  private tenantId: string;
   private database: Database;
 
-  constructor(db: Database, userId: string, tenantId: string) {
+  constructor(db: Database) {
     this.database = db;
     this.db = db.getDrizzleDb();
-    this.userId = userId;
-    this.tenantId = tenantId;
   }
 
-  private async setContext(): Promise<void> {
-    await this.database.setTenantContext(this.tenantId, this.userId);
+  private async setContext(context: RepositoryContext): Promise<void> {
+    await this.database.setTenantContext(context.tenantId, context.userId);
   }
 
-  async findById(id: string, tx?: TransactionScope): Promise<DriveFolder | null> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async findById(id: string, context: RepositoryContext): Promise<DriveFolder | null> {
+    await this.setContext(context);
+    const db = this.db;
     const results = await db
       .select()
       .from(driveFolders)
-      .where(and(eq(driveFolders.id, id), eq(driveFolders.userId, this.userId)))
+      .where(and(eq(driveFolders.id, id), eq(driveFolders.userId, context.userId)))
       .limit(1);
     return results[0] ? mapFolderToDomain(results[0]) : null;
   }
 
-  async findAll(tx?: TransactionScope): Promise<DriveFolder[]> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async findAll(context: RepositoryContext): Promise<DriveFolder[]> {
+    await this.setContext(context);
+    const db = this.db;
     const results = await db
       .select()
       .from(driveFolders)
-      .where(eq(driveFolders.userId, this.userId));
+      .where(eq(driveFolders.userId, context.userId));
     return results.map(mapFolderToDomain);
   }
 
-  async create(entity: Omit<DriveFolder, 'id'>, tx?: TransactionScope): Promise<DriveFolder> {
-    await this.setContext();
-    const db = tx ?? this.db;
-    const schemaEntity = mapFolderToSchema(entity, this.tenantId);
+  async create(entity: Omit<DriveFolder, 'id'>, context: RepositoryContext): Promise<DriveFolder> {
+    await this.setContext(context);
+    const db = this.db;
+    const schemaEntity = mapFolderToSchema(entity, context.tenantId);
     const newEntity: NewDriveFolderSchema = {
       id: generateUUID(),
-      tenantId: this.tenantId,
-      userId: this.userId,
+      tenantId: context.tenantId,
+      userId: context.userId,
       name: schemaEntity.name,
       parentId: schemaEntity.parentId,
       createdAt: schemaEntity.createdAt,
@@ -258,9 +251,9 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
     return mapFolderToDomain(results[0]);
   }
 
-  async update(id: string, entity: Partial<DriveFolder>, tx?: TransactionScope): Promise<DriveFolder | null> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async update(id: string, entity: Partial<DriveFolder>, context: RepositoryContext): Promise<DriveFolder | null> {
+    await this.setContext(context);
+    const db = this.db;
     const schemaEntity: Partial<DriveFolderSchema> = {};
     if (entity.name !== undefined) schemaEntity.name = entity.name;
     if (entity.parentId !== undefined) schemaEntity.parentId = entity.parentId ?? null;
@@ -269,31 +262,32 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
     const results = await db
       .update(driveFolders)
       .set(schemaEntity)
-      .where(and(eq(driveFolders.id, id), eq(driveFolders.userId, this.userId)))
+      .where(and(eq(driveFolders.id, id), eq(driveFolders.userId, context.userId)))
       .returning();
     return results[0] ? mapFolderToDomain(results[0]) : null;
   }
 
-  async delete(id: string, tx?: TransactionScope): Promise<boolean> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async delete(id: string, context: RepositoryContext): Promise<boolean> {
+    await this.setContext(context);
+    const db = this.db;
     const results = await db
       .delete(driveFolders)
-      .where(and(eq(driveFolders.id, id), eq(driveFolders.userId, this.userId)))
+      .where(and(eq(driveFolders.id, id), eq(driveFolders.userId, context.userId)))
       .returning();
     return results.length > 0;
   }
 
-  async findWhere(criteria: Partial<DriveFolder>, options?: import('../index.js').QueryOptions, tx?: TransactionScope): Promise<DriveFolder[]> {
-    await this.setContext();
-    const db = tx ?? this.db;
-    const conditions = [eq(driveFolders.userId, this.userId)];
+  async findWhere(criteria: Partial<DriveFolder>, context: RepositoryContext, _options?: import('../index.js').QueryOptions): Promise<DriveFolder[]> {
+    await this.setContext(context);
+    const db = this.db;
+    const conditions = [eq(driveFolders.userId, context.userId)];
     Object.entries(criteria).forEach(([key, value]) => 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       conditions.push(eq(driveFolders[key as keyof DriveFolderSchema] as any, value as any))
     );
     
     if (conditions.length === 1) {
-      return this.findAll(tx);
+      return this.findAll(context);
     }
 
     const whereClause = and(...conditions);
@@ -301,14 +295,14 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
     return results.map(mapFolderToDomain);
   }
 
-  async count(criteria?: Partial<DriveFolder>, tx?: TransactionScope): Promise<number> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async count(criteria: Partial<DriveFolder>, context: RepositoryContext): Promise<number> {
+    await this.setContext(context);
+    const db = this.db;
     if (!criteria || Object.keys(criteria).length === 0) {
-      const result = await db.select({ count: driveFolders.id }).from(driveFolders).where(eq(driveFolders.userId, this.userId));
+      const result = await db.select({ count: driveFolders.id }).from(driveFolders).where(eq(driveFolders.userId, context.userId));
       return result.length;
     }
-    const results = await this.findWhere(criteria, undefined, tx);
+    const results = await this.findWhere(criteria, context);
     return results.length;
   }
 }

@@ -1,13 +1,24 @@
 import { usage } from '../schema/usage.js';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import type { UsageRepository, UsageRecord } from '@suite/shared-kernel';
-import type { Database } from '../database.interface.js';
+import type { Database, RepositoryContext } from '../index.js';
 
 export class PostgresUsageRepository implements UsageRepository {
-  constructor(private db: Database) {}
+  private db: ReturnType<Database['getDrizzleDb']>;
+  private database: Database;
 
-  async findOrCreateUsage(userId: string, periodStart: Date, periodEnd: Date): Promise<UsageRecord> {
-    const drizzleDb = this.db.getDrizzleDb();
+  constructor(db: Database) {
+    this.database = db;
+    this.db = db.getDrizzleDb();
+  }
+
+  private async setContext(context: RepositoryContext): Promise<void> {
+    await this.database.setTenantContext(context.tenantId, context.userId);
+  }
+
+  async findOrCreateUsage(userId: string, periodStart: Date, periodEnd: Date, context: RepositoryContext): Promise<UsageRecord> {
+    await this.setContext(context);
+    const drizzleDb = this.db;
     const now = new Date();
 
     // Try to find existing usage record for this period
@@ -61,8 +72,9 @@ export class PostgresUsageRepository implements UsageRepository {
     };
   }
 
-  async incrementUsage(id: string): Promise<void> {
-    const drizzleDb = this.db.getDrizzleDb();
+  async incrementUsage(id: string, context: RepositoryContext): Promise<void> {
+    await this.setContext(context);
+    const drizzleDb = this.db;
     await drizzleDb
       .update(usage)
       .set({

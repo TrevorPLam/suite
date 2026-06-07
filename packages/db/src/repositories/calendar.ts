@@ -1,6 +1,6 @@
 import { eq, and, lt, gt } from 'drizzle-orm';
 import { calendarEvents, type CalendarEventSchema, type NewCalendarEventSchema } from '../schema/calendar/index.js';
-import type { Repository, Database, TransactionScope } from '../index.js';
+import type { Repository, Database, RepositoryContext } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
 
 // Domain type (from @suite/domain-calendar)
@@ -12,7 +12,7 @@ export type CalendarEvent = {
 };
 
 export interface CalendarEventRepository extends Repository<CalendarEvent> {
-  findOverlapping?(startAt: Date, endAt: Date, excludeId?: string): Promise<CalendarEvent[]>;
+  findOverlapping?(startAt: Date, endAt: Date, context: RepositoryContext, excludeId?: string): Promise<CalendarEvent[]>;
 }
 
 // Map DB schema to domain type
@@ -37,50 +37,46 @@ function mapToSchema(domain: Omit<CalendarEvent, 'id'>, tenantId: string): Omit<
 
 export class PostgresCalendarEventRepository implements CalendarEventRepository {
   private db: ReturnType<Database['getDrizzleDb']>;
-  private userId: string;
-  private tenantId: string;
   private database: Database;
 
-  constructor(db: Database, userId: string, tenantId: string) {
+  constructor(db: Database) {
     this.database = db;
     this.db = db.getDrizzleDb();
-    this.userId = userId;
-    this.tenantId = tenantId;
   }
 
-  private async setContext(): Promise<void> {
-    await this.database.setTenantContext(this.tenantId, this.userId);
+  private async setContext(context: RepositoryContext): Promise<void> {
+    await this.database.setTenantContext(context.tenantId, context.userId);
   }
 
-  async findById(id: string, tx?: TransactionScope): Promise<CalendarEvent | null> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async findById(id: string, context: RepositoryContext): Promise<CalendarEvent | null> {
+    await this.setContext(context);
+    const db = this.db;
     const results = await db
       .select()
       .from(calendarEvents)
-      .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, this.userId)))
+      .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, context.userId)))
       .limit(1);
     return results[0] ? mapToDomain(results[0]) : null;
   }
 
-  async findAll(tx?: TransactionScope): Promise<CalendarEvent[]> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async findAll(context: RepositoryContext): Promise<CalendarEvent[]> {
+    await this.setContext(context);
+    const db = this.db;
     const results = await db
       .select()
       .from(calendarEvents)
-      .where(eq(calendarEvents.userId, this.userId));
+      .where(eq(calendarEvents.userId, context.userId));
     return results.map(mapToDomain);
   }
 
-  async create(entity: Omit<CalendarEvent, 'id'>, tx?: TransactionScope): Promise<CalendarEvent> {
-    await this.setContext();
-    const db = tx ?? this.db;
-    const schemaEntity = mapToSchema(entity, this.tenantId);
+  async create(entity: Omit<CalendarEvent, 'id'>, context: RepositoryContext): Promise<CalendarEvent> {
+    await this.setContext(context);
+    const db = this.db;
+    const schemaEntity = mapToSchema(entity, context.tenantId);
     const newEntity: NewCalendarEventSchema = {
       id: generateUUID(),
-      tenantId: this.tenantId,
-      userId: this.userId,
+      tenantId: context.tenantId,
+      userId: context.userId,
       title: schemaEntity.title,
       startAt: schemaEntity.startAt,
       endAt: schemaEntity.endAt,
@@ -92,9 +88,9 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
     return mapToDomain(results[0]);
   }
 
-  async update(id: string, entity: Partial<CalendarEvent>, tx?: TransactionScope): Promise<CalendarEvent | null> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async update(id: string, entity: Partial<CalendarEvent>, context: RepositoryContext): Promise<CalendarEvent | null> {
+    await this.setContext(context);
+    const db = this.db;
     const schemaEntity: Partial<CalendarEventSchema> = {};
     if (entity.title !== undefined) schemaEntity.title = entity.title;
     if (entity.startAt !== undefined) schemaEntity.startAt = new Date(entity.startAt);
@@ -103,28 +99,28 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
     const results = await db
       .update(calendarEvents)
       .set(schemaEntity)
-      .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, this.userId)))
+      .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, context.userId)))
       .returning();
     return results[0] ? mapToDomain(results[0]) : null;
   }
 
-  async delete(id: string, tx?: TransactionScope): Promise<boolean> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async delete(id: string, context: RepositoryContext): Promise<boolean> {
+    await this.setContext(context);
+    const db = this.db;
     const results = await db
       .delete(calendarEvents)
-      .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, this.userId)))
+      .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, context.userId)))
       .returning();
     return results.length > 0;
   }
 
-  async findOverlapping(startAt: Date, endAt: Date, excludeId?: string, tx?: TransactionScope): Promise<CalendarEvent[]> {
-    await this.setContext();
-    const db = tx ?? this.db;
+  async findOverlapping(startAt: Date, endAt: Date, context: RepositoryContext, excludeId?: string): Promise<CalendarEvent[]> {
+    await this.setContext(context);
+    const db = this.db;
     // Find events that overlap with the given range
     // Overlap condition: (event.start < candidate.end) AND (event.end > candidate.start)
     const conditions = [
-      eq(calendarEvents.userId, this.userId),
+      eq(calendarEvents.userId, context.userId),
       lt(calendarEvents.startAt, endAt),
       gt(calendarEvents.endAt, startAt),
     ];

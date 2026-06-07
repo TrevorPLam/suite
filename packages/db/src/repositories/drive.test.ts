@@ -5,6 +5,7 @@ import postgres from 'postgres';
 import { driveFiles, driveFolders } from '../schema/drive/index.js';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
+import type { RepositoryContext } from '../index.js';
 
 // Skip tests if DATABASE_URL is not set
 const dbUrl = process.env.DATABASE_URL;
@@ -17,6 +18,8 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
   let client: postgres.Sql;
   let db: ReturnType<typeof drizzle>;
   let repository: PostgresDriveFileRepository;
+  let context1: RepositoryContext;
+  let _context2: RepositoryContext;
 
   beforeAll(async () => {
     if (!dbUrl) {
@@ -31,7 +34,17 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
       transaction: async () => {},
       close: async () => {},
     };
-    repository = new PostgresDriveFileRepository(mockDb as any, userId1, tenantId1);
+    repository = new PostgresDriveFileRepository(mockDb as never);
+    context1 = {
+      userId: userId1,
+      tenantId: tenantId1,
+      requestId: randomUUID(),
+    };
+    _context2 = {
+      userId: userId2,
+      tenantId: tenantId2,
+      requestId: randomUUID(),
+    };
   });
 
   afterAll(async () => {
@@ -50,7 +63,7 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
         size: 1024,
         createdAt: '2026-06-10T10:00:00Z',
         modifiedAt: '2026-06-10T10:00:00Z',
-      });
+      }, context1);
 
       expect(file).toBeDefined();
       expect(file.id).toBeDefined();
@@ -67,7 +80,7 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
         createdAt: '2026-06-10T10:00:00Z',
         modifiedAt: '2026-06-10T10:00:00Z',
         blindIndex: 'hashed-name',
-      });
+      }, context1);
 
       expect(file).toBeDefined();
       expect(file.folderId).toBe('folder-123');
@@ -83,9 +96,9 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
         size: 512,
         createdAt: '2026-06-10T10:00:00Z',
         modifiedAt: '2026-06-10T10:00:00Z',
-      });
+      }, context1);
 
-      const found = await repository.findById(created.id);
+      const found = await repository.findById(created.id, context1);
 
       expect(found).toBeDefined();
       expect(found?.id).toBe(created.id);
@@ -93,25 +106,25 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
     });
 
     it('should return null for non-existent id', async () => {
-      const found = await repository.findById('non-existent-id');
+      const found = await repository.findById('non-existent-id', context1);
       expect(found).toBeNull();
     });
   });
 
   describe('findAll', () => {
     it('should return all files', async () => {
-      await repository.create({ name: 'file1.txt', size: 100, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'file2.txt', size: 200, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'file3.txt', size: 300, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
+      await repository.create({ name: 'file1.txt', size: 100, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'file2.txt', size: 200, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'file3.txt', size: 300, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
 
-      const allFiles = await repository.findAll();
+      const allFiles = await repository.findAll(context1);
 
       expect(allFiles).toHaveLength(3);
       expect(allFiles.map(f => f.name)).toEqual(['file1.txt', 'file2.txt', 'file3.txt']);
     });
 
     it('should return empty array when no files exist', async () => {
-      const allFiles = await repository.findAll();
+      const allFiles = await repository.findAll(context1);
       expect(allFiles).toEqual([]);
     });
   });
@@ -123,12 +136,12 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
         size: 100,
         createdAt: '2026-06-10T10:00:00Z',
         modifiedAt: '2026-06-10T10:00:00Z',
-      });
+      }, context1);
 
       const updated = await repository.update(created.id, {
         name: 'updated.txt',
         size: 200,
-      });
+      }, context1);
 
       expect(updated).toBeDefined();
       expect(updated?.id).toBe(created.id);
@@ -137,7 +150,7 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
     });
 
     it('should return null when updating non-existent file', async () => {
-      const updated = await repository.update('non-existent-id', { name: 'New Name' });
+      const updated = await repository.update('non-existent-id', { name: 'New Name' }, context1);
       expect(updated).toBeNull();
     });
 
@@ -147,12 +160,12 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
         size: 100,
         createdAt: '2026-06-10T10:00:00Z',
         modifiedAt: '2026-06-10T10:00:00Z',
-      });
+      }, context1);
 
       const updated = await repository.update(created.id, {
         folderId: 'folder-456',
         mimeType: 'text/plain',
-      });
+      }, context1);
 
       expect(updated).toBeDefined();
       expect(updated?.folderId).toBe('folder-456');
@@ -167,39 +180,39 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
         size: 100,
         createdAt: '2026-06-10T10:00:00Z',
         modifiedAt: '2026-06-10T10:00:00Z',
-      });
+      }, context1);
 
-      const deleted = await repository.delete(created.id);
+      const deleted = await repository.delete(created.id, context1);
 
       expect(deleted).toBe(true);
 
-      const found = await repository.findById(created.id);
+      const found = await repository.findById(created.id, context1);
       expect(found).toBeNull();
     });
 
     it('should return false when deleting non-existent file', async () => {
-      const deleted = await repository.delete('non-existent-id');
+      const deleted = await repository.delete('non-existent-id', context1);
       expect(deleted).toBe(false);
     });
   });
 
   describe('findWhere', () => {
     it('should find files matching criteria', async () => {
-      await repository.create({ name: 'file1.txt', size: 100, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'file2.txt', size: 200, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'file3.txt', size: 300, folderId: 'folder-2', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
+      await repository.create({ name: 'file1.txt', size: 100, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'file2.txt', size: 200, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'file3.txt', size: 300, folderId: 'folder-2', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
 
-      const filesInFolder1 = await repository.findWhere({ folderId: 'folder-1' });
+      const filesInFolder1 = await repository.findWhere({ folderId: 'folder-1' }, context1);
 
       expect(filesInFolder1).toHaveLength(2);
       expect(filesInFolder1.every(f => f.folderId === 'folder-1')).toBe(true);
     });
 
     it('should return all files when no criteria provided', async () => {
-      await repository.create({ name: 'file1.txt', size: 100, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'file2.txt', size: 200, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
+      await repository.create({ name: 'file1.txt', size: 100, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'file2.txt', size: 200, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
 
-      const allFiles = await repository.findWhere({});
+      const allFiles = await repository.findWhere({}, context1);
 
       expect(allFiles).toHaveLength(2);
     });
@@ -207,27 +220,27 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
 
   describe('count', () => {
     it('should count all files', async () => {
-      await repository.create({ name: 'file1.txt', size: 100, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'file2.txt', size: 200, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'file3.txt', size: 300, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
+      await repository.create({ name: 'file1.txt', size: 100, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'file2.txt', size: 200, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'file3.txt', size: 300, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
 
-      const count = await repository.count();
+      const count = await repository.count({}, context1);
 
       expect(count).toBe(3);
     });
 
     it('should count files matching criteria', async () => {
-      await repository.create({ name: 'file1.txt', size: 100, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'file2.txt', size: 200, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'file3.txt', size: 300, folderId: 'folder-2', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' });
+      await repository.create({ name: 'file1.txt', size: 100, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'file2.txt', size: 200, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'file3.txt', size: 300, folderId: 'folder-2', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
 
-      const countInFolder1 = await repository.count({ folderId: 'folder-1' });
+      const countInFolder1 = await repository.count({ folderId: 'folder-1' }, context1);
 
       expect(countInFolder1).toBe(2);
     });
 
     it('should return 0 when no files exist', async () => {
-      const count = await repository.count();
+      const count = await repository.count({}, context1);
       expect(count).toBe(0);
     });
   });
@@ -237,6 +250,8 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
   let client: postgres.Sql;
   let db: ReturnType<typeof drizzle>;
   let repository: PostgresDriveFolderRepository;
+  let context1: RepositoryContext;
+  let _context2: RepositoryContext;
 
   beforeAll(async () => {
     if (!dbUrl) {
@@ -251,7 +266,17 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
       transaction: async () => {},
       close: async () => {},
     };
-    repository = new PostgresDriveFolderRepository(mockDb as any, userId1, tenantId1);
+    repository = new PostgresDriveFolderRepository(mockDb as never);
+    context1 = {
+      userId: userId1,
+      tenantId: tenantId1,
+      requestId: randomUUID(),
+    };
+    _context2 = {
+      userId: userId2,
+      tenantId: tenantId2,
+      requestId: randomUUID(),
+    };
   });
 
   afterAll(async () => {
@@ -268,7 +293,7 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
       const folder = await repository.create({
         name: 'Documents',
         createdAt: '2026-06-10T10:00:00Z',
-      });
+      }, context1);
 
       expect(folder).toBeDefined();
       expect(folder.id).toBeDefined();
@@ -280,7 +305,7 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
         name: 'Subfolder',
         parentId: 'parent-123',
         createdAt: '2026-06-10T10:00:00Z',
-      });
+      }, context1);
 
       expect(folder).toBeDefined();
       expect(folder.parentId).toBe('parent-123');
@@ -292,9 +317,9 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
       const created = await repository.create({
         name: 'Find Me',
         createdAt: '2026-06-10T10:00:00Z',
-      });
+      }, context1);
 
-      const found = await repository.findById(created.id);
+      const found = await repository.findById(created.id, context1);
 
       expect(found).toBeDefined();
       expect(found?.id).toBe(created.id);
@@ -302,25 +327,25 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
     });
 
     it('should return null for non-existent id', async () => {
-      const found = await repository.findById('non-existent-id');
+      const found = await repository.findById('non-existent-id', context1);
       expect(found).toBeNull();
     });
   });
 
   describe('findAll', () => {
     it('should return all folders', async () => {
-      await repository.create({ name: 'Folder 1', createdAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'Folder 2', createdAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'Folder 3', createdAt: '2026-06-10T10:00:00Z' });
+      await repository.create({ name: 'Folder 1', createdAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'Folder 2', createdAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'Folder 3', createdAt: '2026-06-10T10:00:00Z' }, context1);
 
-      const allFolders = await repository.findAll();
+      const allFolders = await repository.findAll(context1);
 
       expect(allFolders).toHaveLength(3);
       expect(allFolders.map(f => f.name)).toEqual(['Folder 1', 'Folder 2', 'Folder 3']);
     });
 
     it('should return empty array when no folders exist', async () => {
-      const allFolders = await repository.findAll();
+      const allFolders = await repository.findAll(context1);
       expect(allFolders).toEqual([]);
     });
   });
@@ -330,11 +355,11 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
       const created = await repository.create({
         name: 'Original Name',
         createdAt: '2026-06-10T10:00:00Z',
-      });
+      }, context1);
 
       const updated = await repository.update(created.id, {
         name: 'Updated Name',
-      });
+      }, context1);
 
       expect(updated).toBeDefined();
       expect(updated?.id).toBe(created.id);
@@ -342,7 +367,7 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
     });
 
     it('should return null when updating non-existent folder', async () => {
-      const updated = await repository.update('non-existent-id', { name: 'New Name' });
+      const updated = await repository.update('non-existent-id', { name: 'New Name' }, context1);
       expect(updated).toBeNull();
     });
 
@@ -350,11 +375,11 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
       const created = await repository.create({
         name: 'Folder',
         createdAt: '2026-06-10T10:00:00Z',
-      });
+      }, context1);
 
       const updated = await repository.update(created.id, {
         parentId: 'new-parent-456',
-      });
+      }, context1);
 
       expect(updated).toBeDefined();
       expect(updated?.parentId).toBe('new-parent-456');
@@ -366,39 +391,39 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
       const created = await repository.create({
         name: 'To Delete',
         createdAt: '2026-06-10T10:00:00Z',
-      });
+      }, context1);
 
-      const deleted = await repository.delete(created.id);
+      const deleted = await repository.delete(created.id, context1);
 
       expect(deleted).toBe(true);
 
-      const found = await repository.findById(created.id);
+      const found = await repository.findById(created.id, context1);
       expect(found).toBeNull();
     });
 
     it('should return false when deleting non-existent folder', async () => {
-      const deleted = await repository.delete('non-existent-id');
+      const deleted = await repository.delete('non-existent-id', context1);
       expect(deleted).toBe(false);
     });
   });
 
   describe('findWhere', () => {
     it('should find folders matching criteria', async () => {
-      await repository.create({ name: 'Folder 1', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'Folder 2', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'Folder 3', parentId: 'parent-2', createdAt: '2026-06-10T10:00:00Z' });
+      await repository.create({ name: 'Folder 1', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'Folder 2', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'Folder 3', parentId: 'parent-2', createdAt: '2026-06-10T10:00:00Z' }, context1);
 
-      const foldersInParent1 = await repository.findWhere({ parentId: 'parent-1' });
+      const foldersInParent1 = await repository.findWhere({ parentId: 'parent-1' }, context1);
 
       expect(foldersInParent1).toHaveLength(2);
       expect(foldersInParent1.every(f => f.parentId === 'parent-1')).toBe(true);
     });
 
     it('should return all folders when no criteria provided', async () => {
-      await repository.create({ name: 'Folder 1', createdAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'Folder 2', createdAt: '2026-06-10T10:00:00Z' });
+      await repository.create({ name: 'Folder 1', createdAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'Folder 2', createdAt: '2026-06-10T10:00:00Z' }, context1);
 
-      const allFolders = await repository.findWhere({});
+      const allFolders = await repository.findWhere({}, context1);
 
       expect(allFolders).toHaveLength(2);
     });
@@ -406,27 +431,27 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
 
   describe('count', () => {
     it('should count all folders', async () => {
-      await repository.create({ name: 'Folder 1', createdAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'Folder 2', createdAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'Folder 3', createdAt: '2026-06-10T10:00:00Z' });
+      await repository.create({ name: 'Folder 1', createdAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'Folder 2', createdAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'Folder 3', createdAt: '2026-06-10T10:00:00Z' }, context1);
 
-      const count = await repository.count();
+      const count = await repository.count({}, context1);
 
       expect(count).toBe(3);
     });
 
     it('should count folders matching criteria', async () => {
-      await repository.create({ name: 'Folder 1', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'Folder 2', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' });
-      await repository.create({ name: 'Folder 3', parentId: 'parent-2', createdAt: '2026-06-10T10:00:00Z' });
+      await repository.create({ name: 'Folder 1', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'Folder 2', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' }, context1);
+      await repository.create({ name: 'Folder 3', parentId: 'parent-2', createdAt: '2026-06-10T10:00:00Z' }, context1);
 
-      const countInParent1 = await repository.count({ parentId: 'parent-1' });
+      const countInParent1 = await repository.count({ parentId: 'parent-1' }, context1);
 
       expect(countInParent1).toBe(2);
     });
 
     it('should return 0 when no folders exist', async () => {
-      const count = await repository.count();
+      const count = await repository.count({}, context1);
       expect(count).toBe(0);
     });
   });

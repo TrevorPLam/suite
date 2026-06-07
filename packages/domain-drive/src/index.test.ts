@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import fc from 'fast-check';
+import { randomUUID } from 'crypto';
 import {
   uploadDriveFile,
   listDriveFiles,
@@ -29,14 +30,25 @@ import {
   type CreateFolderInput,
 } from './index.js';
 import { generateAESKey } from '@suite/crypto';
+import type { RepositoryContext } from '@suite/db';
+
+function createTestContext(): RepositoryContext {
+  return {
+    userId: randomUUID(),
+    tenantId: randomUUID(),
+    requestId: randomUUID(),
+  };
+}
 
 describe('drive - upload', () => {
   let fileRepository: InMemoryDriveFileRepository;
   let folderRepository: InMemoryDriveFolderRepository;
+  let context: RepositoryContext;
 
   beforeEach(() => {
     fileRepository = new InMemoryDriveFileRepository();
     folderRepository = new InMemoryDriveFolderRepository();
+    context = createTestContext();
     resetKeyProvider();
   });
 
@@ -46,7 +58,7 @@ describe('drive - upload', () => {
       size: 1024,
     };
 
-    const file = await uploadDriveFile(input, fileRepository, folderRepository);
+    const file = await uploadDriveFile(input, fileRepository, folderRepository, null, context);
 
     expect(file.id).toBeDefined();
     expect(file.name).toBe('document.pdf');
@@ -61,7 +73,7 @@ describe('drive - upload', () => {
       size: 1024,
     };
 
-    const file = await uploadDriveFile(input, fileRepository, folderRepository);
+    const file = await uploadDriveFile(input, fileRepository, folderRepository, null, context);
 
     expect(file.name).toBe('document.pdf');
   });
@@ -72,8 +84,8 @@ describe('drive - upload', () => {
       size: 1024,
     };
 
-    await expect(uploadDriveFile(input, fileRepository, folderRepository)).rejects.toThrow(DriveError);
-    await expect(uploadDriveFile(input, fileRepository, folderRepository)).rejects.toMatchObject({
+    await expect(uploadDriveFile(input, fileRepository, folderRepository, null, context)).rejects.toThrow(DriveError);
+    await expect(uploadDriveFile(input, fileRepository, folderRepository, null, context)).rejects.toMatchObject({
       code: 'validation_error',
     });
   });
@@ -84,22 +96,22 @@ describe('drive - upload', () => {
       size: 1024,
     };
 
-    await expect(uploadDriveFile(input, fileRepository, folderRepository)).rejects.toThrow(DriveError);
-    await expect(uploadDriveFile(input, fileRepository, folderRepository)).rejects.toMatchObject({
+    await expect(uploadDriveFile(input, fileRepository, folderRepository, null, context)).rejects.toThrow(DriveError);
+    await expect(uploadDriveFile(input, fileRepository, folderRepository, null, context)).rejects.toMatchObject({
       code: 'validation_error',
     });
   });
 
   it('should reject file name that is . or ..', async () => {
     const input1: UploadDriveFileInput = { name: '.', size: 1024 };
-    await expect(uploadDriveFile(input1, fileRepository, folderRepository)).rejects.toThrow(DriveError);
-    await expect(uploadDriveFile(input1, fileRepository, folderRepository)).rejects.toMatchObject({
+    await expect(uploadDriveFile(input1, fileRepository, folderRepository, null, context)).rejects.toThrow(DriveError);
+    await expect(uploadDriveFile(input1, fileRepository, folderRepository, null, context)).rejects.toMatchObject({
       code: 'validation_error',
     });
 
     const input2: UploadDriveFileInput = { name: '..', size: 1024 };
-    await expect(uploadDriveFile(input2, fileRepository, folderRepository)).rejects.toThrow(DriveError);
-    await expect(uploadDriveFile(input2, fileRepository, folderRepository)).rejects.toMatchObject({
+    await expect(uploadDriveFile(input2, fileRepository, folderRepository, null, context)).rejects.toThrow(DriveError);
+    await expect(uploadDriveFile(input2, fileRepository, folderRepository, null, context)).rejects.toMatchObject({
       code: 'validation_error',
     });
   });
@@ -111,7 +123,7 @@ describe('drive - upload', () => {
       mimeType: 'application/pdf',
     };
 
-    const file = await uploadDriveFile(input, fileRepository, folderRepository);
+    const file = await uploadDriveFile(input, fileRepository, folderRepository, null, context);
     expect(file.mimeType).toBe('application/pdf');
   });
 
@@ -122,7 +134,7 @@ describe('drive - upload', () => {
       mimeType: 'Application/PDF',
     };
 
-    const file = await uploadDriveFile(input, fileRepository, folderRepository);
+    const file = await uploadDriveFile(input, fileRepository, folderRepository, null, context);
     expect(file.mimeType).toBe('application/pdf');
   });
 
@@ -133,8 +145,8 @@ describe('drive - upload', () => {
       mimeType: 'invalid',
     };
 
-    await expect(uploadDriveFile(input, fileRepository, folderRepository)).rejects.toThrow(DriveError);
-    await expect(uploadDriveFile(input, fileRepository, folderRepository)).rejects.toMatchObject({
+    await expect(uploadDriveFile(input, fileRepository, folderRepository, null, context)).rejects.toThrow(DriveError);
+    await expect(uploadDriveFile(input, fileRepository, folderRepository, null, context)).rejects.toMatchObject({
       code: 'validation_error',
     });
   });
@@ -145,7 +157,7 @@ describe('drive - upload', () => {
       size: 1024,
     };
 
-    const file = await uploadDriveFile(input, fileRepository, folderRepository);
+    const file = await uploadDriveFile(input, fileRepository, folderRepository, null, context);
     expect(file.createdAt).toBeDefined();
     expect(file.modifiedAt).toBeDefined();
     expect(file.createdAt).toBe(file.modifiedAt);
@@ -157,7 +169,7 @@ describe('drive - upload', () => {
       size: -1,
     };
 
-    await expect(uploadDriveFile(input)).rejects.toThrow();
+    await expect(uploadDriveFile(input, undefined, undefined, null, context)).rejects.toThrow();
   });
 
   it('should reject non-integer file size', async () => {
@@ -166,7 +178,7 @@ describe('drive - upload', () => {
       size: 1024.5,
     };
 
-    await expect(uploadDriveFile(input)).rejects.toThrow();
+    await expect(uploadDriveFile(input, undefined, undefined, null, context)).rejects.toThrow();
   });
 
   it('should allow zero file size', async () => {
@@ -175,7 +187,7 @@ describe('drive - upload', () => {
       size: 0,
     };
 
-    const file = await uploadDriveFile(input, fileRepository, folderRepository);
+    const file = await uploadDriveFile(input, fileRepository, folderRepository, null, context);
 
     expect(file.size).toBe(0);
   });
@@ -187,8 +199,8 @@ describe('drive - upload', () => {
       folderId: 'non-existent-folder',
     };
 
-    await expect(uploadDriveFile(input)).rejects.toThrow(DriveError);
-    await expect(uploadDriveFile(input)).rejects.toMatchObject({
+    await expect(uploadDriveFile(input, undefined, undefined, null, context)).rejects.toThrow(DriveError);
+    await expect(uploadDriveFile(input, undefined, undefined, null, context)).rejects.toMatchObject({
       code: 'not_found_error',
     });
   });
@@ -205,7 +217,7 @@ describe('drive - upload', () => {
       size: 1024,
     };
 
-    const file = await uploadDriveFile(input, fileRepository, folderRepository);
+    const file = await uploadDriveFile(input, fileRepository, folderRepository, null, context);
     
     // The returned file should have plaintext name (decrypted by domain)
     expect(file.name).toBe('document.pdf');
@@ -226,10 +238,12 @@ describe('drive - upload', () => {
 describe('drive - query', () => {
   let fileRepository: InMemoryDriveFileRepository;
   let folderRepository: InMemoryDriveFolderRepository;
+  let context: RepositoryContext;
 
   beforeEach(() => {
     fileRepository = new InMemoryDriveFileRepository();
     folderRepository = new InMemoryDriveFolderRepository();
+    context = createTestContext();
     resetKeyProvider();
   });
 
@@ -244,10 +258,10 @@ describe('drive - query', () => {
       size: 2048,
     };
 
-    const firstFile = await uploadDriveFile(firstInput, fileRepository, folderRepository);
-    const secondFile = await uploadDriveFile(secondInput, fileRepository, folderRepository);
+    const firstFile = await uploadDriveFile(firstInput, fileRepository, folderRepository, null, context);
+    const secondFile = await uploadDriveFile(secondInput, fileRepository, folderRepository, null, context);
 
-    const files = await listDriveFiles(fileRepository);
+    const files = await listDriveFiles(fileRepository, context);
 
     expect(files).toHaveLength(2);
     expect(files[0]?.id).toBe(secondFile.id);
@@ -260,8 +274,8 @@ describe('drive - query', () => {
       size: 1024,
     };
 
-    const file = await uploadDriveFile(input, fileRepository, folderRepository);
-    const found = await getDriveFile(file.id, fileRepository);
+    const file = await uploadDriveFile(input, fileRepository, folderRepository, null, context);
+    const found = await getDriveFile(file.id, fileRepository, context);
 
     expect(found).not.toBeNull();
     expect(found?.id).toBe(file.id);
@@ -269,12 +283,12 @@ describe('drive - query', () => {
   });
 
   it('should return null for non-existent file', async () => {
-    const found = await getDriveFile('non-existent-id', fileRepository);
+    const found = await getDriveFile('non-existent-id', fileRepository, context);
     expect(found).toBeNull();
   });
 
   it('should return empty list when no files exist', async () => {
-    const files = await listDriveFiles(fileRepository);
+    const files = await listDriveFiles(fileRepository, context);
     expect(files).toHaveLength(0);
   });
 });
@@ -282,10 +296,12 @@ describe('drive - query', () => {
 describe('drive - rename', () => {
   let fileRepository: InMemoryDriveFileRepository;
   let folderRepository: InMemoryDriveFolderRepository;
+  let context: RepositoryContext;
 
   beforeEach(() => {
     fileRepository = new InMemoryDriveFileRepository();
     folderRepository = new InMemoryDriveFolderRepository();
+    context = createTestContext();
     resetKeyProvider();
   });
 
@@ -295,14 +311,14 @@ describe('drive - rename', () => {
       size: 1024,
     };
 
-    const file = await uploadDriveFile(uploadInput, fileRepository, folderRepository);
+    const file = await uploadDriveFile(uploadInput, fileRepository, folderRepository, null, context);
 
     const renameInput: RenameDriveFileInput = {
       id: file.id,
       name: 'renamed.pdf',
     };
 
-    const renamed = await renameDriveFile(renameInput, fileRepository);
+    const renamed = await renameDriveFile(renameInput, fileRepository, context);
 
     expect(renamed).not.toBeNull();
     expect(renamed?.id).toBe(file.id);
@@ -316,7 +332,7 @@ describe('drive - rename', () => {
       size: 1024,
     };
 
-    const file = await uploadDriveFile(uploadInput, fileRepository, folderRepository);
+    const file = await uploadDriveFile(uploadInput, fileRepository, folderRepository, null, context);
     const originalModifiedAt = file.modifiedAt;
 
     // Wait a bit to ensure timestamp difference
@@ -327,7 +343,7 @@ describe('drive - rename', () => {
       name: 'renamed.pdf',
     };
 
-    const renamed = await renameDriveFile(renameInput, fileRepository);
+    const renamed = await renameDriveFile(renameInput, fileRepository, context);
 
     expect(renamed?.modifiedAt).not.toBe(originalModifiedAt);
     expect(renamed?.createdAt).toBe(file.createdAt);
@@ -339,14 +355,14 @@ describe('drive - rename', () => {
       size: 1024,
     };
 
-    const file = await uploadDriveFile(uploadInput, fileRepository, folderRepository);
+    const file = await uploadDriveFile(uploadInput, fileRepository, folderRepository, null, context);
 
     const renameInput: RenameDriveFileInput = {
       id: file.id,
       name: '  renamed.pdf  ',
     };
 
-    const renamed = await renameDriveFile(renameInput, fileRepository);
+    const renamed = await renameDriveFile(renameInput, fileRepository, context);
 
     expect(renamed?.name).toBe('renamed.pdf');
   });
@@ -357,15 +373,15 @@ describe('drive - rename', () => {
       size: 1024,
     };
 
-    const file = await uploadDriveFile(uploadInput, fileRepository, folderRepository);
+    const file = await uploadDriveFile(uploadInput, fileRepository, folderRepository, null, context);
 
     const renameInput: RenameDriveFileInput = {
       id: file.id,
       name: 'invalid<>.pdf',
     };
 
-    await expect(renameDriveFile(renameInput, fileRepository)).rejects.toThrow(DriveError);
-    await expect(renameDriveFile(renameInput, fileRepository)).rejects.toMatchObject({
+    await expect(renameDriveFile(renameInput, fileRepository, context)).rejects.toThrow(DriveError);
+    await expect(renameDriveFile(renameInput, fileRepository, context)).rejects.toMatchObject({
       code: 'validation_error',
     });
   });
@@ -376,7 +392,7 @@ describe('drive - rename', () => {
       name: 'renamed.pdf',
     };
 
-    const result = await renameDriveFile(renameInput, fileRepository);
+    const result = await renameDriveFile(renameInput, fileRepository, context);
 
     expect(result).toBeNull();
   });
@@ -387,14 +403,14 @@ describe('drive - rename', () => {
       size: 1024,
     };
 
-    const file = await uploadDriveFile(uploadInput, fileRepository, folderRepository);
+    const file = await uploadDriveFile(uploadInput, fileRepository, folderRepository, null, context);
 
     const renameInput: RenameDriveFileInput = {
       id: file.id,
       name: 'renamed.pdf',
     };
 
-    const renamed = await renameDriveFile(renameInput, fileRepository);
+    const renamed = await renameDriveFile(renameInput, fileRepository, context);
 
     expect(renamed?.size).toBe(1024);
   });
@@ -403,10 +419,12 @@ describe('drive - rename', () => {
 describe('drive - delete', () => {
   let fileRepository: InMemoryDriveFileRepository;
   let folderRepository: InMemoryDriveFolderRepository;
+  let context: RepositoryContext;
 
   beforeEach(() => {
     fileRepository = new InMemoryDriveFileRepository();
     folderRepository = new InMemoryDriveFolderRepository();
+    context = createTestContext();
     resetKeyProvider();
   });
 
@@ -416,18 +434,18 @@ describe('drive - delete', () => {
       size: 1024,
     };
 
-    const file = await uploadDriveFile(input, fileRepository, folderRepository);
+    const file = await uploadDriveFile(input, fileRepository, folderRepository, null, context);
 
-    const deleted = await deleteDriveFile(file.id, fileRepository);
+    const deleted = await deleteDriveFile(file.id, fileRepository, null, context);
 
     expect(deleted).toBe(true);
 
-    const found = await getDriveFile(file.id, fileRepository);
+    const found = await getDriveFile(file.id, fileRepository, context);
     expect(found).toBeNull();
   });
 
   it('should return false for non-existent file', async () => {
-    const deleted = await deleteDriveFile('non-existent-id', fileRepository);
+    const deleted = await deleteDriveFile('non-existent-id', fileRepository, null, context);
     expect(deleted).toBe(false);
   });
 
@@ -437,11 +455,11 @@ describe('drive - delete', () => {
       size: 1024,
     };
 
-    const file = await uploadDriveFile(input, fileRepository, folderRepository);
+    const file = await uploadDriveFile(input, fileRepository, folderRepository, null, context);
 
-    await deleteDriveFile(file.id, fileRepository);
+    await deleteDriveFile(file.id, fileRepository, null, context);
 
-    const files = await listDriveFiles(fileRepository);
+    const files = await listDriveFiles(fileRepository, context);
     expect(files).toHaveLength(0);
   });
 });
@@ -449,10 +467,12 @@ describe('drive - delete', () => {
 describe('drive - folders', () => {
   let fileRepository: InMemoryDriveFileRepository;
   let folderRepository: InMemoryDriveFolderRepository;
+  let context: RepositoryContext;
 
   beforeEach(() => {
     fileRepository = new InMemoryDriveFileRepository();
     folderRepository = new InMemoryDriveFolderRepository();
+    context = createTestContext();
     resetKeyProvider();
   });
 
@@ -461,7 +481,7 @@ describe('drive - folders', () => {
       name: 'Documents',
     };
 
-    const folder = await createFolder(input, folderRepository);
+    const folder = await createFolder(input, folderRepository, context);
 
     expect(folder.id).toBeDefined();
     expect(folder.name).toBe('Documents');
@@ -471,14 +491,14 @@ describe('drive - folders', () => {
 
   it('should create a folder with parent', async () => {
     const parentInput: CreateFolderInput = { name: 'Parent' };
-    const parent = await createFolder(parentInput, folderRepository);
+    const parent = await createFolder(parentInput, folderRepository, context);
 
     const childInput: CreateFolderInput = {
       name: 'Child',
       parentId: parent.id,
     };
 
-    const child = await createFolder(childInput, folderRepository);
+    const child = await createFolder(childInput, folderRepository, context);
 
     expect(child.parentId).toBe(parent.id);
   });
@@ -489,72 +509,72 @@ describe('drive - folders', () => {
       parentId: 'non-existent',
     };
 
-    await expect(createFolder(input, folderRepository)).rejects.toThrow(DriveError);
-    await expect(createFolder(input, folderRepository)).rejects.toMatchObject({
+    await expect(createFolder(input, folderRepository, context)).rejects.toThrow(DriveError);
+    await expect(createFolder(input, folderRepository, context)).rejects.toMatchObject({
       code: 'not_found_error',
     });
   });
 
   it('should reject invalid folder name', async () => {
     const input: CreateFolderInput = { name: 'invalid<>' };
-    await expect(createFolder(input, folderRepository)).rejects.toThrow(DriveError);
-    await expect(createFolder(input, folderRepository)).rejects.toMatchObject({
+    await expect(createFolder(input, folderRepository, context)).rejects.toThrow(DriveError);
+    await expect(createFolder(input, folderRepository, context)).rejects.toMatchObject({
       code: 'validation_error',
     });
   });
 
   it('should list all folders', async () => {
-    await createFolder({ name: 'Folder1' }, folderRepository);
-    await createFolder({ name: 'Folder2' }, folderRepository);
+    await createFolder({ name: 'Folder1' }, folderRepository, context);
+    await createFolder({ name: 'Folder2' }, folderRepository, context);
 
-    const folders = await listFolders(undefined, folderRepository);
+    const folders = await listFolders(folderRepository, context);
     expect(folders).toHaveLength(2);
   });
 
   it('should list folders by parent', async () => {
-    const parent = await createFolder({ name: 'Parent' }, folderRepository);
-    await createFolder({ name: 'Child1', parentId: parent.id }, folderRepository);
-    await createFolder({ name: 'Child2', parentId: parent.id }, folderRepository);
-    await createFolder({ name: 'Other' }, folderRepository);
+    const parent = await createFolder({ name: 'Parent' }, folderRepository, context);
+    await createFolder({ name: 'Child1', parentId: parent.id }, folderRepository, context);
+    await createFolder({ name: 'Child2', parentId: parent.id }, folderRepository, context);
+    await createFolder({ name: 'Other' }, folderRepository, context);
 
-    const childFolders = await listFolders(parent.id, folderRepository);
+    const childFolders = await listFolders(folderRepository, context, parent.id);
     expect(childFolders).toHaveLength(2);
   });
 
   it('should rename a folder', async () => {
-    const folder = await createFolder({ name: 'OldName' }, folderRepository);
+    const folder = await createFolder({ name: 'OldName' }, folderRepository, context);
 
-    const renamed = await renameFolder({ id: folder.id, name: 'NewName' }, folderRepository);
+    const renamed = await renameFolder({ id: folder.id, name: 'NewName' }, folderRepository, context);
 
     expect(renamed).not.toBeNull();
     expect(renamed?.name).toBe('NewName');
   });
 
   it('should return null when renaming non-existent folder', async () => {
-    const result = await renameFolder({ id: 'non-existent', name: 'Name' }, folderRepository);
+    const result = await renameFolder({ id: 'non-existent', name: 'Name' }, folderRepository, context);
     expect(result).toBeNull();
   });
 
   it('should delete empty folder', async () => {
-    const folder = await createFolder({ name: 'ToDelete' }, folderRepository);
+    const folder = await createFolder({ name: 'ToDelete' }, folderRepository, context);
 
-    const deleted = await deleteFolder(folder.id, fileRepository, folderRepository);
+    const deleted = await deleteFolder(folder.id, fileRepository, folderRepository, context);
     expect(deleted).toBe(true);
   });
 
   it('should not delete folder with files', async () => {
-    const folder = await createFolder({ name: 'WithFiles' }, folderRepository);
-    await uploadDriveFile({ name: 'file.txt', size: 100, folderId: folder.id }, fileRepository, folderRepository);
+    const folder = await createFolder({ name: 'WithFiles' }, folderRepository, context);
+    await uploadDriveFile({ name: 'file.txt', size: 100, folderId: folder.id }, fileRepository, folderRepository, null, context);
 
-    const deleted = await deleteFolder(folder.id, fileRepository, folderRepository);
+    const deleted = await deleteFolder(folder.id, fileRepository, folderRepository, context);
     expect(deleted).toBe(false);
   });
 
   it('should not delete folder with subfolders', async () => {
-    const parent = await createFolder({ name: 'Parent' }, folderRepository);
-    await createFolder({ name: 'Child', parentId: parent.id }, folderRepository);
+    const parent = await createFolder({ name: 'Parent' }, folderRepository, context);
+    await createFolder({ name: 'Child', parentId: parent.id }, folderRepository, context);
 
-    const deleted = await deleteFolder(parent.id, fileRepository, folderRepository);
+    const deleted = await deleteFolder(parent.id, fileRepository, folderRepository, context);
     expect(deleted).toBe(false);
   });
 });
@@ -562,55 +582,57 @@ describe('drive - folders', () => {
 describe('drive - move file', () => {
   let fileRepository: InMemoryDriveFileRepository;
   let folderRepository: InMemoryDriveFolderRepository;
+  let context: RepositoryContext;
 
   beforeEach(() => {
     fileRepository = new InMemoryDriveFileRepository();
     folderRepository = new InMemoryDriveFolderRepository();
+    context = createTestContext();
     resetKeyProvider();
   });
 
   it('should move file to folder', async () => {
-    const folder = await createFolder({ name: 'Documents' }, folderRepository);
-    const file = await uploadDriveFile({ name: 'file.txt', size: 100 }, fileRepository, folderRepository);
+    const folder = await createFolder({ name: 'Documents' }, folderRepository, context);
+    const file = await uploadDriveFile({ name: 'file.txt', size: 100 }, fileRepository, folderRepository, null, context);
 
-    const moved = await moveFile({ id: file.id, folderId: folder.id }, fileRepository, folderRepository);
+    const moved = await moveFile({ id: file.id, folderId: folder.id }, fileRepository, folderRepository, context);
 
     expect(moved).not.toBeNull();
     expect(moved?.folderId).toBe(folder.id);
   });
 
   it('should move file to root', async () => {
-    const folder = await createFolder({ name: 'Documents' }, folderRepository);
-    const file = await uploadDriveFile({ name: 'file.txt', size: 100, folderId: folder.id }, fileRepository, folderRepository);
+    const folder = await createFolder({ name: 'Documents' }, folderRepository, context);
+    const file = await uploadDriveFile({ name: 'file.txt', size: 100, folderId: folder.id }, fileRepository, folderRepository, null, context);
 
-    const moved = await moveFile({ id: file.id }, fileRepository, folderRepository);
+    const moved = await moveFile({ id: file.id }, fileRepository, folderRepository, context);
 
     expect(moved).not.toBeNull();
     expect(moved?.folderId).toBeUndefined();
   });
 
   it('should reject non-existent folder', async () => {
-    const file = await uploadDriveFile({ name: 'file.txt', size: 100 }, fileRepository, folderRepository);
+    const file = await uploadDriveFile({ name: 'file.txt', size: 100 }, fileRepository, folderRepository, null, context);
 
-    await expect(moveFile({ id: file.id, folderId: 'non-existent' }, fileRepository, folderRepository)).rejects.toThrow(DriveError);
-    await expect(moveFile({ id: file.id, folderId: 'non-existent' }, fileRepository, folderRepository)).rejects.toMatchObject({
+    await expect(moveFile({ id: file.id, folderId: 'non-existent' }, fileRepository, folderRepository, context)).rejects.toThrow(DriveError);
+    await expect(moveFile({ id: file.id, folderId: 'non-existent' }, fileRepository, folderRepository, context)).rejects.toMatchObject({
       code: 'not_found_error',
     });
   });
 
   it('should return null for non-existent file', async () => {
-    const moved = await moveFile({ id: 'non-existent' }, fileRepository, folderRepository);
+    const moved = await moveFile({ id: 'non-existent' }, fileRepository, folderRepository, context);
     expect(moved).toBeNull();
   });
 
   it('should update modifiedAt on move', async () => {
-    const folder = await createFolder({ name: 'Documents' }, folderRepository);
-    const file = await uploadDriveFile({ name: 'file.txt', size: 100 }, fileRepository, folderRepository);
+    const folder = await createFolder({ name: 'Documents' }, folderRepository, context);
+    const file = await uploadDriveFile({ name: 'file.txt', size: 100 }, fileRepository, folderRepository, null, context);
     const originalModifiedAt = file.modifiedAt;
 
     await new Promise(resolve => setTimeout(resolve, 10));
 
-    const moved = await moveFile({ id: file.id, folderId: folder.id }, fileRepository, folderRepository);
+    const moved = await moveFile({ id: file.id, folderId: folder.id }, fileRepository, folderRepository, context);
 
     expect(moved?.modifiedAt).not.toBe(originalModifiedAt);
   });
@@ -619,52 +641,54 @@ describe('drive - move file', () => {
 describe('drive - search', () => {
   let fileRepository: InMemoryDriveFileRepository;
   let folderRepository: InMemoryDriveFolderRepository;
+  let context: RepositoryContext;
 
   beforeEach(() => {
     fileRepository = new InMemoryDriveFileRepository();
     folderRepository = new InMemoryDriveFolderRepository();
+    context = createTestContext();
     resetKeyProvider();
   });
 
   it('should search files by name', async () => {
-    await uploadDriveFile({ name: 'document.pdf', size: 100 }, fileRepository, folderRepository);
-    await uploadDriveFile({ name: 'image.png', size: 200 }, fileRepository, folderRepository);
-    await uploadDriveFile({ name: 'notes.txt', size: 50 }, fileRepository, folderRepository);
+    await uploadDriveFile({ name: 'document.pdf', size: 100 }, fileRepository, folderRepository, null, context);
+    await uploadDriveFile({ name: 'image.png', size: 200 }, fileRepository, folderRepository, null, context);
+    await uploadDriveFile({ name: 'notes.txt', size: 50 }, fileRepository, folderRepository, null, context);
 
-    const results = await searchFiles({ query: 'doc' }, fileRepository);
+    const results = await searchFiles({ query: 'doc' }, fileRepository, context);
     expect(results).toHaveLength(1);
     expect(results[0]?.name).toBe('document.pdf');
   });
 
   it('should search case-insensitively', async () => {
-    await uploadDriveFile({ name: 'Document.pdf', size: 100 }, fileRepository, folderRepository);
+    await uploadDriveFile({ name: 'Document.pdf', size: 100 }, fileRepository, folderRepository, null, context);
 
-    const results = await searchFiles({ query: 'document' }, fileRepository);
+    const results = await searchFiles({ query: 'document' }, fileRepository, context);
     expect(results).toHaveLength(1);
   });
 
   it('should return empty array for no matches', async () => {
-    await uploadDriveFile({ name: 'file.txt', size: 100 }, fileRepository, folderRepository);
+    await uploadDriveFile({ name: 'file.txt', size: 100 }, fileRepository, folderRepository, null, context);
 
-    const results = await searchFiles({ query: 'nonexistent' }, fileRepository);
+    const results = await searchFiles({ query: 'nonexistent' }, fileRepository, context);
     expect(results).toHaveLength(0);
   });
 
   it('should search within specific folder', async () => {
-    const folder = await createFolder({ name: 'Documents' }, folderRepository);
-    await uploadDriveFile({ name: 'document.pdf', size: 100, folderId: folder.id }, fileRepository, folderRepository);
-    await uploadDriveFile({ name: 'document.pdf', size: 100 }, fileRepository, folderRepository); // Another file in root
+    const folder = await createFolder({ name: 'Documents' }, folderRepository, context);
+    await uploadDriveFile({ name: 'document.pdf', size: 100, folderId: folder.id }, fileRepository, folderRepository, null, context);
+    await uploadDriveFile({ name: 'document.pdf', size: 100 }, fileRepository, folderRepository, null, context); // Another file in root
 
-    const results = await searchFiles({ query: 'doc', folderId: folder.id }, fileRepository);
+    const results = await searchFiles({ query: 'doc', folderId: folder.id }, fileRepository, context);
     expect(results).toHaveLength(1);
     expect(results[0]?.folderId).toBe(folder.id);
   });
 
   it('should return all files when query matches all', async () => {
-    await uploadDriveFile({ name: 'file1.txt', size: 100 }, fileRepository, folderRepository);
-    await uploadDriveFile({ name: 'file2.txt', size: 200 }, fileRepository, folderRepository);
+    await uploadDriveFile({ name: 'file1.txt', size: 100 }, fileRepository, folderRepository, null, context);
+    await uploadDriveFile({ name: 'file2.txt', size: 200 }, fileRepository, folderRepository, null, context);
 
-    const results = await searchFiles({ query: 'file' }, fileRepository);
+    const results = await searchFiles({ query: 'file' }, fileRepository, context);
     expect(results).toHaveLength(2);
   });
 });
@@ -672,10 +696,12 @@ describe('drive - search', () => {
 describe('drive - encryption', () => {
   let fileRepository: InMemoryDriveFileRepository;
   let folderRepository: InMemoryDriveFolderRepository;
+  let context: RepositoryContext;
 
   beforeEach(() => {
     fileRepository = new InMemoryDriveFileRepository();
     folderRepository = new InMemoryDriveFolderRepository();
+    context = createTestContext();
     resetKeyProvider();
   });
 
@@ -683,8 +709,8 @@ describe('drive - encryption', () => {
     const testKey = await generateAESKey(false);
     setDriveKeyProvider(async () => testKey);
 
-    await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository);
-    const files = await listDriveFiles(fileRepository);
+    await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository, null, context);
+    const files = await listDriveFiles(fileRepository, context);
 
     expect(files).toHaveLength(1);
     expect(files[0]?.name).toBe('document.pdf');
@@ -694,8 +720,8 @@ describe('drive - encryption', () => {
     const testKey = await generateAESKey(false);
     setDriveKeyProvider(async () => testKey);
 
-    const file = await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository);
-    const found = await getDriveFile(file.id, fileRepository);
+    const file = await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository, null, context);
+    const found = await getDriveFile(file.id, fileRepository, context);
 
     expect(found).not.toBeNull();
     expect(found?.name).toBe('document.pdf');
@@ -705,8 +731,8 @@ describe('drive - encryption', () => {
     const testKey = await generateAESKey(false);
     setDriveKeyProvider(async () => testKey);
 
-    const file = await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository);
-    const renamed = await renameDriveFile({ id: file.id, name: 'renamed.pdf' }, fileRepository);
+    const file = await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository, null, context);
+    const renamed = await renameDriveFile({ id: file.id, name: 'renamed.pdf' }, fileRepository, context);
 
     expect(renamed).not.toBeNull();
     expect(renamed?.name).toBe('renamed.pdf');
@@ -716,7 +742,7 @@ describe('drive - encryption', () => {
     const testKey = await generateAESKey(false);
     setDriveKeyProvider(async () => testKey);
 
-    const folder = await createFolder({ name: 'Documents' }, folderRepository);
+    const folder = await createFolder({ name: 'Documents' }, folderRepository, context);
     expect(folder.name).toBe('Documents');
   });
 
@@ -724,8 +750,8 @@ describe('drive - encryption', () => {
     const testKey = await generateAESKey(false);
     setDriveKeyProvider(async () => testKey);
 
-    await createFolder({ name: 'Documents' }, folderRepository);
-    const folders = await listFolders(undefined, folderRepository);
+    await createFolder({ name: 'Documents' }, folderRepository, context);
+    const folders = await listFolders(folderRepository, context);
 
     expect(folders).toHaveLength(1);
     expect(folders[0]?.name).toBe('Documents');
@@ -735,8 +761,8 @@ describe('drive - encryption', () => {
     const testKey = await generateAESKey(false);
     setDriveKeyProvider(async () => testKey);
 
-    const folder = await createFolder({ name: 'OldName' }, folderRepository);
-    const renamed = await renameFolder({ id: folder.id, name: 'NewName' }, folderRepository);
+    const folder = await createFolder({ name: 'OldName' }, folderRepository, context);
+    const renamed = await renameFolder({ id: folder.id, name: 'NewName' }, folderRepository, context);
 
     expect(renamed).not.toBeNull();
     expect(renamed?.name).toBe('NewName');
@@ -746,40 +772,40 @@ describe('drive - encryption', () => {
     const testKey = await generateAESKey(false);
     setDriveKeyProvider(async () => testKey);
 
-    await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository);
-    const results = await searchFiles({ query: 'doc' }, fileRepository);
+    await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository, null, context);
+    const results = await searchFiles({ query: 'doc' }, fileRepository, context);
 
     expect(results).toHaveLength(1);
     expect(results[0]?.name).toBe('document.pdf');
   });
 
   it('should reset files DB', async () => {
-    await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository);
-    await resetDriveFilesDB(fileRepository);
+    await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository, null, context);
+    await resetDriveFilesDB(fileRepository, context);
 
-    const files = await listDriveFiles(fileRepository);
+    const files = await listDriveFiles(fileRepository, context);
     expect(files).toHaveLength(0);
   });
 
   it('should reset folders DB', async () => {
-    await createFolder({ name: 'Documents' }, folderRepository);
-    await resetDriveFoldersDB(folderRepository);
+    await createFolder({ name: 'Documents' }, folderRepository, context);
+    await resetDriveFoldersDB(folderRepository, context);
 
-    const folders = await listFolders(undefined, folderRepository);
+    const folders = await listFolders(folderRepository, context);
     expect(folders).toHaveLength(0);
   });
 
   it('should search files by blind index', async () => {
-    await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository);
-    const results = await searchFiles({ blindIndex: 'some-blind-index' }, fileRepository);
+    await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository, null, context);
+    const results = await searchFiles({ blindIndex: 'some-blind-index' }, fileRepository, context);
 
     // No files have blind index set, so should return empty
     expect(results).toHaveLength(0);
   });
 
   it('should get drive overview', async () => {
-    await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository);
-    const overview = await getDriveOverview(fileRepository);
+    await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository, null, context);
+    const overview = await getDriveOverview(fileRepository, context);
 
     expect(overview.name).toBe('Drive');
     expect(overview.description).toBe('Starter drive domain package');
@@ -809,8 +835,8 @@ describe('drive - encryption', () => {
       },
     };
 
-    const file = await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository, mockAdapter);
-    await deleteDriveFile(file.id, fileRepository, mockAdapter);
+    const file = await uploadDriveFile({ name: 'document.pdf', size: 1024 }, fileRepository, folderRepository, mockAdapter, context);
+    await deleteDriveFile(file.id, fileRepository, mockAdapter, context);
 
     expect(deleteCalled).toBe(true);
   });
@@ -825,7 +851,7 @@ describe('drive - encryption', () => {
       },
     };
 
-    await uploadDriveFile({ name: 'document.pdf', size: 1024, bytes: new Uint8Array([1, 2, 3]) }, fileRepository, folderRepository, mockAdapter);
+    await uploadDriveFile({ name: 'document.pdf', size: 1024, bytes: new Uint8Array([1, 2, 3]) }, fileRepository, folderRepository, mockAdapter, context);
 
     expect(putCalled).toBe(true);
   });
@@ -834,10 +860,12 @@ describe('drive - encryption', () => {
 describe('drive - property-based tests', () => {
   let fileRepository: InMemoryDriveFileRepository;
   let folderRepository: InMemoryDriveFolderRepository;
+  let context: RepositoryContext;
 
   beforeEach(() => {
     fileRepository = new InMemoryDriveFileRepository();
     folderRepository = new InMemoryDriveFolderRepository();
+    context = createTestContext();
     resetKeyProvider();
   });
 
@@ -856,7 +884,7 @@ describe('drive - property-based tests', () => {
             size,
           };
 
-          const file = await uploadDriveFile(input, fileRepository, folderRepository);
+          const file = await uploadDriveFile(input, fileRepository, folderRepository, null, context);
           expect(file.name).toBe(nameWithWhitespace.trim());
           expect(file.name.length).toBeGreaterThan(0);
         }
@@ -877,7 +905,7 @@ describe('drive - property-based tests', () => {
             size,
           };
 
-          const file = await uploadDriveFile(input, fileRepository, folderRepository);
+          const file = await uploadDriveFile(input, fileRepository, folderRepository, null, context);
           expect(file.size).toBeGreaterThanOrEqual(0);
         }
       )
@@ -897,7 +925,7 @@ describe('drive - property-based tests', () => {
             size,
           };
 
-          await expect(uploadDriveFile(input)).rejects.toThrow(DriveError);
+          await expect(uploadDriveFile(input, undefined, undefined, null, context)).rejects.toThrow(DriveError);
         }
       )
     );
@@ -916,7 +944,7 @@ describe('drive - property-based tests', () => {
             name: nameWithWhitespace,
           };
 
-          const folder = await createFolder(input, folderRepository);
+          const folder = await createFolder(input, folderRepository, context);
           expect(folder.name).toBe(nameWithWhitespace.trim());
           expect(folder.name.length).toBeGreaterThan(0);
         }
@@ -933,9 +961,9 @@ describe('drive - property-based tests', () => {
           resetDriveFiles(fileRepository);
           const fileName = name.toLowerCase();
 
-          await uploadDriveFile({ name: fileName, size: 100 }, fileRepository, folderRepository);
+          await uploadDriveFile({ name: fileName, size: 100 }, fileRepository, folderRepository, null, context);
 
-          const results = await searchFiles({ query: query.toLowerCase() }, fileRepository);
+          const results = await searchFiles({ query: query.toLowerCase() }, fileRepository, context);
           if (fileName.includes(query.toLowerCase())) {
             expect(results.length).toBeGreaterThan(0);
           }

@@ -41,11 +41,12 @@ export type {
 } from './lib/tasks.js';
 
 import { listTasks } from './lib/tasks.js';
+import type { RepositoryContext } from '@suite/db';
 
-export async function getTasksOverview() {
+export async function getTasksOverview(context?: RepositoryContext) {
   return {
     name: 'Tasks',
     description: 'Starter tasks domain package',
-    tasks: await listTasks(),
+    tasks: context ? await listTasks(undefined, context) : [],
   };
 }

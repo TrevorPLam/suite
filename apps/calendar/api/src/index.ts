@@ -19,8 +19,8 @@ import {
 } from '@suite/domain-calendar';
 import { validateCalendarEnv, type CalendarEnv } from '@suite/env-config';
 import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
-import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace } from '@suite/shared-kernel';
-import { PostgresUsageRepository, PostgresCalendarEventRepository, createDbClient } from '@suite/db';
+import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace, requireRepositoryContext } from '@suite/shared-kernel';
+import { PostgresUsageRepository, PostgresCalendarEventRepository, createDbClient, type RepositoryContext } from '@suite/db';
 import { createEventBodySchema, updateEventBodySchema } from './schemas.js';
 import { openApiDoc } from './openapi.js';
 
@@ -35,6 +35,7 @@ type Variables = {
   userId: string | null;
   auth: ReturnType<typeof createAuth>;
   calendarRepo: CalendarEventRepository;
+  repositoryContext: RepositoryContext | null;
 };
 
 const app = new Hono<{ Variables: Variables; Bindings: Env }>();
@@ -230,7 +231,19 @@ app.use('/api/*', async (c, next) => {
 
   if (userId) {
     // Use organizationId from auth context as tenantId, fallback to 'default' for single-tenant
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const organizationId = (c.get('auth') as any)?.session?.organizationId || 'default';
+    
+    // Get requestId from headers (set by requestId middleware)
+    const requestId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+
+    // Create repository context
+    const repositoryContext: RepositoryContext = {
+      userId,
+      tenantId: organizationId,
+      requestId,
+    };
+    c.set('repositoryContext', repositoryContext);
     
     // Use HYPERDRIVE if available (Workers), otherwise DATABASE_URL (Node.js)
     const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
@@ -242,11 +255,14 @@ app.use('/api/*', async (c, next) => {
       throw new Error('Either HYPERDRIVE or DATABASE_URL must be set');
     }
     const db = createDbClient(dbEnv);
-    const repo = new PostgresCalendarEventRepository(db, userId, organizationId);
+    const repo = new PostgresCalendarEventRepository(db);
     c.set('calendarRepo', repo);
   }
   await next();
 });
+
+// Validate repository context for all API routes
+app.use('/api/*', requireRepositoryContext());
 
 type CalendarResponseStatus = 400 | 404 | 409 | 500;
 
@@ -434,6 +450,20 @@ http_error_rate{app="calendar"} ${errorRate}
 app.get('/api/v1/events', async (c) => {
   const range = readEventRange(c.req.query());
   const repo = c.get('calendarRepo');
+  const repositoryContext = c.get('repositoryContext');
+
+  if (!repositoryContext) {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Repository context not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      500,
+    );
+  }
 
   if (range === null) {
     const hasStartAt = c.req.query('startAt') !== undefined;
@@ -453,11 +483,11 @@ app.get('/api/v1/events', async (c) => {
       );
     }
 
-    const events = await listCalendarEvents(repo);
+    const events = await listCalendarEvents(repo, repositoryContext);
     return c.json({ events });
   }
 
-  const events = await listCalendarEventsInRange(range, repo);
+  const events = await listCalendarEventsInRange(range, repo, repositoryContext);
   return c.json({ events });
 });
 
@@ -495,7 +525,20 @@ app.post('/api/v1/events', requireAuth, requireOrganization, async (c) => {
 
   try {
     const repo = c.get('calendarRepo');
-    const event = await createCalendarEvent(result.data, repo);
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    const event = await createCalendarEvent(result.data, repo, repositoryContext);
     return c.json({ event }, 201);
   } catch (error) {
     const response = readCalendarError(error);
@@ -554,7 +597,20 @@ app.put('/api/v1/events/:id', requireAuth, requireOrganization, async (c) => {
 
   try {
     const repo = c.get('calendarRepo');
-    const event = await updateCalendarEvent(id, result.data, repo);
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    const event = await updateCalendarEvent(id, result.data, repo, repositoryContext);
     return c.json({ event });
   } catch (error) {
     const response = readCalendarError(error);
