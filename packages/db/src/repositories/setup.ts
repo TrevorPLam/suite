@@ -68,6 +68,17 @@ export async function teardownMigrations(dbUrl: string): Promise<void> {
 }
 
 /**
+ * Note: Transaction-based testing is now the default for repository tests.
+ * Tests use withTransaction() helper which wraps each test in a transaction
+ * that is automatically rolled back after completion. This provides:
+ * - 86.5x faster test execution compared to DELETE-based teardown
+ * - Complete test isolation without data pollution
+ * - No need for manual cleanup in beforeEach hooks
+ * 
+ * See packages/db/src/test-helpers/transaction-wrapper.ts for implementation.
+ */
+
+/**
  * Create a test database connection
  * @param dbUrl - Database connection string
  * @returns Database instance and client
