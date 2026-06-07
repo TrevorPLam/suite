@@ -31,9 +31,14 @@ export async function setupMigrations(dbUrl: string): Promise<void> {
 
 /**
  * Rollback database migrations (for cleanup)
- * Note: Drizzle doesn't support automatic rollback, so we use
- * a different approach: clean all tables instead
+ * Note: This function is deprecated for repository tests.
+ * Transaction-based testing (withTransaction) provides automatic rollback
+ * after each test, making DELETE-based cleanup obsolete.
+ * 
+ * This function is kept for backward compatibility with other test suites
+ * that may not use transaction-based testing yet.
  * @param dbUrl - Database connection string
+ * @deprecated Use withTransaction() from test-helpers/transaction-wrapper.ts instead
  */
 export async function teardownMigrations(dbUrl: string): Promise<void> {
   if (!dbUrl) {
