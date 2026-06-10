@@ -4,7 +4,7 @@ compatibility_date = "2026-06-06"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-BETTER_AUTH_URL = ""
+# BETTER_AUTH_URL should be set via environment variable (e.g., wrangler secret put BETTER_AUTH_URL or .env file)
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
@@ -16,4 +16,5 @@ id = "auth-kv"
 
 [[hyperdrive]]
 binding = "HYPERDRIVE"
-id = "PLACEHOLDER_HYPERDRIVE_ID"
+# id should be set to actual Hyperdrive configuration ID from Cloudflare dashboard
+# Example: id = "your-hyperdrive-config-id"

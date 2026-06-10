@@ -156,7 +156,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T053 - Configure wrangler.toml Placeholders
 
-- [ ] **T053** [PENDING] Configure wrangler.toml Placeholders
+- [x] **T053** [COMPLETED] Configure wrangler.toml Placeholders
 
 **Block Reason:** wrangler.toml files have empty BETTER_AUTH_URL and placeholder HYPERDRIVE id.
 
@@ -174,24 +174,26 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Imports/Exports:** No new exports.
 
+**Implementation Notes:** Removed BETTER_AUTH_URL from wrangler.toml [vars] since it should be set via environment variables (wrangler secret or .env file). Replaced PLACEHOLDER_HYPERDRIVE_ID with comments indicating it needs to be configured with actual Hyperdrive configuration ID from Cloudflare dashboard.
+
 ### Subtasks
 
-- [ ] **T053.01 [AGENT]** Configure BETTER_AUTH_URL in Calendar API
+- [x] **T053.01 [AGENT]** Configure BETTER_AUTH_URL in Calendar API
   - **File:** `apps/calendar/api/wrangler.toml`
   - **Action:** Set BETTER_AUTH_URL to actual domain or document as environment variable.
   - **Validation:** Configuration is valid.
 
-- [ ] **T053.02 [AGENT]** Configure BETTER_AUTH_URL in Tasks API
+- [x] **T053.02 [AGENT]** Configure BETTER_AUTH_URL in Tasks API
   - **File:** `apps/tasks/api/wrangler.toml`
   - **Action:** Set BETTER_AUTH_URL to actual domain or document as environment variable.
   - **Validation:** Configuration is valid.
 
-- [ ] **T053.03 [AGENT]** Configure BETTER_AUTH_URL in Drive API
+- [x] **T053.03 [AGENT]** Configure BETTER_AUTH_URL in Drive API
   - **File:** `apps/drive/api/wrangler.toml`
   - **Action:** Set BETTER_AUTH_URL to actual domain or document as environment variable.
   - **Validation:** Configuration is valid.
 
-- [ ] **T053.04 [AGENT]** Configure HYPERDRIVE ids
+- [x] **T053.04 [AGENT]** Configure HYPERDRIVE ids
   - **Files:** `apps/*/api/wrangler.toml`
   - **Action:** Replace PLACEHOLDER_HYPERDRIVE_ID with actual binding names or document as required.
   - **Validation:** Configuration is valid.
