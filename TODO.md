@@ -1145,7 +1145,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T016 - Fix Health Check Path in Shared Kernel Middleware
 
-- [ ] **T016** [PENDING] Fix Health Check Path in Shared Kernel Middleware
+- [x] **T016** [COMPLETED] Fix Health Check Path in Shared Kernel Middleware
 
 **Files:** `packages/shared-kernel/src/rate-limit.ts`, `packages/shared-kernel/src/usage-monitor.ts`, `packages/shared-kernel/src/rate-limit.test.ts`, `packages/shared-kernel/src/usage-monitor.test.ts`
 
@@ -1163,19 +1163,21 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Depends on:** None. **Blocks:** None.
 
+**Implementation Notes:** Fixed health check path from `/api/health` to `/api/v1/health` in both rate-limit.ts and usage-monitor.ts middleware. Updated rate-limit.test.ts to use the correct path. Created comprehensive usage-monitor.test.ts with 7 tests including health path skip verification. All tests pass (19/19). Typecheck and lint pass.
+
 ### Subtasks
 
-- [ ] **T016.01 [AGENT]** Fix path constant in rate-limit middleware
+- [x] **T016.01 [AGENT]** Fix path constant in rate-limit middleware
   - **File:** `packages/shared-kernel/src/rate-limit.ts:115`
   - **Action:** Change `c.req.path === '/api/health'` to `c.req.path === '/api/v1/health'`.
   - **Validation:** `pnpm --filter @suite/shared-kernel test:run -- rate-limit.test.ts`
 
-- [ ] **T016.02 [AGENT]** Fix path constant in usage-monitor middleware
+- [x] **T016.02 [AGENT]** Fix path constant in usage-monitor middleware
   - **File:** `packages/shared-kernel/src/usage-monitor.ts:49`
   - **Action:** Change `c.req.path === '/api/health'` to `c.req.path === '/api/v1/health'`.
   - **Validation:** `pnpm --filter @suite/shared-kernel test:run -- usage-monitor.test.ts`
 
-- [ ] **T016.03 [AGENT]** Update and add health path skip tests
+- [x] **T016.03 [AGENT]** Update and add health path skip tests
   - **Files:** `packages/shared-kernel/src/rate-limit.test.ts`, `packages/shared-kernel/src/usage-monitor.test.ts`
   - **Action:** In `rate-limit.test.ts`, change the test router from `app.get('/api/health', ...)` to `app.get('/api/v1/health', ...)` and the request path to `/api/v1/health`. Add an equivalent test to `usage-monitor.test.ts` verifying that repeated authenticated calls to `/api/v1/health` do not increment usage.
   - **Validation:** `pnpm --filter @suite/shared-kernel test:run`

@@ -112,7 +112,7 @@ export function rateLimit(options: RateLimitOptions): MiddlewareHandler {
     const userId = c.get('userId') as string | undefined;
 
     // Skip rate limiting for unauthenticated requests or health checks
-    if (!userId || c.req.path === '/api/health') {
+    if (!userId || c.req.path === '/api/v1/health') {
       await next();
       return;
     }

@@ -78,11 +78,11 @@ describe('rateLimit middleware', () => {
       await next();
     });
     app.use('/api/*', rateLimit({ requestsPerMinute: 1 }));
-    app.get('/api/health', (c) => c.json({ ok: true }));
+    app.get('/api/v1/health', (c) => c.json({ ok: true }));
 
     // Make multiple health check requests (should all pass)
     for (let i = 0; i < 10; i++) {
-      const res = await app.request('/api/health');
+      const res = await app.request('/api/v1/health');
       expect(res.status).toBe(200);
     }
   });

@@ -46,7 +46,7 @@ export function UsageMonitor(options: UsageMonitorOptions): MiddlewareHandler {
     const requestId = c.get('requestId') as string | undefined;
 
     // Skip usage monitoring for unauthenticated requests or health checks
-    if (!userId || c.req.path === '/api/health') {
+    if (!userId || c.req.path === '/api/v1/health') {
       await next();
       return;
     }
