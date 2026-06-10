@@ -11,7 +11,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T050 - Fix Calendar findOverlapping Bug
 
-- [ ] **T050** [PENDING] Fix Calendar findOverlapping Bug
+- [x] **T050** [COMPLETED] Fix Calendar findOverlapping Bug
 
 **Block Reason:** Critical bug in conflict detection logic.
 
@@ -31,12 +31,12 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ### Subtasks
 
-- [ ] **T050.01 [AGENT]** Fix findOverlapping excludeId comparison
+- [x] **T050.01 [AGENT]** Fix findOverlapping excludeId comparison
   - **File:** `packages/db/src/repositories/calendar.ts`
   - **Action:** Change eq(calendarEvents.id, excludeId) to ne(calendarEvents.id, excludeId) on line 129.
   - **Validation:** `pnpm --filter @suite/db test:run -- calendar.test.ts`.
 
-- [ ] **T050.02 [AGENT]** Add regression test for conflict detection
+- [x] **T050.02 [AGENT]** Add regression test for conflict detection
   - **File:** `packages/db/src/repositories/calendar.test.ts`
   - **Action:** Add test that verifies conflict detection excludes the event being updated.
   - **Validation:** `pnpm --filter @suite/db test:run -- calendar.test.ts`.

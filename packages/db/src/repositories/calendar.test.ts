@@ -298,6 +298,36 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
         expect(overlapping).toEqual([]);
       });
     });
+
+    it('should exclude the event being updated when checking for conflicts', async () => {
+      await withTransaction(client, async () => {
+        // Create an event at 10:00-11:00
+        const eventToUpdate = await repository.create(
+          await createCalendarEvent({ title: 'Original Event', startAt: '2026-06-10T10:00:00Z', endAt: '2026-06-10T11:00:00Z' }),
+          context1
+        );
+
+        // Create a conflicting event at 10:30-11:30
+        await repository.create(
+          await createCalendarEvent({ title: 'Conflicting Event', startAt: '2026-06-10T10:30:00Z', endAt: '2026-06-10T11:30:00Z' }),
+          context1
+        );
+
+        // When updating the first event to 10:15-11:15, check for conflicts
+        // The original event should be excluded from the conflict check
+        const conflicts = await repository.findOverlapping(
+          new Date('2026-06-10T10:15:00Z'),
+          new Date('2026-06-10T11:15:00Z'),
+          context1,
+          eventToUpdate.id // Exclude the event being updated
+        );
+
+        // Should only find the conflicting event, not the event being updated
+        expect(conflicts).toHaveLength(1);
+        expect(conflicts[0]?.title).toBe('Conflicting Event');
+        expect(conflicts[0]?.id).not.toBe(eventToUpdate.id);
+      });
+    });
   });
 
   describe('tenant isolation', () => {

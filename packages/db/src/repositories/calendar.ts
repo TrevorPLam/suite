@@ -1,4 +1,4 @@
-import { eq, and, lt, gt } from 'drizzle-orm';
+import { eq, and, lt, gt, ne } from 'drizzle-orm';
 import { calendarEvents, type CalendarEventSchema, type NewCalendarEventSchema } from '../schema/calendar/index.js';
 import type { Repository, Database, RepositoryContext } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
@@ -126,7 +126,7 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
     ];
 
     if (excludeId) {
-      conditions.push(eq(calendarEvents.id, excludeId));
+      conditions.push(ne(calendarEvents.id, excludeId));
     }
 
     const results = await db
