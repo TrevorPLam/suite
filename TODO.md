@@ -715,7 +715,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T008 - Implement Backup/Restore Strategy
 
-- [ ] **T008** [PENDING] Implement Backup/Restore Strategy
+- [x] **T008** [COMPLETED] Implement Backup/Restore Strategy
 
 **Files:** `packages/db/docs/backup-strategy.md` (create), `packages/db/scripts/backup.sh` (create), `packages/db/scripts/restore.sh` (create), `packages/db/scripts/verify-backup.sh` (create)
 
@@ -735,29 +735,31 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Imports/Exports:** Export backup/restore functions. Import in scripts.
 
+**Implementation Notes:** Created comprehensive backup-strategy.md documentation covering WAL archiving setup, base backup strategy, PITR restore procedures, RTO/RPO targets, monitoring, disaster recovery runbook, and troubleshooting. Created backup.sh script using pg_basebackup with compression, S3 upload support, and automatic cleanup. Created restore.sh script for PITR with time-based recovery target. Created verify-backup.sh script supporting pg_verifybackup (PostgreSQL 13+) and tar validation. All scripts use environment variables for configuration (BACKUP_DIR, S3_BACKUP_BUCKET, BACKUP_USER, BACKUP_HOST). Documentation includes cron schedule examples and monitoring queries.
+
 ### Subtasks
 
-- [ ] **T008.01 [AGENT]** Document WAL archiving setup
+- [x] **T008.01 [AGENT]** Document WAL archiving setup
   - **File:** `packages/db/docs/backup-strategy.md` (create)
   - **Action:** Document wal_level = replica, archive_mode = on. Explain WAL archiving configuration. Provide PostgreSQL config examples.
   - **Validation:** Documentation covers WAL archiving setup.
 
-- [ ] **T008.02 [AGENT]** Create backup script
+- [x] **T008.02 [AGENT]** Create backup script
   - **File:** `packages/db/scripts/backup.sh` (create)
   - **Action:** Create script using pg_basebackup. Compress backup. Upload to storage (S3 or local). Log backup status.
   - **Validation:** Script is executable and runs without errors.
 
-- [ ] **T008.03 [AGENT]** Create restore script
+- [x] **T008.03 [AGENT]** Create restore script
   - **File:** `packages/db/scripts/restore.sh` (create)
   - **Action:** Create script for PITR. Restore base backup. Replay WAL to target time. Verify restore.
   - **Validation:** Script is executable and runs without errors.
 
-- [ ] **T008.04 [AGENT]** Create backup verification script
+- [x] **T008.04 [AGENT]** Create backup verification script
   - **File:** `packages/db/scripts/verify-backup.sh` (create)
   - **Action:** Create script to verify backup integrity. Check backup completeness. Test restore in sandbox.
   - **Validation:** Script is executable and runs without errors.
 
-- [ ] **T008.05 [AGENT]** Document RTO/RPO targets
+- [x] **T008.05 [AGENT]** Document RTO/RPO targets
   - **File:** `packages/db/docs/backup-strategy.md`
   - **Action:** Document RTO < 1 hour, RPO < 5 minutes. Explain how targets are met. Provide runbook for disaster recovery.
   - **Validation:** Documentation includes RTO/RPO targets.
