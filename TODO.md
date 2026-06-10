@@ -1227,7 +1227,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T018 - Fix getCalendarOverview Unawaited Async Call
 
-- [ ] **T018** [PENDING] Fix getCalendarOverview Unawaited Async Call
+- [x] **T018** [COMPLETED] Fix getCalendarOverview Unawaited Async Call
 
 **Files:** `packages/domain-calendar/src/index.ts`
 
@@ -1245,18 +1245,20 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Depends on:** None. **Blocks:** T029.
 
+**Implementation Notes:** Grep audit found zero callers of getCalendarOverview in the codebase. Removed the function and its unused imports (listCalendarEvents, RepositoryContext) from packages/domain-calendar/src/index.ts. Typecheck and lint pass.
+
 ### Subtasks
 
-- [ ] **T018.01 [AGENT]** Audit callers of getCalendarOverview
+- [x] **T018.01 [AGENT]** Audit callers of getCalendarOverview
   - **Action:** Run `grep -r "getCalendarOverview" --include="*.ts" . | grep -v "src/index.ts"` from repo root. Record the output. If zero results, execute T018.02. If results exist, execute T018.03.
   - **Validation:** Grep output is inspected and a path is chosen.
 
-- [ ] **T018.02 [AGENT]** Remove getCalendarOverview (preferred — no callers)
+- [x] **T018.02 [AGENT]** Remove getCalendarOverview (preferred — no callers)
   - **File:** `packages/domain-calendar/src/index.ts`
   - **Action:** Delete the `getCalendarOverview` function body and its `export`. Run `grep -n "getCalendarOverview" packages/domain-calendar/src/index.ts` to confirm zero remaining references.
   - **Validation:** `pnpm --filter @suite/domain-calendar typecheck`
 
-- [ ] **T018.03 [AGENT]** Fix getCalendarOverview if callers exist
+- [x] **T018.03 [AGENT]** Fix getCalendarOverview if callers exist
   - **File:** `packages/domain-calendar/src/index.ts`
   - **Action:** Add `async` keyword to the function. Add `await` before the `listCalendarEvents(undefined, context)` call. Update the return type annotation to reflect `Promise<{ name: string; description: string; events: CalendarEvent[] }>`.
   - **Validation:** `pnpm --filter @suite/domain-calendar typecheck`
