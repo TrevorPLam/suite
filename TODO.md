@@ -701,12 +701,12 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
   - **Action:** Replace generic errors with error codes. Add actionable error messages. Include context in errors.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T007.08 [AGENT]** Add error handling tests
+- [x] **T007.08 [AGENT]** Add error handling tests
   - **File:** `packages/db/src/error-handling/error-handling.test.ts` (create)
   - **Action:** Test retry logic. Test circuit breaker. Test error classification.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T007.09 [AGENT]** Document error handling strategy
+- [x] **T007.09 [AGENT]** Document error handling strategy
   - **File:** `packages/db/docs/error-handling.md` (create)
   - **Action:** Document error codes. Explain retry logic. Document circuit breaker pattern.
   - **Validation:** Documentation explains error handling clearly.
