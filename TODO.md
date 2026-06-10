@@ -517,7 +517,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T005 - Add Migration Linter
 
-- [ ] **T005** [PENDING] Add Migration Linter
+- [x] **T005** [COMPLETED] Add Migration Linter
 
 **Files:** `packages/db/.migration-linter.json` (create), `packages/db/scripts/lint-migrations.ts` (create), `.github/workflows/ci.yml`
 
@@ -537,33 +537,35 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Imports/Exports:** Export lintMigrations() function. Import in CI workflow.
 
+**Implementation Notes:** Created migration linter with 6 forbidden operation rules (DROP_COLUMN, ALTER_COLUMN_TYPE, CREATE_INDEX, DROP_TABLE, DROP_CONSTRAINT, ADD_NOT_NULL) and 2 required pattern rules (PHASE_COMMENT, ROLLBACK_COMMENT). Linter runs in CI before migrations. Initial schema migrations (0000_*.sql, 0001_*.sql) are excluded. All existing migrations pass linter checks.
+
 ### Subtasks
 
-- [ ] **T005.01 [AGENT]** Create linter configuration
+- [x] **T005.01 [AGENT]** Create linter configuration
   - **File:** `packages/db/.migration-linter.json` (create)
   - **Action:** Define forbidden operations: DROP COLUMN without contract, ALTER COLUMN TYPE without expand, CREATE INDEX without CONCURRENTLY, missing RLS policy updates.
   - **Validation:** JSON is valid and contains all rules.
 
-- [ ] **T005.02 [AGENT]** Create linter script
+- [x] **T005.02 [AGENT]** Create linter script
   - **File:** `packages/db/scripts/lint-migrations.ts` (create)
   - **Action:** Create lintMigrations() function. Parse migration SQL. Check against forbidden operations. Return errors.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T005.03 [AGENT]** Add linter to package.json scripts
+- [x] **T005.03 [AGENT]** Add linter to package.json scripts
   - **File:** `packages/db/package.json`
   - **Action:** Add "lint:migrations": "tsx scripts/lint-migrations.ts" script.
   - **Validation:** `pnpm --filter @suite/db lint:migrations` runs successfully.
 
-- [ ] **T005.04 [AGENT]** Integrate linter in CI
+- [x] **T005.04 [AGENT]** Integrate linter in CI
   - **File:** `.github/workflows/ci.yml`
   - **Action:** Add step to run migration linter before migration step. Fail CI on linter errors.
   - **Validation:** CI workflow includes linter step.
 
-- [ ] **T005.05 [AGENT]** Test linter on existing migrations
+- [x] **T005.05 [AGENT]** Test linter on existing migrations
   - **Action:** Run linter on existing migrations. Document any violations. Fix or document exceptions.
   - **Validation:** Linter runs without errors or violations are documented.
 
-- [ ] **T005.06 [AGENT]** Document linter rules
+- [x] **T005.06 [AGENT]** Document linter rules
   - **File:** `packages/db/docs/migration-linter.md` (create)
   - **Action:** Document all linter rules. Explain why each rule exists. Provide examples.
   - **Validation:** Documentation explains all rules clearly.

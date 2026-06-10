@@ -1,0 +1,67 @@
+{
+  "forbiddenOperations": [
+    {
+      "name": "DROP_COLUMN_WITHOUT_CONTRACT",
+      "pattern": "DROP COLUMN",
+      "description": "DROP COLUMN operations must only occur in contract phase migrations. Use expand-contract pattern: add new column first, migrate data, then drop old column.",
+      "severity": "error",
+      "exception": "Migration file name contains 'contract' or is marked with -- contract phase comment"
+    },
+    {
+      "name": "ALTER_COLUMN_TYPE_WITHOUT_EXPAND",
+      "pattern": "ALTER COLUMN.*TYPE",
+      "description": "ALTER COLUMN TYPE operations must use expand-contract pattern. Add new column with new type, migrate data, then drop old column.",
+      "severity": "error",
+      "exception": "Migration file name contains 'contract' or is marked with -- contract phase comment"
+    },
+    {
+      "name": "CREATE_INDEX_WITHOUT_CONCURRENTLY",
+      "pattern": "CREATE INDEX(?!.*CONCURRENTLY)",
+      "description": "CREATE INDEX must use CONCURRENTLY to avoid blocking writes on production tables. Use CREATE INDEX CONCURRENTLY instead.",
+      "severity": "error",
+      "exception": "Migration is for initial schema creation (e.g., 0000_*.sql) or table is small (<1000 rows)"
+    },
+    {
+      "name": "DROP_TABLE_WITHOUT_CONTRACT",
+      "pattern": "DROP TABLE",
+      "description": "DROP TABLE operations must only occur in contract phase migrations. Use expand-contract pattern: create new table, migrate data, then drop old table.",
+      "severity": "error",
+      "exception": "Migration file name contains 'contract' or is marked with -- contract phase comment"
+    },
+    {
+      "name": "DROP_CONSTRAINT_WITHOUT_CONTRACT",
+      "pattern": "DROP CONSTRAINT",
+      "description": "DROP CONSTRAINT operations must only occur in contract phase migrations. Use expand-contract pattern: add new constraint, validate, then drop old constraint.",
+      "severity": "error",
+      "exception": "Migration file name contains 'contract' or is marked with -- contract phase comment"
+    },
+    {
+      "name": "ADD_NOT_NULL_WITHOUT_DEFAULT",
+      "pattern": "ALTER COLUMN.*SET NOT NULL",
+      "description": "Adding NOT NULL constraint without default value can fail on existing data. Use expand-contract pattern: add nullable column, backfill data, then add NOT NULL constraint.",
+      "severity": "error",
+      "exception": "Migration file name contains 'contract' or is marked with -- contract phase comment"
+    }
+  ],
+  "requiredPatterns": [
+    {
+      "name": "PHASE_COMMENT",
+      "pattern": "-- (expand|deploy|backfill|contract) phase",
+      "description": "Migrations should include phase comments to indicate which phase of expand-contract pattern they represent.",
+      "severity": "warning",
+      "exception": "Migration is for initial schema creation or simple additive changes"
+    },
+    {
+      "name": "ROLLBACK_COMMENT",
+      "pattern": "-- rollback",
+      "description": "Migrations should include rollback instructions in comments.",
+      "severity": "warning",
+      "exception": "Migration is for initial schema creation or is reversible by design"
+    }
+  ],
+  "excludedMigrations": [
+    "0000_*.sql",
+    "0001_*.sql"
+  ],
+  "migrationDirectory": "drizzle"
+}
