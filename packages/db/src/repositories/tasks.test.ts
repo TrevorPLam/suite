@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 import type { RepositoryContext } from '../index.js';
 import { withTransaction } from '../test-helpers/transaction-wrapper.js';
+import { createTask } from '../test-helpers/factories/tasks.js';
 
 // Skip tests if DATABASE_URL is not set
 const dbUrl = process.env.DATABASE_URL;
@@ -55,14 +56,15 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   describe('create', () => {
     it('should create a task with basic fields', async () => {
       await withTransaction(client, async () => {
-        const task = await repository.create({
+        const taskData = await createTask({
           title: 'Test Task',
           completed: false,
           archived: false,
           dueDate: null,
           priority: 'medium',
           tags: [],
-        }, context1);
+        });
+        const task = await repository.create(taskData, context1);
 
         expect(task).toBeDefined();
         expect(task.id).toBeDefined();
@@ -74,14 +76,15 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
     it('should create a task with optional fields (dueDate, priority, tags)', async () => {
       await withTransaction(client, async () => {
-        const task = await repository.create({
+        const taskData = await createTask({
           title: 'Task with optional fields',
           completed: false,
           archived: false,
           dueDate: '2026-06-10T10:00:00Z',
           priority: 'high',
           tags: ['urgent', 'work'],
-        }, context1);
+        });
+        const task = await repository.create(taskData, context1);
 
         expect(task).toBeDefined();
         expect(task.id).toBeDefined();
@@ -96,14 +99,15 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   describe('findById', () => {
     it('should find a task by id', async () => {
       await withTransaction(client, async () => {
-        const created = await repository.create({
+        const taskData = await createTask({
           title: 'Find Me',
           completed: false,
           archived: false,
           dueDate: null,
           priority: 'medium',
           tags: [],
-        }, context1);
+        });
+        const created = await repository.create(taskData, context1);
 
         const found = await repository.findById(created.id, context1);
 
@@ -124,9 +128,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   describe('findAll', () => {
     it('should return all tasks', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        await repository.create({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
+        await repository.create(await createTask({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
 
         const allTasks = await repository.findAll(context1);
 
@@ -146,14 +150,15 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   describe('update', () => {
     it('should update a task', async () => {
       await withTransaction(client, async () => {
-        const created = await repository.create({
+        const taskData = await createTask({
           title: 'Original Title',
           completed: false,
           archived: false,
           dueDate: null,
           priority: 'medium',
           tags: [],
-        }, context1);
+        });
+        const created = await repository.create(taskData, context1);
 
         const updated = await repository.update(created.id, {
           title: 'Updated Title',
@@ -176,14 +181,15 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
     it('should update optional fields', async () => {
       await withTransaction(client, async () => {
-        const created = await repository.create({
+        const taskData = await createTask({
           title: 'Task',
           completed: false,
           archived: false,
           dueDate: null,
           priority: 'medium',
           tags: [],
-        }, context1);
+        });
+        const created = await repository.create(taskData, context1);
 
         const updated = await repository.update(created.id, {
           dueDate: '2026-06-15T14:00:00Z',
@@ -202,14 +208,15 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   describe('delete', () => {
     it('should delete a task', async () => {
       await withTransaction(client, async () => {
-        const created = await repository.create({
+        const taskData = await createTask({
           title: 'To Delete',
           completed: false,
           archived: false,
           dueDate: null,
           priority: 'medium',
           tags: [],
-        }, context1);
+        });
+        const created = await repository.create(taskData, context1);
 
         const deleted = await repository.delete(created.id, context1);
 
@@ -231,9 +238,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   describe('findWhere', () => {
     it('should find tasks matching criteria', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ title: 'Task 1', completed: false, archived: false, priority: 'high', dueDate: null, tags: [] }, context1);
-        await repository.create({ title: 'Task 2', completed: true, archived: false, priority: 'high', dueDate: null, tags: [] }, context1);
-        await repository.create({ title: 'Task 3', completed: false, archived: false, priority: 'low', dueDate: null, tags: [] }, context1);
+        await repository.create(await createTask({ title: 'Task 1', completed: false, archived: false, priority: 'high', dueDate: null, tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 2', completed: true, archived: false, priority: 'high', dueDate: null, tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 3', completed: false, archived: false, priority: 'low', dueDate: null, tags: [] }), context1);
 
         const highPriorityTasks = await repository.findWhere({ priority: 'high' }, context1);
 
@@ -244,8 +251,8 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
     it('should return all tasks when no criteria provided', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
+        await repository.create(await createTask({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
 
         const allTasks = await repository.findWhere({}, context1);
 
@@ -257,9 +264,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   describe('count', () => {
     it('should count all tasks', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        await repository.create({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
+        await repository.create(await createTask({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
 
         const count = await repository.count({}, context1);
 
@@ -269,9 +276,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
     it('should count tasks matching criteria', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ title: 'Task 1', completed: false, archived: false, priority: 'high', dueDate: null, tags: [] }, context1);
-        await repository.create({ title: 'Task 2', completed: true, archived: false, priority: 'high', dueDate: null, tags: [] }, context1);
-        await repository.create({ title: 'Task 3', completed: false, archived: false, priority: 'low', dueDate: null, tags: [] }, context1);
+        await repository.create(await createTask({ title: 'Task 1', completed: false, archived: false, priority: 'high', dueDate: null, tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 2', completed: true, archived: false, priority: 'high', dueDate: null, tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 3', completed: false, archived: false, priority: 'low', dueDate: null, tags: [] }), context1);
 
         const highPriorityCount = await repository.count({ priority: 'high' }, context1);
 
@@ -290,9 +297,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   describe('batch operations', () => {
     it('should handle multiple creates in sequence', async () => {
       await withTransaction(client, async () => {
-        const task1 = await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        const task2 = await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        const task3 = await repository.create({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
+        const task1 = await repository.create(await createTask({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        const task2 = await repository.create(await createTask({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        const task3 = await repository.create(await createTask({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
 
         const allTasks = await repository.findAll(context1);
         expect(allTasks).toHaveLength(3);
@@ -302,8 +309,8 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
     it('should handle multiple updates in sequence', async () => {
       await withTransaction(client, async () => {
-        const task1 = await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        const task2 = await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
+        const task1 = await repository.create(await createTask({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        const task2 = await repository.create(await createTask({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
 
         await repository.update(task1.id, { completed: true }, context1);
         await repository.update(task2.id, { completed: true }, context1);
@@ -315,9 +322,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
     it('should handle multiple deletes in sequence', async () => {
       await withTransaction(client, async () => {
-        const task1 = await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        const task2 = await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        const task3 = await repository.create({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
+        const task1 = await repository.create(await createTask({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        const task2 = await repository.create(await createTask({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        const task3 = await repository.create(await createTask({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
 
         await repository.delete(task1.id, context1);
         await repository.delete(task2.id, context1);
@@ -332,9 +339,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   describe('filtering', () => {
     it('should filter by completed status', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ title: 'Task 1', completed: true, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        await repository.create({ title: 'Task 3', completed: true, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
+        await repository.create(await createTask({ title: 'Task 1', completed: true, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 3', completed: true, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
 
         const completedTasks = await repository.findWhere({ completed: true }, context1);
         expect(completedTasks).toHaveLength(2);
@@ -344,9 +351,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
     it('should filter by archived status', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ title: 'Task 1', completed: false, archived: true, dueDate: null, priority: 'medium', tags: [] }, context1);
-        await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        await repository.create({ title: 'Task 3', completed: false, archived: true, dueDate: null, priority: 'medium', tags: [] }, context1);
+        await repository.create(await createTask({ title: 'Task 1', completed: false, archived: true, dueDate: null, priority: 'medium', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 3', completed: false, archived: true, dueDate: null, priority: 'medium', tags: [] }), context1);
 
         const archivedTasks = await repository.findWhere({ archived: true }, context1);
         expect(archivedTasks).toHaveLength(2);
@@ -356,9 +363,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
     it('should filter by priority', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'high', tags: [] }, context1);
-        await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        await repository.create({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'high', tags: [] }, context1);
+        await repository.create(await createTask({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'high', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'high', tags: [] }), context1);
 
         const highPriorityTasks = await repository.findWhere({ priority: 'high' }, context1);
         expect(highPriorityTasks).toHaveLength(2);
@@ -370,9 +377,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   describe('searching', () => {
     it('should find tasks by title substring (case-sensitive)', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ title: 'Buy groceries', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        await repository.create({ title: 'Call mom', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        await repository.create({ title: 'Buy milk', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
+        await repository.create(await createTask({ title: 'Buy groceries', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Call mom', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        await repository.create(await createTask({ title: 'Buy milk', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
 
         const buyTasks = await repository.findWhere({ title: 'Buy' }, context1);
         expect(buyTasks).toHaveLength(2);
@@ -382,9 +389,9 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
     it('should find tasks by tags', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: ['work', 'urgent'] }, context1);
-        await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: ['personal'] }, context1);
-        await repository.create({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'medium', tags: ['work'] }, context1);
+        await repository.create(await createTask({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: ['work', 'urgent'] }), context1);
+        await repository.create(await createTask({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: ['personal'] }), context1);
+        await repository.create(await createTask({ title: 'Task 3', completed: false, archived: false, dueDate: null, priority: 'medium', tags: ['work'] }), context1);
 
         const workTasks = await repository.findWhere({ tags: ['work'] }, context1);
         expect(workTasks).toHaveLength(2);
@@ -395,8 +402,8 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
   describe('transactions', () => {
     it('should maintain consistency when operations fail mid-sequence', async () => {
       await withTransaction(client, async () => {
-        const task1 = await repository.create({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
-        const task2 = await repository.create({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
+        const task1 = await repository.create(await createTask({ title: 'Task 1', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        const task2 = await repository.create(await createTask({ title: 'Task 2', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
 
         // Update task1 successfully
         await repository.update(task1.id, { completed: true }, context1);
@@ -416,7 +423,7 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
 
     it('should handle concurrent operations on same task', async () => {
       await withTransaction(client, async () => {
-        const task = await repository.create({ title: 'Task', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }, context1);
+        const task = await repository.create(await createTask({ title: 'Task', completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
 
         // Sequential updates (simulating concurrent operations)
         const update1 = await repository.update(task.id, { completed: true }, context1);

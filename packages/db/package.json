@@ -19,6 +19,7 @@
     "db:migrate:tasks": "APP_DOMAIN=tasks tsx scripts/migrate.ts"
   },
   "dependencies": {
+    "@suite/crypto": "workspace:*",
     "@suite/shared-kernel": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.5"

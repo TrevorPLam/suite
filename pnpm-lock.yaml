@@ -542,6 +542,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@suite/crypto':
+        specifier: workspace:*
+        version: link:../crypto
       '@suite/shared-kernel':
         specifier: workspace:*
         version: link:../shared-kernel

@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 import type { RepositoryContext } from '../index.js';
 import { withTransaction } from '../test-helpers/transaction-wrapper.js';
+import { createDriveFile, createDriveFolder } from '../test-helpers/factories/drive.js';
 
 // Skip tests if DATABASE_URL is not set
 const dbUrl = process.env.DATABASE_URL;
@@ -55,12 +56,13 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
   describe('create', () => {
     it('should create a file with basic fields', async () => {
       await withTransaction(client, async () => {
-        const file = await repository.create({
+        const fileData = await createDriveFile({
           name: 'test.txt',
           size: 1024,
           createdAt: '2026-06-10T10:00:00Z',
           modifiedAt: '2026-06-10T10:00:00Z',
-        }, context1);
+        });
+        const file = await repository.create(fileData, context1);
 
         expect(file).toBeDefined();
         expect(file.id).toBeDefined();
@@ -71,7 +73,7 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
 
     it('should create a file with optional fields', async () => {
       await withTransaction(client, async () => {
-        const file = await repository.create({
+        const fileData = await createDriveFile({
           name: 'document.pdf',
           size: 2048,
           folderId: 'folder-123',
@@ -79,7 +81,8 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
           createdAt: '2026-06-10T10:00:00Z',
           modifiedAt: '2026-06-10T10:00:00Z',
           blindIndex: 'hashed-name',
-        }, context1);
+        });
+        const file = await repository.create(fileData, context1);
 
         expect(file).toBeDefined();
         expect(file.folderId).toBe('folder-123');
@@ -92,12 +95,13 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
   describe('findById', () => {
     it('should find a file by id', async () => {
       await withTransaction(client, async () => {
-        const created = await repository.create({
+        const fileData = await createDriveFile({
           name: 'find-me.txt',
           size: 512,
           createdAt: '2026-06-10T10:00:00Z',
           modifiedAt: '2026-06-10T10:00:00Z',
-        }, context1);
+        });
+        const created = await repository.create(fileData, context1);
 
         const found = await repository.findById(created.id, context1);
 
@@ -118,9 +122,9 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
   describe('findAll', () => {
     it('should return all files', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ name: 'file1.txt', size: 100, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'file2.txt', size: 200, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'file3.txt', size: 300, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+        await repository.create(await createDriveFile({ name: 'file1.txt', size: 100, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFile({ name: 'file2.txt', size: 200, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFile({ name: 'file3.txt', size: 300, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
 
         const allFiles = await repository.findAll(context1);
 
@@ -140,12 +144,13 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
   describe('update', () => {
     it('should update a file', async () => {
       await withTransaction(client, async () => {
-        const created = await repository.create({
+        const fileData = await createDriveFile({
           name: 'original.txt',
           size: 100,
           createdAt: '2026-06-10T10:00:00Z',
           modifiedAt: '2026-06-10T10:00:00Z',
-        }, context1);
+        });
+        const created = await repository.create(fileData, context1);
 
         const updated = await repository.update(created.id, {
           name: 'updated.txt',
@@ -168,12 +173,13 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
 
     it('should update optional fields', async () => {
       await withTransaction(client, async () => {
-        const created = await repository.create({
+        const fileData = await createDriveFile({
           name: 'file.txt',
           size: 100,
           createdAt: '2026-06-10T10:00:00Z',
           modifiedAt: '2026-06-10T10:00:00Z',
-        }, context1);
+        });
+        const created = await repository.create(fileData, context1);
 
         const updated = await repository.update(created.id, {
           folderId: 'folder-456',
@@ -190,12 +196,13 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
   describe('delete', () => {
     it('should delete a file', async () => {
       await withTransaction(client, async () => {
-        const created = await repository.create({
+        const fileData = await createDriveFile({
           name: 'to-delete.txt',
           size: 100,
           createdAt: '2026-06-10T10:00:00Z',
           modifiedAt: '2026-06-10T10:00:00Z',
-        }, context1);
+        });
+        const created = await repository.create(fileData, context1);
 
         const deleted = await repository.delete(created.id, context1);
 
@@ -217,9 +224,9 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
   describe('findWhere', () => {
     it('should find files matching criteria', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ name: 'file1.txt', size: 100, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'file2.txt', size: 200, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'file3.txt', size: 300, folderId: 'folder-2', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+        await repository.create(await createDriveFile({ name: 'file1.txt', size: 100, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFile({ name: 'file2.txt', size: 200, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFile({ name: 'file3.txt', size: 300, folderId: 'folder-2', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
 
         const filesInFolder1 = await repository.findWhere({ folderId: 'folder-1' }, context1);
 
@@ -230,8 +237,8 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
 
     it('should return all files when no criteria provided', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ name: 'file1.txt', size: 100, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'file2.txt', size: 200, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+        await repository.create(await createDriveFile({ name: 'file1.txt', size: 100, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFile({ name: 'file2.txt', size: 200, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
 
         const allFiles = await repository.findWhere({}, context1);
 
@@ -243,9 +250,9 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
   describe('count', () => {
     it('should count all files', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ name: 'file1.txt', size: 100, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'file2.txt', size: 200, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'file3.txt', size: 300, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+        await repository.create(await createDriveFile({ name: 'file1.txt', size: 100, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFile({ name: 'file2.txt', size: 200, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFile({ name: 'file3.txt', size: 300, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
 
         const count = await repository.count({}, context1);
 
@@ -255,9 +262,9 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
 
     it('should count files matching criteria', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ name: 'file1.txt', size: 100, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'file2.txt', size: 200, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'file3.txt', size: 300, folderId: 'folder-2', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }, context1);
+        await repository.create(await createDriveFile({ name: 'file1.txt', size: 100, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFile({ name: 'file2.txt', size: 200, folderId: 'folder-1', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFile({ name: 'file3.txt', size: 300, folderId: 'folder-2', createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
 
         const countInFolder1 = await repository.count({ folderId: 'folder-1' }, context1);
 
@@ -314,10 +321,11 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
   describe('create', () => {
     it('should create a folder with basic fields', async () => {
       await withTransaction(client, async () => {
-        const folder = await repository.create({
+        const folderData = await createDriveFolder({
           name: 'Documents',
           createdAt: '2026-06-10T10:00:00Z',
-        }, context1);
+        });
+        const folder = await repository.create(folderData, context1);
 
         expect(folder).toBeDefined();
         expect(folder.id).toBeDefined();
@@ -327,11 +335,12 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
 
     it('should create a folder with parent', async () => {
       await withTransaction(client, async () => {
-        const folder = await repository.create({
+        const folderData = await createDriveFolder({
           name: 'Subfolder',
           parentId: 'parent-123',
           createdAt: '2026-06-10T10:00:00Z',
-        }, context1);
+        });
+        const folder = await repository.create(folderData, context1);
 
         expect(folder).toBeDefined();
         expect(folder.parentId).toBe('parent-123');
@@ -342,10 +351,11 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
   describe('findById', () => {
     it('should find a folder by id', async () => {
       await withTransaction(client, async () => {
-        const created = await repository.create({
+        const folderData = await createDriveFolder({
           name: 'Find Me',
           createdAt: '2026-06-10T10:00:00Z',
-        }, context1);
+        });
+        const created = await repository.create(folderData, context1);
 
         const found = await repository.findById(created.id, context1);
 
@@ -366,9 +376,9 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
   describe('findAll', () => {
     it('should return all folders', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ name: 'Folder 1', createdAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'Folder 2', createdAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'Folder 3', createdAt: '2026-06-10T10:00:00Z' }, context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 1', createdAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 2', createdAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 3', createdAt: '2026-06-10T10:00:00Z' }), context1);
 
         const allFolders = await repository.findAll(context1);
 
@@ -388,10 +398,11 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
   describe('update', () => {
     it('should update a folder', async () => {
       await withTransaction(client, async () => {
-        const created = await repository.create({
+        const folderData = await createDriveFolder({
           name: 'Original Name',
           createdAt: '2026-06-10T10:00:00Z',
-        }, context1);
+        });
+        const created = await repository.create(folderData, context1);
 
         const updated = await repository.update(created.id, {
           name: 'Updated Name',
@@ -412,10 +423,11 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
 
     it('should update parent folder', async () => {
       await withTransaction(client, async () => {
-        const created = await repository.create({
+        const folderData = await createDriveFolder({
           name: 'Folder',
           createdAt: '2026-06-10T10:00:00Z',
-        }, context1);
+        });
+        const created = await repository.create(folderData, context1);
 
         const updated = await repository.update(created.id, {
           parentId: 'new-parent-456',
@@ -430,10 +442,11 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
   describe('delete', () => {
     it('should delete a folder', async () => {
       await withTransaction(client, async () => {
-        const created = await repository.create({
+        const folderData = await createDriveFolder({
           name: 'To Delete',
           createdAt: '2026-06-10T10:00:00Z',
-        }, context1);
+        });
+        const created = await repository.create(folderData, context1);
 
         const deleted = await repository.delete(created.id, context1);
 
@@ -455,9 +468,9 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
   describe('findWhere', () => {
     it('should find folders matching criteria', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ name: 'Folder 1', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'Folder 2', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'Folder 3', parentId: 'parent-2', createdAt: '2026-06-10T10:00:00Z' }, context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 1', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 2', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 3', parentId: 'parent-2', createdAt: '2026-06-10T10:00:00Z' }), context1);
 
         const foldersInParent1 = await repository.findWhere({ parentId: 'parent-1' }, context1);
 
@@ -468,8 +481,8 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
 
     it('should return all folders when no criteria provided', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ name: 'Folder 1', createdAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'Folder 2', createdAt: '2026-06-10T10:00:00Z' }, context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 1', createdAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 2', createdAt: '2026-06-10T10:00:00Z' }), context1);
 
         const allFolders = await repository.findWhere({}, context1);
 
@@ -481,9 +494,9 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
   describe('count', () => {
     it('should count all folders', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ name: 'Folder 1', createdAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'Folder 2', createdAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'Folder 3', createdAt: '2026-06-10T10:00:00Z' }, context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 1', createdAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 2', createdAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 3', createdAt: '2026-06-10T10:00:00Z' }), context1);
 
         const count = await repository.count({}, context1);
 
@@ -493,9 +506,9 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
 
     it('should count folders matching criteria', async () => {
       await withTransaction(client, async () => {
-        await repository.create({ name: 'Folder 1', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'Folder 2', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' }, context1);
-        await repository.create({ name: 'Folder 3', parentId: 'parent-2', createdAt: '2026-06-10T10:00:00Z' }, context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 1', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 2', parentId: 'parent-1', createdAt: '2026-06-10T10:00:00Z' }), context1);
+        await repository.create(await createDriveFolder({ name: 'Folder 3', parentId: 'parent-2', createdAt: '2026-06-10T10:00:00Z' }), context1);
 
         const countInParent1 = await repository.count({ parentId: 'parent-1' }, context1);
 
