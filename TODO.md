@@ -9,6 +9,230 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ---
 
+## Task: T050 - Fix Calendar findOverlapping Bug
+
+- [ ] **T050** [PENDING] Fix Calendar findOverlapping Bug
+
+**Block Reason:** Critical bug in conflict detection logic.
+
+**Files:** `packages/db/src/repositories/calendar.ts`
+
+**Definition of done:** findOverlapping uses ne() instead of eq() for excludeId. Conflict detection works correctly.
+
+**Out of scope:** Changing other repository logic, adding new features.
+
+**Rules:** Bug fixes must be minimal and targeted. Test the fix thoroughly.
+
+**Pattern:** Change eq() to ne() for excludeId parameter in findOverlapping function.
+
+**Anti-pattern:** Leaving the bug unfixed, making unnecessary changes.
+
+**Imports/Exports:** No new exports.
+
+### Subtasks
+
+- [ ] **T050.01 [AGENT]** Fix findOverlapping excludeId comparison
+  - **File:** `packages/db/src/repositories/calendar.ts`
+  - **Action:** Change eq(calendarEvents.id, excludeId) to ne(calendarEvents.id, excludeId) on line 129.
+  - **Validation:** `pnpm --filter @suite/db test:run -- calendar.test.ts`.
+
+- [ ] **T050.02 [AGENT]** Add regression test for conflict detection
+  - **File:** `packages/db/src/repositories/calendar.test.ts`
+  - **Action:** Add test that verifies conflict detection excludes the event being updated.
+  - **Validation:** `pnpm --filter @suite/db test:run -- calendar.test.ts`.
+
+---
+
+## Task: T051 - Fix Auth Middleware Mounting
+
+- [ ] **T051** [PENDING] Fix Auth Middleware Mounting
+
+**Block Reason:** GET endpoints are inaccessible because userId is never set in context.
+
+**Files:** `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
+
+**Definition of done:** authMiddleware is globally mounted. GET endpoints work correctly. Health checks are not blocked.
+
+**Out of scope:** Changing auth logic, adding new endpoints.
+
+**Rules:** Auth middleware must be mounted globally to set userId in context for all requests.
+
+**Pattern:** Mount authMiddleware at the top level, not on specific routes. Use route-specific middleware for health checks.
+
+**Anti-pattern:** Mounting authMiddleware only on specific routes, blocking health checks with requireRepositoryContext.
+
+**Imports/Exports:** No new exports.
+
+### Subtasks
+
+- [ ] **T051.01 [AGENT]** Mount authMiddleware globally in Calendar API
+  - **File:** `apps/calendar/api/src/index.ts`
+  - **Action:** Move authMiddleware to global mount. Ensure it runs before all routes.
+  - **Validation:** `pnpm --filter calendar-api typecheck`.
+
+- [ ] **T051.02 [AGENT]** Mount authMiddleware globally in Tasks API
+  - **File:** `apps/tasks/api/src/index.ts`
+  - **Action:** Move authMiddleware to global mount. Ensure it runs before all routes.
+  - **Validation:** `pnpm --filter tasks-api typecheck`.
+
+- [ ] **T051.03 [AGENT]** Mount authMiddleware globally in Drive API
+  - **File:** `apps/drive/api/src/index.ts`
+  - **Action:** Move authMiddleware to global mount. Ensure it runs before all routes.
+  - **Validation:** `pnpm --filter drive-api typecheck`.
+
+- [ ] **T051.04 [AGENT]** Fix health check endpoint blocking
+  - **Files:** `apps/*/api/src/index.ts`
+  - **Action:** Remove requireRepositoryContext from /api/v1/health and /api/metrics routes.
+  - **Validation:** Health checks return 200 without auth.
+
+---
+
+## Task: T052 - Fix pnpm-workspace.yaml Placeholder
+
+- [ ] **T052** [PENDING] Fix pnpm-workspace.yaml Placeholder
+
+**Block Reason:** Configuration has literal placeholder string instead of boolean.
+
+**Files:** `pnpm-workspace.yaml`
+
+**Definition of done:** protobufjs allowBuilds is set to true or false, not a placeholder string.
+
+**Out of scope:** Changing other workspace configuration.
+
+**Rules:** Configuration files must have valid values, not placeholders.
+
+**Pattern:** Set allowBuilds to boolean value based on build requirements.
+
+**Anti-pattern:** Leaving placeholder strings in configuration files.
+
+**Imports/Exports:** No new exports.
+
+### Subtasks
+
+- [ ] **T052.01 [AGENT]** Fix protobufjs allowBuilds value
+  - **File:** `pnpm-workspace.yaml`
+  - **Action:** Change "set this to true or false" to boolean value (true or false).
+  - **Validation:** `pnpm install` succeeds.
+
+---
+
+## Task: T053 - Configure wrangler.toml Placeholders
+
+- [ ] **T053** [PENDING] Configure wrangler.toml Placeholders
+
+**Block Reason:** wrangler.toml files have empty BETTER_AUTH_URL and placeholder HYPERDRIVE id.
+
+**Files:** `apps/*/api/wrangler.toml`
+
+**Definition of done:** BETTER_AUTH_URL is configured. HYPERDRIVE id is set to actual value or documented as required.
+
+**Out of scope:** Changing other wrangler configuration.
+
+**Rules:** Production configuration must not have placeholder values.
+
+**Pattern:** Set BETTER_AUTH_URL to actual domain. Set HYPERDRIVE id to actual binding name.
+
+**Anti-pattern:** Leaving placeholder values in production configuration.
+
+**Imports/Exports:** No new exports.
+
+### Subtasks
+
+- [ ] **T053.01 [AGENT]** Configure BETTER_AUTH_URL in Calendar API
+  - **File:** `apps/calendar/api/wrangler.toml`
+  - **Action:** Set BETTER_AUTH_URL to actual domain or document as environment variable.
+  - **Validation:** Configuration is valid.
+
+- [ ] **T053.02 [AGENT]** Configure BETTER_AUTH_URL in Tasks API
+  - **File:** `apps/tasks/api/wrangler.toml`
+  - **Action:** Set BETTER_AUTH_URL to actual domain or document as environment variable.
+  - **Validation:** Configuration is valid.
+
+- [ ] **T053.03 [AGENT]** Configure BETTER_AUTH_URL in Drive API
+  - **File:** `apps/drive/api/wrangler.toml`
+  - **Action:** Set BETTER_AUTH_URL to actual domain or document as environment variable.
+  - **Validation:** Configuration is valid.
+
+- [ ] **T053.04 [AGENT]** Configure HYPERDRIVE ids
+  - **Files:** `apps/*/api/wrangler.toml`
+  - **Action:** Replace PLACEHOLDER_HYPERDRIVE_ID with actual binding names or document as required.
+  - **Validation:** Configuration is valid.
+
+---
+
+## Task: T054 - Add Calendar DELETE Endpoint
+
+- [ ] **T054** [PENDING] Add Calendar DELETE Endpoint
+
+**Block Reason:** Calendar API missing DELETE /api/v1/events/:id endpoint (Tasks and Drive have DELETE).
+
+**Files:** `apps/calendar/api/src/index.ts`
+
+**Definition of done:** DELETE /api/v1/events/:id endpoint exists and works correctly.
+
+**Out of scope:** Changing other endpoints, adding new features.
+
+**Rules:** API consistency across apps - all apps should have CRUD endpoints.
+
+**Pattern:** Follow pattern from Tasks and Drive DELETE endpoints.
+
+**Anti-pattern:** Missing DELETE endpoint, inconsistent API across apps.
+
+**Imports/Exports:** No new exports.
+
+### Subtasks
+
+- [ ] **T054.01 [AGENT]** Add DELETE events endpoint
+  - **File:** `apps/calendar/api/src/index.ts`
+  - **Action:** Add DELETE /api/v1/events/:id endpoint following Tasks/Drive pattern.
+  - **Validation:** `pnpm --filter calendar-api typecheck`.
+
+- [ ] **T054.02 [AGENT]** Add DELETE endpoint test
+  - **File:** `apps/calendar/api/src/index.test.ts` (create if needed)
+  - **Action:** Test DELETE endpoint returns 200 and deletes event.
+  - **Validation:** `pnpm --filter calendar-api test:run`.
+
+---
+
+## Task: T055 - Fix Unsafe organizationId Cast
+
+- [ ] **T055** [PENDING] Fix Unsafe organizationId Cast
+
+**Block Reason:** apps/*/api organizationId read via unsafe (c.get('auth') as any)?.session?.organizationId cast.
+
+**Files:** `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
+
+**Definition of done:** organizationId is read via c.get('organizationId') set by authMiddleware.
+
+**Out of scope:** Changing auth logic, adding new features.
+
+**Rules:** Avoid unsafe type casts. Use properly typed context values.
+
+**Pattern:** Use c.get('organizationId') instead of (c.get('auth') as any)?.session?.organizationId.
+
+**Anti-pattern:** Unsafe type casts, bypassing type safety.
+
+**Imports/Exports:** No new exports.
+
+### Subtasks
+
+- [ ] **T055.01 [AGENT]** Fix organizationId cast in Calendar API
+  - **File:** `apps/calendar/api/src/index.ts`
+  - **Action:** Replace (c.get('auth') as any)?.session?.organizationId with c.get('organizationId').
+  - **Validation:** `pnpm --filter calendar-api typecheck`.
+
+- [ ] **T055.02 [AGENT]** Fix organizationId cast in Tasks API
+  - **File:** `apps/tasks/api/src/index.ts`
+  - **Action:** Replace (c.get('auth') as any)?.session?.organizationId with c.get('organizationId').
+  - **Validation:** `pnpm --filter tasks-api typecheck`.
+
+- [ ] **T055.03 [AGENT]** Fix organizationId cast in Drive API
+  - **File:** `apps/drive/api/src/index.ts`
+  - **Action:** Replace (c.get('auth') as any)?.session?.organizationId with c.get('organizationId').
+  - **Validation:** `pnpm --filter drive-api typecheck`.
+
+---
+
 ## Task: T001 - Add Secure Account Recovery with Identity Verification
 
 - [!] **T001** [BLOCKED] Add Secure Account Recovery with Identity Verification
@@ -188,7 +412,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T004 - Document Expand-Contract Pattern
 
-- [ ] **T004** [PENDING] Document Expand-Contract Pattern
+- [x] **T004** [COMPLETED] Document Expand-Contract Pattern
 
 **Files:** `packages/db/docs/migration-patterns.md` (create), `packages/db/templates/expand-migration.sql` (create), `packages/db/templates/contract-migration.sql` (create), `packages/db/scripts/validate-migration.ts` (create), `packages/db/scripts/verify-migration.ts` (create), `AGENTS.md`
 
@@ -210,37 +434,37 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ### Subtasks
 
-- [ ] **T004.01 [AGENT]** Create migration patterns documentation
+- [x] **T004.01 [AGENT]** Create migration patterns documentation
   - **File:** `packages/db/docs/migration-patterns.md` (create)
   - **Action:** Document expand-contract pattern. Explain 4 phases. Provide examples. Include checklist.
   - **Validation:** Documentation covers all phases clearly.
 
-- [ ] **T004.02 [AGENT]** Create expand migration template
+- [x] **T004.02 [AGENT]** Create expand migration template
   - **File:** `packages/db/templates/expand-migration.sql` (create)
   - **Action:** Create template for expand phase. Add new column/table. Mark as nullable. Add comment with phase.
   - **Validation:** Template is usable for new expand migrations.
 
-- [ ] **T004.03 [AGENT]** Create contract migration template
+- [x] **T004.03 [AGENT]** Create contract migration template
   - **File:** `packages/db/templates/contract-migration.sql` (create)
   - **Action:** Create template for contract phase. Remove old column/table. Add comment with phase.
   - **Validation:** Template is usable for new contract migrations.
 
-- [ ] **T004.04 [AGENT]** Create migration validation script
+- [x] **T004.04 [AGENT]** Create migration validation script
   - **File:** `packages/db/scripts/validate-migration.ts` (create)
   - **Action:** Create validateMigration() function. Check for forbidden operations (DROP COLUMN without contract, ALTER COLUMN TYPE without expand). Return errors.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T004.05 [AGENT]** Create migration verification script
+- [x] **T004.05 [AGENT]** Create migration verification script
   - **File:** `packages/db/scripts/verify-migration.ts` (create)
   - **Action:** Create verifyMigration() function. Check migration follows expand-contract pattern. Verify phases in correct order.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T004.06 [AGENT]** Add migration checklist to AGENTS.md
+- [x] **T004.06 [AGENT]** Add migration checklist to AGENTS.md
   - **File:** `AGENTS.md`
   - **Action:** Add migration checklist section. Include expand-contract pattern requirements. Add validation steps.
   - **Validation:** AGENTS.md includes migration checklist.
 
-- [ ] **T004.07 [AGENT]** Create example migration
+- [x] **T004.07 [AGENT]** Create example migration
   - **File:** `packages/db/examples/add-column-migration.md` (create)
   - **Action:** Document example migration following expand-contract pattern. Show all 4 phases with SQL.
   - **Validation:** Example is clear and follows pattern.

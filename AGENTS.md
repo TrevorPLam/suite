@@ -29,6 +29,13 @@ This repository is a greenfield monorepo for a productivity suite. The initial f
 - Migration script (`packages/db/scripts/migrate.ts`) uses advisory locks to prevent concurrent migrations
 - Per-domain migration folders and tables are supported (calendar, drive, tasks)
 
+**Migration Checklist**: All schema changes must follow the expand-contract pattern:
+- **Expand Phase**: Add new columns/tables as nullable or with defaults. No DROP operations.
+- **Deploy Phase**: Update application to write to both old and new structures.
+- **Backfill Phase**: Migrate existing data from old to new structure in batches.
+- **Contract Phase**: Remove old structures after all clients have migrated.
+- See `packages/db/docs/migration-patterns.md` for detailed guidance and templates.
+
 6. **Search uses blind indexing by default.** Implement exact‑match search via HMAC tokens. Defer semantic search until validated.
 
 7. **One Durable Object per "room" (chat, doc, board).** Never put multiple coordination units in one DO. See `.devin/rules/durable-objects-pattern.md` for detailed implementation guidelines including Hibernation API, E2EE, Alarms, RPC methods, and Hono integration.
