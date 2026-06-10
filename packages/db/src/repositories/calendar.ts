@@ -50,101 +50,107 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
   }
 
   async findById(id: string, context: RepositoryContext): Promise<CalendarEvent | null> {
-    await this.setContext(context);
-    const db = this.db;
-    const results = await db
-      .select()
-      .from(calendarEvents)
-      .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, context.userId)))
-      .limit(1);
-    return results[0] ? mapToDomain(results[0]) : null;
+    return this.db.transaction(async (tx) => {
+      await this.setContext(context);
+      const results = await tx
+        .select()
+        .from(calendarEvents)
+        .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, context.userId)))
+        .limit(1);
+      return results[0] ? mapToDomain(results[0]) : null;
+    });
   }
 
   async findAll(context: RepositoryContext): Promise<CalendarEvent[]> {
-    await this.setContext(context);
-    const db = this.db;
-    const results = await db
-      .select()
-      .from(calendarEvents)
-      .where(eq(calendarEvents.userId, context.userId));
-    return results.map(mapToDomain);
+    return this.db.transaction(async (tx) => {
+      await this.setContext(context);
+      const results = await tx
+        .select()
+        .from(calendarEvents)
+        .where(eq(calendarEvents.userId, context.userId));
+      return results.map(mapToDomain);
+    });
   }
 
   async create(entity: Omit<CalendarEvent, 'id'>, context: RepositoryContext): Promise<CalendarEvent> {
-    await this.setContext(context);
-    const db = this.db;
-    const schemaEntity = mapToSchema(entity, context.tenantId);
-    const newEntity: NewCalendarEventSchema = {
-      id: generateUUID(),
-      tenantId: context.tenantId,
-      userId: context.userId,
-      title: schemaEntity.title,
-      startAt: schemaEntity.startAt,
-      endAt: schemaEntity.endAt,
-    };
-    const results = await db.insert(calendarEvents).values(newEntity).returning();
-    if (!results[0]) {
-      throw new Error('Failed to create calendar event');
-    }
-    // Security: audit log data creation
-    logDataCreated(context.userId, context.tenantId, 'calendar_event', newEntity.id);
-    return mapToDomain(results[0]);
+    return this.db.transaction(async (tx) => {
+      await this.setContext(context);
+      const schemaEntity = mapToSchema(entity, context.tenantId);
+      const newEntity: NewCalendarEventSchema = {
+        id: generateUUID(),
+        tenantId: context.tenantId,
+        userId: context.userId,
+        title: schemaEntity.title,
+        startAt: schemaEntity.startAt,
+        endAt: schemaEntity.endAt,
+      };
+      const results = await tx.insert(calendarEvents).values(newEntity).returning();
+      if (!results[0]) {
+        throw new Error('Failed to create calendar event');
+      }
+      // Security: audit log data creation
+      logDataCreated(context.userId, context.tenantId, 'calendar_event', newEntity.id);
+      return mapToDomain(results[0]);
+    });
   }
 
   async update(id: string, entity: Partial<CalendarEvent>, context: RepositoryContext): Promise<CalendarEvent | null> {
-    await this.setContext(context);
-    const db = this.db;
-    const schemaEntity: Partial<CalendarEventSchema> = {};
-    if (entity.title !== undefined) schemaEntity.title = entity.title;
-    if (entity.startAt !== undefined) schemaEntity.startAt = new Date(entity.startAt);
-    if (entity.endAt !== undefined) schemaEntity.endAt = new Date(entity.endAt);
+    return this.db.transaction(async (tx) => {
+      await this.setContext(context);
+      const schemaEntity: Partial<CalendarEventSchema> = {};
+      if (entity.title !== undefined) schemaEntity.title = entity.title;
+      if (entity.startAt !== undefined) schemaEntity.startAt = new Date(entity.startAt);
+      if (entity.endAt !== undefined) schemaEntity.endAt = new Date(entity.endAt);
 
-    const results = await db
-      .update(calendarEvents)
-      .set(schemaEntity)
-      .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, context.userId)))
-      .returning();
-    if (results[0]) {
-      // Security: audit log data update
-      logDataUpdated(context.userId, context.tenantId, 'calendar_event', id);
-      return mapToDomain(results[0]);
-    }
-    return null;
+      const results = await tx
+        .update(calendarEvents)
+        .set(schemaEntity)
+        .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, context.userId)))
+        .returning();
+      if (results[0]) {
+        // Security: audit log data update
+        logDataUpdated(context.userId, context.tenantId, 'calendar_event', id);
+        return mapToDomain(results[0]);
+      }
+      return null;
+    });
   }
 
   async delete(id: string, context: RepositoryContext): Promise<boolean> {
-    await this.setContext(context);
-    const db = this.db;
-    const results = await db
-      .delete(calendarEvents)
-      .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, context.userId)))
-      .returning();
-    if (results.length > 0) {
-      // Security: audit log data deletion
-      logDataDeleted(context.userId, context.tenantId, 'calendar_event', id);
-    }
-    return results.length > 0;
+    return this.db.transaction(async (tx) => {
+      await this.setContext(context);
+      const results = await tx
+        .delete(calendarEvents)
+        .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, context.userId)))
+        .returning();
+      if (results.length > 0) {
+        // Security: audit log data deletion
+        logDataDeleted(context.userId, context.tenantId, 'calendar_event', id);
+      }
+      return results.length > 0;
+    });
   }
 
   async findOverlapping(startAt: Date, endAt: Date, context: RepositoryContext, excludeId?: string): Promise<CalendarEvent[]> {
-    await this.setContext(context);
-    const db = this.db;
-    // Find events that overlap with the given range
-    // Overlap condition: (event.start < candidate.end) AND (event.end > candidate.start)
-    const conditions = [
-      eq(calendarEvents.userId, context.userId),
-      lt(calendarEvents.startAt, endAt),
-      gt(calendarEvents.endAt, startAt),
-    ];
+    return this.db.transaction(async (tx) => {
+      await this.setContext(context);
+      // Find events that overlap with the given range
+      // Overlap condition: (event.start < candidate.end) AND (event.end > candidate.start)
+      const conditions = [
+        eq(calendarEvents.userId, context.userId),
+        lt(calendarEvents.startAt, endAt),
+        gt(calendarEvents.endAt, startAt),
+      ];
 
-    if (excludeId) {
-      conditions.push(ne(calendarEvents.id, excludeId));
-    }
+      if (excludeId) {
+        conditions.push(ne(calendarEvents.id, excludeId));
+      }
 
-    const results = await db
-      .select()
-      .from(calendarEvents)
-      .where(and(...conditions));
-    return results.map(mapToDomain);
+      const results = await tx
+        .select()
+        .from(calendarEvents)
+        .where(and(...conditions));
+      return results.map(mapToDomain);
+    });
   }
 }

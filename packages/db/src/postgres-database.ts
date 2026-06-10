@@ -185,6 +185,11 @@ export class PostgresDatabase implements Database {
    * Uses SET LOCAL to set PostgreSQL session variables that RLS policies
    * reference for tenant and user isolation. SET LOCAL is transaction-scoped
    * and automatically resets at transaction end, preventing context leaks.
+   * 
+   * **IMPORTANT:** This method must be called inside an open transaction for
+   * SET LOCAL to take effect. The repository operation that follows must use the
+   * same connection. SET LOCAL will appear to have no effect if executed outside
+   * a BEGIN block, since the transaction will end immediately.
    */
   async setTenantContext(tenantId: string, userId: string): Promise<void> {
     if (this.isClosed) {

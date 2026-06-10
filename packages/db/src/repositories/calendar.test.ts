@@ -374,6 +374,43 @@ describe.skipIf(!dbUrl)('PostgresCalendarEventRepository', () => {
         expect(tenant2Events[0]?.title).toBe('Tenant 2 Event');
       });
     });
+
+    it('should isolate data when using repository contexts with same userId but different tenantId', async () => {
+      await withTransaction(client, async () => {
+        // Create two repository contexts with the same userId but different tenantId
+        const contextTenantA: RepositoryContext = {
+          userId: userId1,
+          tenantId: tenantId1,
+          requestId: randomUUID(),
+        };
+        const contextTenantB: RepositoryContext = {
+          userId: userId1, // Same userId
+          tenantId: tenantId2, // Different tenantId
+          requestId: randomUUID(),
+        };
+
+        // Insert a calendar event under tenant A context
+        const eventData = await createCalendarEvent({
+          title: 'Tenant A Event',
+          startAt: '2026-06-10T10:00:00Z',
+          endAt: '2026-06-10T11:00:00Z',
+        });
+        const createdEvent = await repository.create(eventData, contextTenantA);
+
+        // Query findAll with tenant B context
+        const tenantBEvents = await repository.findAll(contextTenantB);
+
+        // Assert the event is not present in the result
+        expect(tenantBEvents).toHaveLength(0);
+        expect(tenantBEvents.find(e => e.id === createdEvent.id)).toBeUndefined();
+
+        // Verify the event exists when queried with tenant A context
+        const tenantAEvents = await repository.findAll(contextTenantA);
+        expect(tenantAEvents).toHaveLength(1);
+        expect(tenantAEvents[0]?.id).toBe(createdEvent.id);
+        expect(tenantAEvents[0]?.title).toBe('Tenant A Event');
+      });
+    });
   });
 
   describe('composite index performance', () => {
