@@ -42,6 +42,20 @@ type Variables = {
 
 const app = new Hono<{ Variables: Variables; Bindings: Env }>();
 
+// Validate environment variables using runtime env
+app.use('/api/*', async (c, next) => {
+  const runtimeEnv = env(c);
+  // Extract only string env vars for validation (exclude KVNamespace and other bindings)
+  const stringEnv: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(runtimeEnv)) {
+    if (typeof value === 'string') {
+      stringEnv[key] = value;
+    }
+  }
+  validateCalendarEnv(stringEnv);
+  await next();
+});
+
 // Create usage repository for monitoring
 let usageRepository: PostgresUsageRepository | null = null;
 app.use('/api/*', async (c, next) => {
@@ -56,20 +70,6 @@ app.use('/api/*', async (c, next) => {
     const db = createDbClient(dbEnv);
     usageRepository = new PostgresUsageRepository(db);
   }
-  await next();
-});
-
-// Validate environment variables using runtime env
-app.use('/api/*', async (c, next) => {
-  const runtimeEnv = env(c);
-  // Extract only string env vars for validation (exclude KVNamespace and other bindings)
-  const stringEnv: Record<string, string | undefined> = {};
-  for (const [key, value] of Object.entries(runtimeEnv)) {
-    if (typeof value === 'string') {
-      stringEnv[key] = value;
-    }
-  }
-  validateCalendarEnv(stringEnv);
   await next();
 });
 
