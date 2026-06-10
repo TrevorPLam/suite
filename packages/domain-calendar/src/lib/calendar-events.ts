@@ -40,7 +40,7 @@ export interface CalendarEventRepository extends Repository<CalendarEvent> {
 }
 
 // In-memory repository for testing (default)
-class InMemoryCalendarEventRepository implements CalendarEventRepository {
+export class InMemoryCalendarEventRepository implements CalendarEventRepository {
   private events = new Map<string, CalendarEvent>();
 
   async findById(id: string, _context: RepositoryContext): Promise<CalendarEvent | null> {

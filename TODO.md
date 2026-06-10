@@ -89,7 +89,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T056 - Fix Pre-existing Calendar Domain Test Failures
 
-- [ ] **T056** [PENDING] Fix Pre-existing Calendar Domain Test Failures
+- [x] **T056** [COMPLETED] Fix Pre-existing Calendar Domain Test Failures
 
 **Block Reason:** packages/domain-calendar tests are failing (12 failed, 33 passed). Tests expect conflict detection behavior that may be related to T050 fix.
 
@@ -107,14 +107,16 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Imports/Exports:** No new exports.
 
+**Implementation Notes:** Root cause was that tests were passing `undefined` as the repository parameter, which created a new `InMemoryCalendarEventRepository` instance for each function call. Events created in one call were not visible in subsequent calls. Fixed by creating a shared repository instance in each test suite's `beforeEach` hook and passing it to all function calls. Also exported `InMemoryCalendarEventRepository` from calendar-events.ts to enable this pattern.
+
 ### Subtasks
 
-- [ ] **T056.01 [AGENT]** Investigate calendar test failures
+- [x] **T056.01 [AGENT]** Investigate calendar test failures
   - **File:** `packages/domain-calendar/src/lib/calendar-events.test.ts`
   - **Action:** Analyze failing tests to understand root cause. Check if related to T050 findOverlapping fix.
   - **Validation:** Root cause identified.
 
-- [ ] **T056.02 [AGENT]** Fix calendar test failures
+- [x] **T056.02 [AGENT]** Fix calendar test failures
   - **File:** `packages/domain-calendar/src/lib/calendar-events.test.ts` or `packages/domain-calendar/src/lib/calendar-events.ts`
   - **Action:** Fix tests or code based on investigation results.
   - **Validation:** `pnpm --filter @suite/domain-calendar test:run` passes.

@@ -7,11 +7,11 @@ import {
   getCalendarEvent,
   listCalendarEvents,
   listCalendarEventsInRange,
-  resetCalendarEvents,
   resetCalendarEventsDB,
   CalendarEventError,
   type CreateCalendarEventInput,
   type UpdateCalendarEventInput,
+  InMemoryCalendarEventRepository,
 } from './calendar-events.js';
 import { setCalendarKeyProvider, resetKeyProvider } from './calendar-crypto.js';
 import { generateAESKey } from '@suite/crypto';
@@ -44,8 +44,10 @@ async function assertCalendarEventError(
 }
 
 describe('calendar-events - create', () => {
+  let repository: InMemoryCalendarEventRepository;
+
   beforeEach(() => {
-    resetCalendarEvents();
+    repository = new InMemoryCalendarEventRepository();
   });
 
   it('should create a valid event with a stable ID', async () => {
@@ -56,7 +58,7 @@ describe('calendar-events - create', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    const event = await createCalendarEvent(input, undefined, context);
+    const event = await createCalendarEvent(input, repository, context);
 
     expect(event.id).toBeDefined();
     expect(event.id).toMatch(/^[0-9a-f-]{36}$/); // UUID format
@@ -73,7 +75,7 @@ describe('calendar-events - create', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    const event = await createCalendarEvent(input, undefined, context);
+    const event = await createCalendarEvent(input, repository, context);
 
     expect(event.title).toBe('Team Meeting');
   });
@@ -86,7 +88,7 @@ describe('calendar-events - create', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    await assertCalendarEventError(() => createCalendarEvent(input, undefined, context), 'validation_error', 'title must be a non-empty string');
+    await assertCalendarEventError(() => createCalendarEvent(input, repository, context), 'validation_error', 'title must be a non-empty string');
   });
 
   it('should reject whitespace-only title', async () => {
@@ -97,7 +99,7 @@ describe('calendar-events - create', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    await expect(createCalendarEvent(input, undefined, context)).rejects.toThrow(CalendarEventError);
+    await expect(createCalendarEvent(input, repository, context)).rejects.toThrow(CalendarEventError);
   });
 
   it('should reject invalid startAt timestamp', async () => {
@@ -108,7 +110,7 @@ describe('calendar-events - create', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    await assertCalendarEventError(() => createCalendarEvent(input, undefined, context), 'validation_error', 'startAt must be a valid ISO timestamp');
+    await assertCalendarEventError(() => createCalendarEvent(input, repository, context), 'validation_error', 'startAt must be a valid ISO timestamp');
   });
 
   it('should reject invalid endAt timestamp', async () => {
@@ -119,7 +121,7 @@ describe('calendar-events - create', () => {
       endAt: 'invalid-date',
     };
 
-    await assertCalendarEventError(() => createCalendarEvent(input, undefined, context), 'validation_error', 'endAt must be a valid ISO timestamp');
+    await assertCalendarEventError(() => createCalendarEvent(input, repository, context), 'validation_error', 'endAt must be a valid ISO timestamp');
   });
 
   it('should reject endAt before or equal to startAt', async () => {
@@ -130,8 +132,8 @@ describe('calendar-events - create', () => {
       endAt: '2025-01-15T10:00:00Z',
     };
 
-    await expect(createCalendarEvent(input, undefined, context)).rejects.toThrow(CalendarEventError);
-    await expect(createCalendarEvent(input, undefined, context)).rejects.toThrow('endAt must be later than startAt');
+    await expect(createCalendarEvent(input, repository, context)).rejects.toThrow(CalendarEventError);
+    await expect(createCalendarEvent(input, repository, context)).rejects.toThrow('endAt must be later than startAt');
   });
 
   it('should reject overlapping events', async () => {
@@ -148,9 +150,9 @@ describe('calendar-events - create', () => {
       endAt: '2025-01-15T11:30:00Z',
     };
 
-    await createCalendarEvent(firstInput, undefined, context);
+    await createCalendarEvent(firstInput, repository, context);
 
-    await assertCalendarEventError(() => createCalendarEvent(secondInput, undefined, context), 'conflict_error');
+    await assertCalendarEventError(() => createCalendarEvent(secondInput, repository, context), 'conflict_error');
   });
 
   it('should allow non-overlapping events', async () => {
@@ -167,16 +169,18 @@ describe('calendar-events - create', () => {
       endAt: '2025-01-15T12:00:00Z',
     };
 
-    const firstEvent = await createCalendarEvent(firstInput, undefined, context);
-    const secondEvent = await createCalendarEvent(secondInput, undefined, context);
+    const firstEvent = await createCalendarEvent(firstInput, repository, context);
+    const secondEvent = await createCalendarEvent(secondInput, repository, context);
 
     expect(firstEvent.id).not.toBe(secondEvent.id);
   });
 });
 
 describe('calendar-events - update', () => {
+  let repository: InMemoryCalendarEventRepository;
+
   beforeEach(() => {
-    resetCalendarEvents();
+    repository = new InMemoryCalendarEventRepository();
   });
 
   it('should update an existing event', async () => {
@@ -187,7 +191,7 @@ describe('calendar-events - update', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    const event = await createCalendarEvent(createInput, undefined, context);
+    const event = await createCalendarEvent(createInput, repository, context);
 
     const updateInput: UpdateCalendarEventInput = {
       title: 'Updated Meeting',
@@ -195,7 +199,7 @@ describe('calendar-events - update', () => {
       endAt: '2025-01-15T15:00:00Z',
     };
 
-    const updated = await updateCalendarEvent(event.id, updateInput, undefined, context);
+    const updated = await updateCalendarEvent(event.id, updateInput, repository, context);
 
     expect(updated.id).toBe(event.id);
     expect(updated.title).toBe('Updated Meeting');
@@ -211,7 +215,7 @@ describe('calendar-events - update', () => {
       endAt: '2025-01-15T15:00:00Z',
     };
 
-    await assertCalendarEventError(() => updateCalendarEvent('', updateInput, undefined, context), 'validation_error', 'id must be a non-empty string');
+    await assertCalendarEventError(() => updateCalendarEvent('', updateInput, repository, context), 'validation_error', 'id must be a non-empty string');
   });
 
   it('should reject update for non-existent event', async () => {
@@ -222,7 +226,7 @@ describe('calendar-events - update', () => {
       endAt: '2025-01-15T15:00:00Z',
     };
 
-    await assertCalendarEventError(() => updateCalendarEvent('non-existent-id', updateInput, undefined, context), 'not_found_error');
+    await assertCalendarEventError(() => updateCalendarEvent('non-existent-id', updateInput, repository, context), 'not_found_error');
   });
 
   it('should reject update that creates conflict with other events', async () => {
@@ -239,8 +243,8 @@ describe('calendar-events - update', () => {
       endAt: '2025-01-15T15:00:00Z',
     };
 
-    const firstEvent = await createCalendarEvent(firstInput, undefined, context);
-    await createCalendarEvent(secondInput, undefined, context);
+    const firstEvent = await createCalendarEvent(firstInput, repository, context);
+    await createCalendarEvent(secondInput, repository, context);
 
     const updateInput: UpdateCalendarEventInput = {
       title: 'Updated First Meeting',
@@ -248,7 +252,7 @@ describe('calendar-events - update', () => {
       endAt: '2025-01-15T15:30:00Z',
     };
 
-    await assertCalendarEventError(() => updateCalendarEvent(firstEvent.id, updateInput, undefined, context), 'conflict_error');
+    await assertCalendarEventError(() => updateCalendarEvent(firstEvent.id, updateInput, repository, context), 'conflict_error');
   });
 
   it('should allow update that does not create conflict', async () => {
@@ -265,8 +269,8 @@ describe('calendar-events - update', () => {
       endAt: '2025-01-15T15:00:00Z',
     };
 
-    const firstEvent = await createCalendarEvent(firstInput, undefined, context);
-    await createCalendarEvent(secondInput, undefined, context);
+    const firstEvent = await createCalendarEvent(firstInput, repository, context);
+    await createCalendarEvent(secondInput, repository, context);
 
     const updateInput: UpdateCalendarEventInput = {
       title: 'Updated First Meeting',
@@ -274,15 +278,17 @@ describe('calendar-events - update', () => {
       endAt: '2025-01-15T10:00:00Z',
     };
 
-    const updated = await updateCalendarEvent(firstEvent.id, updateInput, undefined, context);
+    const updated = await updateCalendarEvent(firstEvent.id, updateInput, repository, context);
 
     expect(updated.title).toBe('Updated First Meeting');
   });
 });
 
 describe('calendar-events - encryption', () => {
+  let repository: InMemoryCalendarEventRepository;
+
   beforeEach(() => {
-    resetCalendarEvents();
+    repository = new InMemoryCalendarEventRepository();
     resetKeyProvider();
   });
 
@@ -297,7 +303,7 @@ describe('calendar-events - encryption', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    const event = await createCalendarEvent(input, undefined, context);
+    const event = await createCalendarEvent(input, repository, context);
 
     // The returned event should have the decrypted title
     expect(event.title).toBe('Team Meeting');
@@ -314,8 +320,8 @@ describe('calendar-events - encryption', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    await createCalendarEvent(input, undefined, context);
-    const events = await listCalendarEvents(undefined, context);
+    await createCalendarEvent(input, repository, context);
+    const events = await listCalendarEvents(repository, context);
 
     expect(events).toHaveLength(1);
     expect(events[0]?.title).toBe('Team Meeting');
@@ -332,14 +338,14 @@ describe('calendar-events - encryption', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    await createCalendarEvent(input, undefined, context);
+    await createCalendarEvent(input, repository, context);
 
     const range = {
       startAt: '2025-01-15T00:00:00Z',
       endAt: '2025-01-17T00:00:00Z',
     };
 
-    const events = await listCalendarEventsInRange(range, undefined, context);
+    const events = await listCalendarEventsInRange(range, repository, context);
 
     expect(events).toHaveLength(1);
     expect(events[0]?.title).toBe('Team Meeting');
@@ -356,8 +362,8 @@ describe('calendar-events - encryption', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    const event = await createCalendarEvent(input, undefined, context);
-    const found = await getCalendarEvent(event.id, undefined, context);
+    const event = await createCalendarEvent(input, repository, context);
+    const found = await getCalendarEvent(event.id, repository, context);
 
     expect(found).not.toBeNull();
     expect(found?.title).toBe('Team Meeting');
@@ -374,7 +380,7 @@ describe('calendar-events - encryption', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    const event = await createCalendarEvent(createInput, undefined, context);
+    const event = await createCalendarEvent(createInput, repository, context);
 
     const updateInput: UpdateCalendarEventInput = {
       title: 'Updated Meeting',
@@ -382,7 +388,7 @@ describe('calendar-events - encryption', () => {
       endAt: '2025-01-15T15:00:00Z',
     };
 
-    const updated = await updateCalendarEvent(event.id, updateInput, undefined, context);
+    const updated = await updateCalendarEvent(event.id, updateInput, repository, context);
 
     expect(updated.title).toBe('Updated Meeting');
   });
@@ -395,10 +401,10 @@ describe('calendar-events - encryption', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    await createCalendarEvent(input, undefined, context);
-    await resetCalendarEventsDB(undefined, context);
+    await createCalendarEvent(input, repository, context);
+    await resetCalendarEventsDB(repository, context);
 
-    const events = await listCalendarEvents(undefined, context);
+    const events = await listCalendarEvents(repository, context);
     expect(events).toHaveLength(0);
   });
 
@@ -413,7 +419,7 @@ describe('calendar-events - encryption', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    const event = await createCalendarEvent(input, undefined, context);
+    const event = await createCalendarEvent(input, repository, context);
 
     // The returned event should have the decrypted title
     expect(event.title).toBe('Team Meeting');
@@ -422,8 +428,10 @@ describe('calendar-events - encryption', () => {
 
 
 describe('calendar-events - query', () => {
+  let repository: InMemoryCalendarEventRepository;
+
   beforeEach(() => {
-    resetCalendarEvents();
+    repository = new InMemoryCalendarEventRepository();
   });
 
   it('should list all events sorted by start time', async () => {
@@ -440,10 +448,10 @@ describe('calendar-events - query', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    await createCalendarEvent(firstInput, undefined, context);
-    await createCalendarEvent(secondInput, undefined, context);
+    await createCalendarEvent(firstInput, repository, context);
+    await createCalendarEvent(secondInput, repository, context);
 
-    const events = await listCalendarEvents(undefined, context);
+    const events = await listCalendarEvents(repository, context);
 
     expect(events).toHaveLength(2);
     expect(events[0]?.title).toBe('Second Meeting');
@@ -458,8 +466,8 @@ describe('calendar-events - query', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    const event = await createCalendarEvent(input, undefined, context);
-    const found = await getCalendarEvent(event.id, undefined, context);
+    const event = await createCalendarEvent(input, repository, context);
+    const found = await getCalendarEvent(event.id, repository, context);
 
     expect(found).not.toBeNull();
     expect(found?.id).toBe(event.id);
@@ -468,7 +476,7 @@ describe('calendar-events - query', () => {
 
   it('should return null for non-existent event', async () => {
     const context = createTestContext();
-    const found = await getCalendarEvent('non-existent-id', undefined, context);
+    const found = await getCalendarEvent('non-existent-id', repository, context);
     expect(found).toBeNull();
   });
 
@@ -492,16 +500,16 @@ describe('calendar-events - query', () => {
       endAt: '2025-01-20T11:00:00Z',
     };
 
-    await createCalendarEvent(firstInput, undefined, context);
-    await createCalendarEvent(secondInput, undefined, context);
-    await createCalendarEvent(thirdInput, undefined, context);
+    await createCalendarEvent(firstInput, repository, context);
+    await createCalendarEvent(secondInput, repository, context);
+    await createCalendarEvent(thirdInput, repository, context);
 
     const range = {
       startAt: '2025-01-15T00:00:00Z',
       endAt: '2025-01-17T00:00:00Z',
     };
 
-    const events = await listCalendarEventsInRange(range, undefined, context);
+    const events = await listCalendarEventsInRange(range, repository, context);
 
     expect(events).toHaveLength(2);
     expect(events.map((e: { title: string }) => e.title)).toContain('First Meeting');
@@ -516,7 +524,7 @@ describe('calendar-events - query', () => {
       endAt: '2025-01-17T00:00:00Z',
     };
 
-    await expect(listCalendarEventsInRange(range, undefined, context)).rejects.toThrow(CalendarEventError);
+    await expect(listCalendarEventsInRange(range, repository, context)).rejects.toThrow(CalendarEventError);
   });
 
   it('should return empty list for range with no events', async () => {
@@ -527,24 +535,20 @@ describe('calendar-events - query', () => {
       endAt: '2025-01-15T11:00:00Z',
     };
 
-    await createCalendarEvent(input, undefined, context);
+    await createCalendarEvent(input, repository, context);
 
     const range = {
       startAt: '2025-02-01T00:00:00Z',
       endAt: '2025-02-02T00:00:00Z',
     };
 
-    const events = await listCalendarEventsInRange(range, undefined, context);
+    const events = await listCalendarEventsInRange(range, repository, context);
 
     expect(events).toHaveLength(0);
   });
 });
 
 describe('calendar-events - property-based tests', () => {
-  beforeEach(() => {
-    resetCalendarEvents();
-  });
-
   it('property: end time is always after start time for valid events', async () => {
     await fc.assert(
       fc.asyncProperty(
@@ -553,7 +557,7 @@ describe('calendar-events - property-based tests', () => {
         fc.integer({ min: 1, max: 86400000 }), // 1ms to 24 hours in milliseconds
         async (title: string, startDate: Date, durationMs: number) => {
           const context = createTestContext();
-          resetCalendarEvents();
+          const repository = new InMemoryCalendarEventRepository();
           const startAt = startDate.toISOString();
           const endDate = new Date(startDate.getTime() + durationMs);
           const endAt = endDate.toISOString();
@@ -564,7 +568,7 @@ describe('calendar-events - property-based tests', () => {
             endAt,
           };
 
-          const event = await createCalendarEvent(input, undefined, context);
+          const event = await createCalendarEvent(input, repository, context);
           expect(Date.parse(event.endAt)).toBeGreaterThan(Date.parse(event.startAt));
         }
       )
@@ -578,7 +582,7 @@ describe('calendar-events - property-based tests', () => {
         fc.string({ minLength: 0, maxLength: 10 }),
         async (title: string, whitespace: string) => {
           const context = createTestContext();
-          resetCalendarEvents();
+          const repository = new InMemoryCalendarEventRepository();
           const titleWithWhitespace = whitespace + title + whitespace;
           const startAt = new Date().toISOString();
           const endAt = new Date(Date.now() + 3600000).toISOString();
@@ -589,7 +593,7 @@ describe('calendar-events - property-based tests', () => {
             endAt,
           };
 
-          const event = await createCalendarEvent(input, undefined, context);
+          const event = await createCalendarEvent(input, repository, context);
           expect(event.title).toBe(titleWithWhitespace.trim());
           expect(event.title.length).toBeGreaterThan(0);
         }
@@ -604,7 +608,7 @@ describe('calendar-events - property-based tests', () => {
         fc.date({ min: new Date(2000, 0, 1), max: new Date(2100, 11, 31) }),
         async (title: string, startDate: Date) => {
           const context = createTestContext();
-          resetCalendarEvents();
+          const repository = new InMemoryCalendarEventRepository();
           const startAt = startDate.toISOString();
           const endAt = new Date(startDate.getTime() + 3600000).toISOString();
 
@@ -614,7 +618,7 @@ describe('calendar-events - property-based tests', () => {
             endAt,
           };
 
-          const event = await createCalendarEvent(input, undefined, context);
+          const event = await createCalendarEvent(input, repository, context);
           expect(event.startAt).toBe(startAt);
           expect(event.endAt).toBe(endAt);
         }
@@ -632,7 +636,7 @@ describe('calendar-events - property-based tests', () => {
         fc.integer({ min: 3600000, max: 7200000 }),
         async (title1: string, title2: string, startDate: Date, duration1: number, gap: number) => {
           const context = createTestContext();
-          resetCalendarEvents();
+          const repository = new InMemoryCalendarEventRepository();
           const startAt1 = startDate.toISOString();
           const endAt1 = new Date(startDate.getTime() + duration1).toISOString();
           const startAt2 = new Date(startDate.getTime() + duration1 + gap).toISOString();
@@ -650,8 +654,8 @@ describe('calendar-events - property-based tests', () => {
             endAt: endAt2,
           };
 
-          const event1 = await createCalendarEvent(input1, undefined, context);
-          const event2 = await createCalendarEvent(input2, undefined, context);
+          const event1 = await createCalendarEvent(input1, repository, context);
+          const event2 = await createCalendarEvent(input2, repository, context);
 
           expect(event1.id).not.toBe(event2.id);
           expect(event1.title).toBe(title1.trim());
@@ -670,7 +674,7 @@ describe('calendar-events - property-based tests', () => {
         fc.integer({ min: 1000, max: 3600000 }),
         async (title1: string, title2: string, startDate: Date, duration1: number) => {
           const context = createTestContext();
-          resetCalendarEvents();
+          const repository = new InMemoryCalendarEventRepository();
           const startAt1 = startDate.toISOString();
           const endAt1 = new Date(startDate.getTime() + duration1).toISOString();
           // Start second event halfway through first event to ensure overlap
@@ -689,8 +693,8 @@ describe('calendar-events - property-based tests', () => {
             endAt: endAt2,
           };
 
-          await createCalendarEvent(input1, undefined, context);
-          await expect(createCalendarEvent(input2, undefined, context)).rejects.toThrow(CalendarEventError);
+          await createCalendarEvent(input1, repository, context);
+          await expect(createCalendarEvent(input2, repository, context)).rejects.toThrow(CalendarEventError);
         }
       )
     );
