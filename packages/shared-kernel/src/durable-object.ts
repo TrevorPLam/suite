@@ -18,7 +18,7 @@ export interface DurableObjectStorage {
     exec(query: string, ...params: unknown[]): unknown[];
   };
   deleteAll(): Promise<void>;
-  setAlarm(timestamp: number, callback: () => void | Promise<void>): void;
+  setAlarm(scheduledTime: number | Date, options?: Record<string, unknown>): Promise<void>;
   get<T>(key: string): Promise<T | undefined>;
   put(key: string, value: unknown): Promise<void>;
   delete(key: string): Promise<void>;
@@ -102,9 +102,7 @@ export abstract class BaseDurableObject {
    * Call this when first connection arrives
    */
   protected scheduleCleanupAlarm(delayMs: number = 600_000): void {
-    this.ctx.storage.setAlarm(Date.now() + delayMs, async () => {
-      await this.alarm();
-    });
+    this.ctx.storage.setAlarm(Date.now() + delayMs);
   }
 
   /**
@@ -126,6 +124,12 @@ export abstract class BaseDurableObject {
    * Handle WebSocket upgrade with Hibernation API
    */
   protected async handleWebSocketUpgrade(request: Request): Promise<Response> {
+    // Get user identity from request (set by auth middleware)
+    const userId = request.headers.get('X-User-Id');
+    if (!userId) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
     // @ts-ignore - WebSocketPair is a global in Cloudflare Workers runtime
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
@@ -133,14 +137,9 @@ export abstract class BaseDurableObject {
     // Accept the server side using the Hibernation API
     this.ctx.acceptWebSocket(server);
 
-    // Get user identity from request (set by auth middleware)
-    const userId = request.headers.get('X-User-Id');
-    if (!userId) {
-      server.close(1008, 'Unauthorized');
-      // @ts-ignore - webSocket is a valid ResponseInit option in Cloudflare Workers
-      return new Response(null, { status: 101, webSocket: client });
-    }
-
+    // Persist userId via attachment to survive hibernation
+    // @ts-ignore - serializeAttachment is available on WebSocket in Cloudflare Workers
+    server.serializeAttachment({ userId });
     this.sessions.set(server, { userId });
 
     // Schedule cleanup alarm if this is the first connection
@@ -172,10 +171,28 @@ export abstract class BaseDurableObject {
   }
 
   /**
+   * Restore sessions from hibernation
+   * Called lazily when sessions Map is empty but WebSockets exist
+   */
+  private restoreSessions(): void {
+    // @ts-ignore - getWebSockets is available on DurableObjectState in Cloudflare Workers
+    for (const ws of this.ctx.getWebSockets()) {
+      // @ts-ignore - deserializeAttachment is available on WebSocket in Cloudflare Workers
+      const { userId } = ws.deserializeAttachment();
+      this.sessions.set(ws, { userId });
+    }
+  }
+
+  /**
    * Called by runtime when WebSocket message is received
    * Override this method for custom message handling
    */
   async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
+    // Restore sessions from hibernation if Map is empty
+    if (this.sessions.size === 0) {
+      this.restoreSessions();
+    }
+
     const session = this.sessions.get(ws);
     if (!session) return;
 
@@ -195,6 +212,11 @@ export abstract class BaseDurableObject {
    * Called when WebSocket closes
    */
   async webSocketClose(ws: WebSocket, _code: number, _reason: string, _wasClean: boolean): Promise<void> {
+    // Restore sessions from hibernation if Map is empty
+    if (this.sessions.size === 0) {
+      this.restoreSessions();
+    }
+
     this.sessions.delete(ws);
 
     // If no more connections, alarm will eventually clean up storage

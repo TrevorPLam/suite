@@ -1354,7 +1354,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T021 - Fix blindIndex Not Regenerated on Update and Rename
 
-- [ ] **T021** [PENDING] Fix blindIndex Not Regenerated on Update and Rename
+- [x] **T021** [COMPLETED] Fix blindIndex Not Regenerated on Update and Rename
 
 **Files:** `packages/domain-tasks/src/lib/tasks.ts`, `packages/domain-drive/src/index.ts`, `packages/domain-tasks/src/lib/tasks.test.ts`, `packages/domain-drive/src/index.test.ts`
 
@@ -1374,17 +1374,17 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ### Subtasks
 
-- [ ] **T021.01 [AGENT]** Recompute blindIndex in updateTask
+- [x] **T021.01 [AGENT]** Recompute blindIndex in updateTask
   - **File:** `packages/domain-tasks/src/lib/tasks.ts`
   - **Action:** In `updateTask`, when `input.title` is present, derive the blind index using the same `generateBlindIndex(input.title, indexKey)` call pattern that `createTask` uses. Add the computed `blindIndex` to the repository update payload alongside the title.
   - **Validation:** `pnpm --filter @suite/domain-tasks test:run -- tasks.test.ts`
 
-- [ ] **T021.02 [AGENT]** Recompute blindIndex in renameDriveFile
+- [x] **T021.02 [AGENT]** Recompute blindIndex in renameDriveFile
   - **File:** `packages/domain-drive/src/index.ts`
   - **Action:** In `renameDriveFile`, after determining `newName` (and optionally encrypting it), recompute `blindIndex` using `generateBlindIndex(newName, indexKey)` and include it in the update passed to `fileRepository.update(...)`.
   - **Validation:** `pnpm --filter @suite/domain-drive test:run -- index.test.ts`
 
-- [ ] **T021.03 [AGENT]** Add BDD tests: search finds item by new name, not old name
+- [x] **T021.03 [AGENT]** Add BDD tests: search finds item by new name, not old name
   - **Files:** `packages/domain-tasks/src/lib/tasks.test.ts`, `packages/domain-drive/src/index.test.ts`
   - **Action:** Tasks: create task titled "old title", call `updateTask` with `title: "new title"`, call `searchTasks("new title")` — assert one result. Call `searchTasks("old title")` — assert zero results. Drive: upload "old.txt", call `renameDriveFile` to "new.txt", call `searchFiles("new.txt")` — assert one result. Call `searchFiles("old.txt")` — assert zero results.
   - **Validation:** `pnpm --filter @suite/domain-tasks test:run -- tasks.test.ts && pnpm --filter @suite/domain-drive test:run -- index.test.ts`
@@ -1393,7 +1393,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T022 - Fix BaseDurableObject: Hibernation, WebSocket Auth Order, and Alarm API
 
-- [ ] **T022** [PENDING] Fix BaseDurableObject: Hibernation, WebSocket Auth Order, and Alarm API
+- [x] **T022** [COMPLETED] Fix BaseDurableObject: Hibernation, WebSocket Auth Order, and Alarm API
 
 **Files:** `packages/shared-kernel/src/durable-object.ts`
 
@@ -1413,25 +1413,27 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ### Subtasks
 
-- [ ] **T022.01 [AGENT]** Move auth check before ctx.acceptWebSocket()
+- [x] **T022.01 [AGENT]** Move auth check before ctx.acceptWebSocket()
   - **File:** `packages/shared-kernel/src/durable-object.ts`
   - **Action:** In `handleWebSocketUpgrade`, move the `userId` extraction and null check to before the `this.ctx.acceptWebSocket(server)` call. If `!userId`, return `new Response('Unauthorized', { status: 401 })` directly without calling `acceptWebSocket` or constructing the WebSocket response.
   - **Validation:** `pnpm --filter @suite/shared-kernel typecheck`
 
-- [ ] **T022.02 [AGENT]** Persist session identity via WebSocket attachment for hibernation
+- [x] **T022.02 [AGENT]** Persist session identity via WebSocket attachment for hibernation
   - **File:** `packages/shared-kernel/src/durable-object.ts`
   - **Action:** After `this.ctx.acceptWebSocket(server)`, replace `this.sessions.set(server, { userId })` with `server.serializeAttachment({ userId }); this.sessions.set(server, { userId });`. Add a private `restoreSessions()` method that calls `for (const ws of this.ctx.getWebSockets()) { const { userId } = ws.deserializeAttachment(); this.sessions.set(ws, { userId }); }`. Call `restoreSessions()` at the top of `webSocketMessage` and `webSocketClose` when `this.sessions.size === 0`.
   - **Validation:** `pnpm --filter @suite/shared-kernel typecheck`
 
-- [ ] **T022.03 [AGENT]** Fix scheduleCleanupAlarm to omit callback
+- [x] **T022.03 [AGENT]** Fix scheduleCleanupAlarm to omit callback
   - **File:** `packages/shared-kernel/src/durable-object.ts`
   - **Action:** Change `this.ctx.storage.setAlarm(Date.now() + delayMs, async () => { await this.alarm(); });` to `await this.ctx.storage.setAlarm(Date.now() + delayMs);`. The `alarm()` method on the class is already the handler — no callback is needed or supported.
   - **Validation:** `pnpm --filter @suite/shared-kernel typecheck`
 
-- [ ] **T022.04 [AGENT]** Fix DurableObjectStorage.setAlarm type signature
+- [x] **T022.04 [AGENT]** Fix DurableObjectStorage.setAlarm type signature
   - **File:** `packages/shared-kernel/src/durable-object.ts`
   - **Action:** In the inline `DurableObjectStorage` interface definition, update `setAlarm` from `setAlarm(timestamp: number, callback: () => void | Promise<void>): void` to `setAlarm(scheduledTime: number | Date, options?: Record<string, unknown>): Promise<void>`.
   - **Validation:** `pnpm --filter @suite/shared-kernel typecheck`
+
+**Implementation Notes:** Fixed all four issues in BaseDurableObject: (1) Moved auth check before acceptWebSocket to return 401 before WebSocket handshake, (2) Added serializeAttachment/deserializeAttachment with restoreSessions() method to persist userId across hibernation, (3) Removed callback parameter from setAlarm call (correct API is setAlarm(scheduledTime: number): void), (4) Updated DurableObjectStorage.setAlarm type signature to match Cloudflare runtime API (scheduledTime: number | Date, options?: Record<string, unknown>): Promise<void>. All typecheck, lint, and tests pass.
 
 ---
 
