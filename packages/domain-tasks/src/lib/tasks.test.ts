@@ -22,6 +22,7 @@ import {
   type SearchTasksInput,
   type BatchOperationInput,
   type TaskItem,
+  type TaskRepository,
   InMemoryTaskRepository,
 } from './tasks.js';
 import { sealTask, unsealTask, setTaskKeyProvider, resetKeyProvider } from './tasks-crypto.js';
@@ -368,7 +369,7 @@ describe('tasks - query', () => {
     expect(found).toBeNull();
   });
 
-  it('should filter tasks by all (non-archived)', async () => {
+  it('should filter tasks by all (including archived)', async () => {
     const firstInput: CreateTaskInput = {
       title: 'First task',
     };
@@ -384,8 +385,9 @@ describe('tasks - query', () => {
 
     const tasks = await filterTasks('all', repository, context);
 
-    expect(tasks).toHaveLength(1);
-    expect(tasks[0]?.id).toBe(secondTask.id);
+    expect(tasks).toHaveLength(2);
+    expect(tasks.map(t => t.id)).toContain(firstTask.id);
+    expect(tasks.map(t => t.id)).toContain(secondTask.id);
   });
 
   it('should filter tasks by active (not completed, not archived)', async () => {
@@ -453,6 +455,203 @@ describe('tasks - query', () => {
 
     expect(tasks).toHaveLength(1);
     expect(tasks[0]?.id).toBe(firstTask.id);
+  });
+});
+
+describe('filterTasks', () => {
+  let repository: InMemoryTaskRepository;
+  let context: RepositoryContext;
+
+  beforeEach(() => {
+    repository = new InMemoryTaskRepository();
+    context = createTestContext();
+  });
+
+  describe('filter: all', () => {
+    it('should return all tasks including archived when using findWhere', async () => {
+      const activeTask = await createTask({ title: 'Active task' }, repository, context);
+      const archivedTask = await createTask({ title: 'Archived task' }, repository, context);
+      await archiveTask(archivedTask.id, { archived: true }, repository, context);
+
+      const tasks = await filterTasks('all', repository, context);
+
+      expect(tasks).toHaveLength(2);
+      expect(tasks.map(t => t.id)).toContain(activeTask.id);
+      expect(tasks.map(t => t.id)).toContain(archivedTask.id);
+    });
+
+    it('should return all tasks including archived when using fallback path', async () => {
+      // Create a repository without findWhere to force fallback path
+      const fallbackRepository = {
+        findById: repository.findById.bind(repository),
+        findAll: repository.findAll.bind(repository),
+        create: repository.create.bind(repository),
+        update: repository.update.bind(repository),
+        delete: repository.delete.bind(repository),
+        count: repository.count.bind(repository),
+        // No findWhere - forces fallback path
+      } as TaskRepository;
+
+      const activeTask = await createTask({ title: 'Active task' }, fallbackRepository, context);
+      const archivedTask = await createTask({ title: 'Archived task' }, fallbackRepository, context);
+      await archiveTask(archivedTask.id, { archived: true }, fallbackRepository, context);
+
+      const tasks = await filterTasks('all', fallbackRepository, context);
+
+      expect(tasks).toHaveLength(2);
+      expect(tasks.map(t => t.id)).toContain(activeTask.id);
+      expect(tasks.map(t => t.id)).toContain(archivedTask.id);
+    });
+
+    it('should decrypt tasks when encryption is enabled (findWhere path)', async () => {
+      const testKey = await generateAESKey(false);
+      setTaskKeyProvider(async () => testKey);
+
+      await createTask({ title: 'Task 1' }, repository, context);
+      await createTask({ title: 'Task 2' }, repository, context);
+
+      const tasks = await filterTasks('all', repository, context);
+
+      expect(tasks).toHaveLength(2);
+      expect(tasks.map(t => t.title)).toContain('Task 1');
+      expect(tasks.map(t => t.title)).toContain('Task 2');
+      resetKeyProvider();
+    });
+
+    it('should decrypt tasks when encryption is enabled (fallback path)', async () => {
+      const testKey = await generateAESKey(false);
+      setTaskKeyProvider(async () => testKey);
+
+      const fallbackRepository = {
+        findById: repository.findById.bind(repository),
+        findAll: repository.findAll.bind(repository),
+        create: repository.create.bind(repository),
+        update: repository.update.bind(repository),
+        delete: repository.delete.bind(repository),
+        count: repository.count.bind(repository),
+      } as TaskRepository;
+
+      await createTask({ title: 'Task 1' }, fallbackRepository, context);
+      await createTask({ title: 'Task 2' }, fallbackRepository, context);
+
+      const tasks = await filterTasks('all', fallbackRepository, context);
+
+      expect(tasks).toHaveLength(2);
+      expect(tasks.map(t => t.title)).toContain('Task 1');
+      expect(tasks.map(t => t.title)).toContain('Task 2');
+      resetKeyProvider();
+    });
+  });
+
+  describe('filter: active', () => {
+    it('should return only non-completed, non-archived tasks when using findWhere', async () => {
+      const activeTask = await createTask({ title: 'Active task' }, repository, context);
+      await createTask({ title: 'Completed task', completed: true }, repository, context);
+      const archivedTask = await createTask({ title: 'Archived task' }, repository, context);
+      await archiveTask(archivedTask.id, { archived: true }, repository, context);
+
+      const tasks = await filterTasks('active', repository, context);
+
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0]?.id).toBe(activeTask.id);
+    });
+
+    it('should return only non-completed, non-archived tasks when using fallback path', async () => {
+      const fallbackRepository = {
+        findById: repository.findById.bind(repository),
+        findAll: repository.findAll.bind(repository),
+        create: repository.create.bind(repository),
+        update: repository.update.bind(repository),
+        delete: repository.delete.bind(repository),
+        count: repository.count.bind(repository),
+      } as TaskRepository;
+
+      const activeTask = await createTask({ title: 'Active task' }, fallbackRepository, context);
+      await createTask({ title: 'Completed task', completed: true }, fallbackRepository, context);
+      const archivedTask = await createTask({ title: 'Archived task' }, fallbackRepository, context);
+      await archiveTask(archivedTask.id, { archived: true }, fallbackRepository, context);
+
+      const tasks = await filterTasks('active', fallbackRepository, context);
+
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0]?.id).toBe(activeTask.id);
+    });
+  });
+
+  describe('filter: completed', () => {
+    it('should return only completed, non-archived tasks when using findWhere', async () => {
+      await createTask({ title: 'Active task' }, repository, context);
+      const completedTask = await createTask({ title: 'Completed task', completed: true }, repository, context);
+      const archivedTask = await createTask({ title: 'Archived completed task', completed: true }, repository, context);
+      await archiveTask(archivedTask.id, { archived: true }, repository, context);
+
+      const tasks = await filterTasks('completed', repository, context);
+
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0]?.id).toBe(completedTask.id);
+    });
+
+    it('should return only completed, non-archived tasks when using fallback path', async () => {
+      const fallbackRepository = {
+        findById: repository.findById.bind(repository),
+        findAll: repository.findAll.bind(repository),
+        create: repository.create.bind(repository),
+        update: repository.update.bind(repository),
+        delete: repository.delete.bind(repository),
+        count: repository.count.bind(repository),
+      } as TaskRepository;
+
+      await createTask({ title: 'Active task' }, fallbackRepository, context);
+      const completedTask = await createTask({ title: 'Completed task', completed: true }, fallbackRepository, context);
+      const archivedTask = await createTask({ title: 'Archived completed task', completed: true }, fallbackRepository, context);
+      await archiveTask(archivedTask.id, { archived: true }, fallbackRepository, context);
+
+      const tasks = await filterTasks('completed', fallbackRepository, context);
+
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0]?.id).toBe(completedTask.id);
+    });
+  });
+
+  describe('filter: archived', () => {
+    it('should return only archived tasks when using findWhere', async () => {
+      const activeTask = await createTask({ title: 'Active task' }, repository, context);
+      const archivedTask1 = await createTask({ title: 'Archived task 1' }, repository, context);
+      const archivedTask2 = await createTask({ title: 'Archived task 2' }, repository, context);
+      await archiveTask(archivedTask1.id, { archived: true }, repository, context);
+      await archiveTask(archivedTask2.id, { archived: true }, repository, context);
+
+      const tasks = await filterTasks('archived', repository, context);
+
+      expect(tasks).toHaveLength(2);
+      expect(tasks.map(t => t.id)).toContain(archivedTask1.id);
+      expect(tasks.map(t => t.id)).toContain(archivedTask2.id);
+      expect(tasks.map(t => t.id)).not.toContain(activeTask.id);
+    });
+
+    it('should return only archived tasks when using fallback path', async () => {
+      const fallbackRepository = {
+        findById: repository.findById.bind(repository),
+        findAll: repository.findAll.bind(repository),
+        create: repository.create.bind(repository),
+        update: repository.update.bind(repository),
+        delete: repository.delete.bind(repository),
+        count: repository.count.bind(repository),
+      } as TaskRepository;
+
+      const activeTask = await createTask({ title: 'Active task' }, fallbackRepository, context);
+      const archivedTask1 = await createTask({ title: 'Archived task 1' }, fallbackRepository, context);
+      const archivedTask2 = await createTask({ title: 'Archived task 2' }, fallbackRepository, context);
+      await archiveTask(archivedTask1.id, { archived: true }, fallbackRepository, context);
+      await archiveTask(archivedTask2.id, { archived: true }, fallbackRepository, context);
+
+      const tasks = await filterTasks('archived', fallbackRepository, context);
+
+      expect(tasks).toHaveLength(2);
+      expect(tasks.map(t => t.id)).toContain(archivedTask1.id);
+      expect(tasks.map(t => t.id)).toContain(archivedTask2.id);
+      expect(tasks.map(t => t.id)).not.toContain(activeTask.id);
+    });
   });
 });
 

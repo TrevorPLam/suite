@@ -1186,7 +1186,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T017 - Fix filterTasks Correctness Bugs
 
-- [ ] **T017** [PENDING] Fix filterTasks Correctness Bugs
+- [x] **T017** [COMPLETED] Fix filterTasks Correctness Bugs
 
 **Files:** `packages/domain-tasks/src/lib/tasks.ts`, `packages/domain-tasks/src/lib/tasks.test.ts`
 
@@ -1204,19 +1204,21 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Depends on:** None. **Blocks:** None.
 
+**Implementation Notes:** Fixed 'all' filter to use `findAll()` instead of `findWhere({ archived: false })` in both findWhere and fallback paths. Removed early return statements in fallback path to ensure all branches route through the decrypt block. Added comprehensive BDD tests with 10 new tests covering all four filter modes ('all', 'active', 'completed', 'archived') in both code paths (findWhere and fallback), including encryption tests. Updated existing test to reflect that 'all' now includes archived tasks. All 88 tests pass.
+
 ### Subtasks
 
-- [ ] **T017.01 [AGENT]** Fix 'all' filter to include archived tasks
+- [x] **T017.01 [AGENT]** Fix 'all' filter to include archived tasks
   - **File:** `packages/domain-tasks/src/lib/tasks.ts`
   - **Action:** In the `case 'all':` branch of the `findWhere` path, change `repository.findWhere({ archived: false }, context)` to `repository.findAll(context)`. In the `else` (in-memory) branch, when `filter === 'all'`, do not apply the `archived: false` predicate.
   - **Validation:** `pnpm --filter @suite/domain-tasks test:run -- tasks.test.ts`
 
-- [ ] **T017.02 [AGENT]** Fix fallback path to route through decrypt block
+- [x] **T017.02 [AGENT]** Fix fallback path to route through decrypt block
   - **File:** `packages/domain-tasks/src/lib/tasks.ts`
   - **Action:** Remove the early `return` statement inside the `else` fallback branch. Assign the filtered result to the shared `tasks` variable (declared before the `if/else`) so execution continues to the `unsealTasks` block at the bottom of the function.
   - **Validation:** `pnpm --filter @suite/domain-tasks test:run -- tasks.test.ts`
 
-- [ ] **T017.03 [AGENT]** Add BDD tests covering all filter modes and both code paths
+- [x] **T017.03 [AGENT]** Add BDD tests covering all filter modes and both code paths
   - **File:** `packages/domain-tasks/src/lib/tasks.test.ts`
   - **Action:** Add `describe('filterTasks', () => { ... })` with nested describes per filter value. Cover: 'all' includes archived tasks; 'active' excludes completed and archived; 'completed' returns only completed; 'archived' returns only archived. Repeat the 'all' and 'active' tests with encryption enabled and the in-memory repository to confirm the fallback path decrypts. Use `setTaskKeyProvider` to inject a test key.
   - **Validation:** `pnpm --filter @suite/domain-tasks test:run -- tasks.test.ts`

@@ -471,7 +471,7 @@ export async function filterTasks(filter: TaskFilter, repository: TaskRepository
         break;
       case 'all':
       default:
-        tasks = await repository.findWhere({ archived: false }, context);
+        tasks = await repository.findAll(context);
         break;
     }
   } else {
@@ -480,14 +480,18 @@ export async function filterTasks(filter: TaskFilter, repository: TaskRepository
 
     switch (filter) {
       case 'active':
-        return allTasks.filter((task) => !task.completed && !task.archived);
+        tasks = allTasks.filter((task) => !task.completed && !task.archived);
+        break;
       case 'completed':
-        return allTasks.filter((task) => task.completed && !task.archived);
+        tasks = allTasks.filter((task) => task.completed && !task.archived);
+        break;
       case 'archived':
-        return allTasks.filter((task) => task.archived);
+        tasks = allTasks.filter((task) => task.archived);
+        break;
       case 'all':
       default:
-        return allTasks.filter((task) => !task.archived);
+        tasks = allTasks;
+        break;
     }
   }
 
