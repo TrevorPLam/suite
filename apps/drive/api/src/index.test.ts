@@ -98,12 +98,21 @@ describe('drive API - list files', () => {
     resetDriveFiles();
   });
 
-  it('should list all files', async () => {
+  it('GET /api/v1/files returns 401 without authentication', async () => {
+    const res = await app.request('/api/v1/files');
+    expect(res.status).toBe(401);
+    const json = await res.json() as ErrorResponse;
+    expect(json).toHaveProperty('error');
+  });
+
+  it('should list all files with authentication', async () => {
+    allowAuth = true;
     const res = await app.request('/api/v1/files');
     expect(res.status).toBe(200);
     const json = await res.json() as FilesListResponse;
     expect(json).toHaveProperty('files');
     expect(Array.isArray(json.files)).toBe(true);
+    allowAuth = false;
   });
 });
 
@@ -427,20 +436,31 @@ describe('drive API - list folders', () => {
     resetDriveFolders();
   });
 
-  it('should list all folders', async () => {
+  it('GET /api/v1/folders returns 401 without authentication', async () => {
+    const res = await app.request('/api/v1/folders');
+    expect(res.status).toBe(401);
+    const json = await res.json() as ErrorResponse;
+    expect(json).toHaveProperty('error');
+  });
+
+  it('should list all folders with authentication', async () => {
+    allowAuth = true;
     const res = await app.request('/api/v1/folders');
     expect(res.status).toBe(200);
     const json = await res.json() as FoldersListResponse;
     expect(json).toHaveProperty('folders');
     expect(Array.isArray(json.folders)).toBe(true);
+    allowAuth = false;
   });
 
-  it('should list folders by parentId', async () => {
+  it('should list folders by parentId with authentication', async () => {
+    allowAuth = true;
     const res = await app.request('/api/v1/folders?parentId=parent-123');
     expect(res.status).toBe(200);
     const json = await res.json() as FoldersListResponse;
     expect(json).toHaveProperty('folders');
     expect(Array.isArray(json.folders)).toBe(true);
+    allowAuth = false;
   });
 });
 
@@ -741,33 +761,48 @@ describe('drive API - search files', () => {
     resetDriveFiles();
   });
 
-  it('should search files by query', async () => {
+  it('GET /api/v1/files/search returns 401 without authentication', async () => {
+    const res = await app.request('/api/v1/files/search?q=doc');
+    expect(res.status).toBe(401);
+    const json = await res.json() as ErrorResponse;
+    expect(json).toHaveProperty('error');
+  });
+
+  it('should search files by query with authentication', async () => {
+    allowAuth = true;
     const res = await app.request('/api/v1/files/search?q=doc');
     expect(res.status).toBe(200);
     const json = await res.json() as FilesListResponse;
     expect(json).toHaveProperty('files');
     expect(Array.isArray(json.files)).toBe(true);
+    allowAuth = false;
   });
 
-  it('should search files by query and folderId', async () => {
+  it('should search files by query and folderId with authentication', async () => {
+    allowAuth = true;
     const res = await app.request('/api/v1/files/search?q=doc&folderId=folder-123');
     expect(res.status).toBe(200);
     const json = await res.json() as FilesListResponse;
     expect(json).toHaveProperty('files');
     expect(Array.isArray(json.files)).toBe(true);
+    allowAuth = false;
   });
 
-  it('should reject missing query parameter', async () => {
+  it('should reject missing query parameter with authentication', async () => {
+    allowAuth = true;
     const res = await app.request('/api/v1/files/search');
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json).toHaveProperty('error');
+    allowAuth = false;
   });
 
-  it('should reject empty query parameter', async () => {
+  it('should reject empty query parameter with authentication', async () => {
+    allowAuth = true;
     const res = await app.request('/api/v1/files/search?q=');
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json).toHaveProperty('error');
+    allowAuth = false;
   });
 });

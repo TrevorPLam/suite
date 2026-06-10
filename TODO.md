@@ -1267,7 +1267,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T019 - Fix Drive Public Endpoints Using Empty In-Memory Repositories
 
-- [ ] **T019** [PENDING] Fix Drive Public Endpoints Using Empty In-Memory Repositories
+- [x] **T019** [COMPLETED] Fix Drive Public Endpoints Using Empty In-Memory Repositories
 
 **Files:** `apps/drive/api/src/index.ts`, `apps/drive/api/src/index.test.ts`
 
@@ -1287,25 +1287,27 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ### Subtasks
 
-- [ ] **T019.01 [AGENT]** Fix GET /api/v1/files handler
+- [x] **T019.01 [AGENT]** Fix GET /api/v1/files handler
   - **File:** `apps/drive/api/src/index.ts`
   - **Action:** Add `requireAuth, requireOrganization` to the `app.get('/api/v1/files', ...)` handler middleware chain. Replace `const fileRepo = new InMemoryDriveFileRepository()` and the hardcoded `repositoryContext` with `const fileRepo = c.get('fileRepo')` and `const repositoryContext = c.get('repositoryContext')`. Return 500 with `{ error: { code: 'MISSING_CONTEXT' } }` if either is absent.
   - **Validation:** `pnpm --filter @suite/drive-api typecheck`
 
-- [ ] **T019.02 [AGENT]** Fix GET /api/v1/folders handler
+- [x] **T019.02 [AGENT]** Fix GET /api/v1/folders handler
   - **File:** `apps/drive/api/src/index.ts`
   - **Action:** Same pattern as T019.01 using `c.get('folderRepo')`.
   - **Validation:** `pnpm --filter @suite/drive-api typecheck`
 
-- [ ] **T019.03 [AGENT]** Fix GET /api/v1/files/search handler
+- [x] **T019.03 [AGENT]** Fix GET /api/v1/files/search handler
   - **File:** `apps/drive/api/src/index.ts`
   - **Action:** Same pattern as T019.01. The call to `searchFiles(result.data, fileRepo, repositoryContext)` already uses these variables — only the source of `fileRepo` and `repositoryContext` changes.
   - **Validation:** `pnpm --filter @suite/drive-api typecheck`
 
-- [ ] **T019.04 [AGENT]** Add authentication requirement tests for Drive read endpoints
+- [x] **T019.04 [AGENT]** Add authentication requirement tests for Drive read endpoints
   - **File:** `apps/drive/api/src/index.test.ts` (create if absent)
   - **Action:** Add three test groups (files, folders, search). For each: assert unauthenticated request returns 401. Assert authenticated request returns `{ files: [] }` (or folders/search equivalent) rather than an error. Use the test helper that sets up auth context in Hono.
   - **Validation:** `pnpm --filter @suite/drive-api test:run -- index.test.ts`
+
+**Implementation Notes:** Fixed three Drive API endpoints (GET /api/v1/files, GET /api/v1/folders, GET /api/v1/files/search) to require authentication by adding `requireAuth, requireOrganization` middleware. Replaced in-memory repository instantiation with context-based repository retrieval (`c.get('fileRepo')`, `c.get('folderRepo')`, `c.get('repositoryContext')`). Added 500 error response when repository context is missing. Updated tests to verify 401 response without authentication and 200 response with authentication. All typecheck and tests pass.
 
 ---
 

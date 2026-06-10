@@ -448,14 +448,21 @@ http_error_rate{app="drive"} ${errorRate}
   return c.text(prometheusMetrics);
 });
 
-app.get('/api/v1/files', async (c) => {
-  // Use in-memory repositories for public endpoint (no auth required)
-  const fileRepo = new InMemoryDriveFileRepository();
-  const repositoryContext: RepositoryContext = {
-    userId: 'anonymous',
-    tenantId: 'default',
-    requestId: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
-  };
+app.get('/api/v1/files', requireAuth, requireOrganization, async (c) => {
+  const fileRepo = c.get('fileRepo');
+  const repositoryContext = c.get('repositoryContext');
+  if (!fileRepo || !repositoryContext) {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Repository context not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      500,
+    );
+  }
   const files = await listDriveFiles(fileRepo, repositoryContext);
   return c.json({ files });
 });
@@ -874,15 +881,22 @@ app.get('/api/v1/files/:id/download', async (c) => {
 });
 
 // Folder endpoints
-app.get('/api/v1/folders', async (c) => {
-  // Use in-memory repositories for public endpoint (no auth required)
-  const folderRepo = new InMemoryDriveFolderRepository();
+app.get('/api/v1/folders', requireAuth, requireOrganization, async (c) => {
+  const folderRepo = c.get('folderRepo');
+  const repositoryContext = c.get('repositoryContext');
+  if (!folderRepo || !repositoryContext) {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Repository context not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      500,
+    );
+  }
   const parentId = c.req.query('parentId');
-  const repositoryContext: RepositoryContext = {
-    userId: 'anonymous',
-    tenantId: 'default',
-    requestId: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
-  };
   const folders = await listFolders(folderRepo, repositoryContext, parentId);
   return c.json({ folders });
 });
@@ -1169,9 +1183,21 @@ app.post('/api/v1/files/:id/move', requireAuth, requireOrganization, async (c) =
 });
 
 // Search endpoint
-app.get('/api/v1/files/search', async (c) => {
-  // Use in-memory repositories for public endpoint (no auth required)
-  const fileRepo = new InMemoryDriveFileRepository();
+app.get('/api/v1/files/search', requireAuth, requireOrganization, async (c) => {
+  const fileRepo = c.get('fileRepo');
+  const repositoryContext = c.get('repositoryContext');
+  if (!fileRepo || !repositoryContext) {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Repository context not found',
+          timestamp: new Date().toISOString(),
+        },
+      },
+      500,
+    );
+  }
   const query = c.req.query();
   const result = searchFilesQuerySchema.safeParse(query);
 
@@ -1189,11 +1215,6 @@ app.get('/api/v1/files/search', async (c) => {
     );
   }
 
-  const repositoryContext: RepositoryContext = {
-    userId: 'anonymous',
-    tenantId: 'default',
-    requestId: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
-  };
   const results = await searchFiles(result.data, fileRepo, repositoryContext);
   return c.json({ files: results });
 });
