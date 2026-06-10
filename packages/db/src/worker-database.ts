@@ -11,6 +11,8 @@ import type { Database, DatabaseEnvironment, TransactionContext, QueryResult } f
 import { logQuery, extractOperation, extractTableName, type QueryLogContext } from './observability/query-logger.js';
 import { recordQueryDuration, incrementQueryCount, incrementErrorCount, incrementTransactionCount, setPoolUtilization } from './observability/metrics.js';
 import { detectSlowQuery } from './observability/slow-query-detector.js';
+import { retryWithBackoff } from './error-handling/retry.js';
+import { getDatabaseErrorCode } from './error-handling/error-codes.js';
 
 /**
  * WorkerDatabase implementation using Hyperdrive
@@ -48,7 +50,6 @@ export class WorkerDatabase implements Database {
       throw new Error('Database connection is closed');
     }
 
-    const startTime = Date.now();
     const operation = extractOperation(sql);
     const table = extractTableName(sql);
     const queryContext: QueryLogContext = {
@@ -57,26 +58,33 @@ export class WorkerDatabase implements Database {
       ...(table && { table }),
     };
 
-    try {
-      const result = await this.pool.unsafe(sql, params as any[]);
-      const duration = Date.now() - startTime;
+    return retryWithBackoff(async () => {
+      const startTime = Date.now();
 
-      // Observability: log query, record metrics, detect slow queries
-      logQuery(sql, duration, queryContext);
-      recordQueryDuration(duration, operation);
-      incrementQueryCount(operation);
-      detectSlowQuery(sql, duration, undefined, queryContext);
+      try {
+        const result = await this.pool.unsafe(sql, params as never[]);
+        const duration = Date.now() - startTime;
 
-      return result as unknown as QueryResult<T>;
-    } catch (error) {
-      const duration = Date.now() - startTime;
+        // Observability: log query, record metrics, detect slow queries
+        logQuery(sql, duration, queryContext);
+        recordQueryDuration(duration, operation);
+        incrementQueryCount(operation);
+        detectSlowQuery(sql, duration, undefined, queryContext);
 
-      // Observability: log error, increment error counter
-      logQuery(sql, duration, queryContext, error instanceof Error ? error : new Error(String(error)));
-      incrementErrorCount(error instanceof Error ? error.constructor.name : 'unknown');
+        return result as unknown as QueryResult<T>;
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        const errorCode = getDatabaseErrorCode(error);
 
-      throw new Error(`Query failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
+        // Observability: log error, increment error counter
+        logQuery(sql, duration, queryContext, error instanceof Error ? error : new Error(String(error)));
+        incrementErrorCount(error instanceof Error ? error.constructor.name : 'unknown');
+
+        throw new Error(
+          `Database query failed [${errorCode}]: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    });
   }
 
   /**
@@ -93,7 +101,7 @@ export class WorkerDatabase implements Database {
 
     const txContext: TransactionContext = {
       query: async <U = unknown>(sql: string, params?: unknown[]): Promise<QueryResult<U>> => {
-        const result = await client.unsafe(sql, params as any[]);
+        const result = await client.unsafe(sql, params as never[]);
         return result as unknown as QueryResult<U>;
       },
       commit: async () => {

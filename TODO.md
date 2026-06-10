@@ -642,7 +642,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T007 - Add Retry Logic and Error Handling
 
-- [ ] **T007** [PENDING] Add Retry Logic and Error Handling
+- [x] **T007** [COMPLETED] Add Retry Logic and Error Handling
 
 **Files:** `packages/db/src/error-handling/retry.ts` (create), `packages/db/src/error-handling/error-codes.ts` (create), `packages/db/src/error-handling/circuit-breaker.ts` (create), `packages/db/src/postgres-database.ts`, `packages/db/src/worker-database.ts`
 
@@ -662,39 +662,41 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Imports/Exports:** Export retry functions and error codes. Import in database implementations.
 
+**Implementation Notes:** Created error-codes.ts with PostgreSQL SQLSTATE classification (transient: 57P01, 08006, 08003; permanent: 23505, 23503, etc.). Created retry.ts with exponential backoff (100ms, 200ms, 400ms, 800ms) and jitter. Created circuit-breaker.ts with Closed/Open/Half-Open states. Integrated retry in both PostgresDatabase and WorkerDatabase query methods. Added CircuitBreakerDatabase wrapper in database-factory.ts. Updated error messages to include actionable error codes. All tests passing (40/40).
+
 ### Subtasks
 
-- [ ] **T007.01 [AGENT]** Create error codes
+- [x] **T007.01 [AGENT]** Create error codes
   - **File:** `packages/db/src/error-handling/error-codes.ts` (create)
   - **Action:** Define error codes: DB_CONNECTION_FAILED, DB_QUERY_TIMEOUT, DB_CONSTRAINT_VIOLATION, DB_DEADLOCK_DETECTED, DB_TRANSIENT_ERROR. Export constants.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T007.02 [AGENT]** Create retry logic
+- [x] **T007.02 [AGENT]** Create retry logic
   - **File:** `packages/db/src/error-handling/retry.ts` (create)
   - **Action:** Create retryWithBackoff(fn, maxAttempts) function. Exponential backoff: 100ms, 200ms, 400ms, 800ms. Classify errors as transient/permanent.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T007.03 [AGENT]** Create circuit breaker
+- [x] **T007.03 [AGENT]** Create circuit breaker
   - **File:** `packages/db/src/error-handling/circuit-breaker.ts` (create)
   - **Action:** Create CircuitBreaker class. Track failure count. Open circuit after threshold. Half-open after timeout. Close on success.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T007.04 [AGENT]** Integrate retry in PostgresDatabase
+- [x] **T007.04 [AGENT]** Integrate retry in PostgresDatabase
   - **File:** `packages/db/src/postgres-database.ts`
   - **Action:** Wrap query() method with retry logic. Retry transient errors. Fail fast on permanent errors.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T007.05 [AGENT]** Integrate retry in WorkerDatabase
+- [x] **T007.05 [AGENT]** Integrate retry in WorkerDatabase
   - **File:** `packages/db/src/worker-database.ts`
   - **Action:** Same pattern as T007.04.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T007.06 [AGENT]** Add circuit breaker to database factory
+- [x] **T007.06 [AGENT]** Add circuit breaker to database factory
   - **File:** `packages/db/src/database-factory.ts`
   - **Action:** Wrap database instances with circuit breaker. Configure threshold and timeout.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T007.07 [AGENT]** Update error messages
+- [x] **T007.07 [AGENT]** Update error messages
   - **Files:** `packages/db/src/postgres-database.ts`, `packages/db/src/worker-database.ts`
   - **Action:** Replace generic errors with error codes. Add actionable error messages. Include context in errors.
   - **Validation:** `pnpm --filter @suite/db test:run`.

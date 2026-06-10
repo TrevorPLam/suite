@@ -79,7 +79,7 @@ describe('DatabaseFactory Workers Detection', () => {
         },
       };
 
-      const db = createDbClient(env);
+      const db = createDbClient(env, undefined, true);
       expect(db).toBeInstanceOf(WorkerDatabase);
     });
 
@@ -107,7 +107,7 @@ describe('DatabaseFactory Workers Detection', () => {
         },
       };
 
-      const db = createDbClient(env);
+      const db = createDbClient(env, undefined, true);
       expect(db).toBeInstanceOf(WorkerDatabase);
     });
 
@@ -116,7 +116,7 @@ describe('DatabaseFactory Workers Detection', () => {
         DATABASE_URL: 'postgres://node',
       };
 
-      const db = createDbClient(env);
+      const db = createDbClient(env, undefined, true);
       expect(db.constructor.name).toBe('PostgresDatabase');
     });
   });
