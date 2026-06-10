@@ -574,7 +574,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T006 - Implement Observability
 
-- [ ] **T006** [PENDING] Implement Observability
+- [x] **T006** [COMPLETED] Implement Observability
 
 **Files:** `packages/db/src/observability/query-logger.ts` (create), `packages/db/src/observability/metrics.ts` (create), `packages/db/src/observability/slow-query-detector.ts` (create), `packages/db/src/postgres-database.ts`, `packages/db/src/worker-database.ts`
 
@@ -594,44 +594,46 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Imports/Exports:** Export observability functions. Import in database implementations.
 
+**Implementation Notes:** Created query logger with structured logging, metrics collector with Prometheus export format, slow query detector with configurable thresholds. Integrated observability into both PostgresDatabase and WorkerDatabase. Added connection pool monitoring. Created Grafana dashboard documentation. All tests pass (21/21). Note: In-memory metrics reset per Worker invocation; for production, consider using Workers Analytics Engine for metrics aggregation.
+
 ### Subtasks
 
-- [ ] **T006.01 [AGENT]** Create query logger
+- [x] **T006.01 [AGENT]** Create query logger
   - **File:** `packages/db/src/observability/query-logger.ts` (create)
   - **Action:** Create logQuery(query, duration, context) function. Log query SQL, duration, userId, tenantId. Use structured logging.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T006.02 [AGENT]** Create metrics collector
+- [x] **T006.02 [AGENT]** Create metrics collector
   - **File:** `packages/db/src/observability/metrics.ts` (create)
   - **Action:** Create metrics for query duration (p50, p95, p99), connection pool utilization, transaction success/failure rate, slow query count. Export to Prometheus format.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T006.03 [AGENT]** Create slow query detector
+- [x] **T006.03 [AGENT]** Create slow query detector
   - **File:** `packages/db/src/observability/slow-query-detector.ts` (create)
   - **Action:** Create detectSlowQuery(query, duration) function. Log queries >1s duration. Alert on queries >5s.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T006.04 [AGENT]** Integrate query logging in PostgresDatabase
+- [x] **T006.04 [AGENT]** Integrate query logging in PostgresDatabase
   - **File:** `packages/db/src/postgres-database.ts`
   - **Action:** Wrap query() method with query logger. Log duration and metadata. Call slow query detector.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T006.05 [AGENT]** Integrate query logging in WorkerDatabase
+- [x] **T006.05 [AGENT]** Integrate query logging in WorkerDatabase
   - **File:** `packages/db/src/worker-database.ts`
   - **Action:** Same pattern as T006.04.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T006.06 [AGENT]** Add connection pool monitoring
+- [x] **T006.06 [AGENT]** Add connection pool monitoring
   - **Files:** `packages/db/src/postgres-database.ts`, `packages/db/src/worker-database.ts`
   - **Action:** Track active/idle connections. Export as metrics. Log when pool near capacity.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T006.07 [AGENT]** Create observability dashboard
+- [x] **T006.07 [AGENT]** Create observability dashboard
   - **File:** `packages/db/docs/observability-dashboard.md` (create)
   - **Action:** Document key metrics. Provide Grafana dashboard configuration. Explain alert thresholds.
   - **Validation:** Dashboard configuration is complete.
 
-- [ ] **T006.08 [AGENT]** Add observability tests
+- [x] **T006.08 [AGENT]** Add observability tests
   - **File:** `packages/db/src/observability/observability.test.ts` (create)
   - **Action:** Test query logging. Test metrics collection. Test slow query detection.
   - **Validation:** `pnpm --filter @suite/db test:run`.

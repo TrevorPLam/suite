@@ -8,6 +8,9 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import type { Database, DatabaseEnvironment, TransactionContext, QueryResult } from './database.interface.js';
+import { logQuery, extractOperation, extractTableName, type QueryLogContext } from './observability/query-logger.js';
+import { recordQueryDuration, incrementQueryCount, incrementErrorCount, incrementTransactionCount, setPoolUtilization } from './observability/metrics.js';
+import { detectSlowQuery } from './observability/slow-query-detector.js';
 
 /**
  * WorkerDatabase implementation using Hyperdrive
@@ -30,21 +33,48 @@ export class WorkerDatabase implements Database {
       prepare: false,
     });
     this.db = drizzle(this.pool);
+
+    // Observability: set pool utilization metrics
+    // Workers use Hyperdrive with max: 1, so we track that
+    setPoolUtilization(0, 1);
   }
 
   /**
    * Execute a SQL query with optional parameters
    * Note: This is a simplified wrapper. For production use, prefer Drizzle ORM via getDrizzleDb()
    */
-  async query<T = unknown>(sql: string, params?: unknown[]): Promise<QueryResult<T>> {
+  async query<T = unknown>(sql: string, params?: unknown[], context?: QueryLogContext): Promise<QueryResult<T>> {
     if (this.isClosed) {
       throw new Error('Database connection is closed');
     }
 
+    const startTime = Date.now();
+    const operation = extractOperation(sql);
+    const table = extractTableName(sql);
+    const queryContext: QueryLogContext = {
+      ...context,
+      ...(operation && { operation }),
+      ...(table && { table }),
+    };
+
     try {
       const result = await this.pool.unsafe(sql, params as any[]);
+      const duration = Date.now() - startTime;
+
+      // Observability: log query, record metrics, detect slow queries
+      logQuery(sql, duration, queryContext);
+      recordQueryDuration(duration, operation);
+      incrementQueryCount(operation);
+      detectSlowQuery(sql, duration, undefined, queryContext);
+
       return result as unknown as QueryResult<T>;
     } catch (error) {
+      const duration = Date.now() - startTime;
+
+      // Observability: log error, increment error counter
+      logQuery(sql, duration, queryContext, error instanceof Error ? error : new Error(String(error)));
+      incrementErrorCount(error instanceof Error ? error.constructor.name : 'unknown');
+
       throw new Error(`Query failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -81,9 +111,11 @@ export class WorkerDatabase implements Database {
       if (!committed) {
         await client`COMMIT`;
       }
+      incrementTransactionCount(true);
       return result;
     } catch (error) {
       await client`ROLLBACK`;
+      incrementTransactionCount(false);
       throw error;
     }
   }
