@@ -848,7 +848,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T010 - Document PgBouncer Integration
 
-- [ ] **T010** [PENDING] Document PgBouncer Integration
+- [x] **T010** [COMPLETED] Document PgBouncer Integration
 
 **Files:** `packages/db/docs/pgbouncer-setup.md` (create), `packages/db/config/pgbouncer.ini.template` (create)
 
@@ -868,29 +868,31 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Imports/Exports:** Export configuration template. Import in deployment documentation.
 
+**Implementation Notes:** Created comprehensive PgBouncer setup documentation covering installation, pool modes (session/transaction/statement), configuration options, pool sizing formula, timeout settings, authentication methods, TLS/SSL configuration, Suite-specific integration guidance, monitoring with admin console and Prometheus, high availability with HAProxy, troubleshooting guide, and production checklist. Created pgbouncer.ini.template with recommended settings for transaction pooling mode, detailed comments for all configuration options, and Suite-specific examples.
+
 ### Subtasks
 
-- [ ] **T010.01 [AGENT]** Create PgBouncer configuration guide
+- [x] **T010.01 [AGENT]** Create PgBouncer configuration guide
   - **File:** `packages/db/docs/pgbouncer-setup.md` (create)
   - **Action:** Document PgBouncer installation. Explain configuration options. Provide pgbouncer.ini example.
   - **Validation:** Documentation covers installation and configuration.
 
-- [ ] **T010.02 [AGENT]** Document connection pool sizing
+- [x] **T010.02 [AGENT]** Document connection pool sizing
   - **File:** `packages/db/docs/pgbouncer-setup.md`
   - **Action:** Explain pool sizing formula. Document default_pool_size, max_client_conn. Provide sizing examples.
   - **Validation:** Documentation explains pool sizing clearly.
 
-- [ ] **T010.03 [AGENT]** Create PgBouncer configuration template
+- [x] **T010.03 [AGENT]** Create PgBouncer configuration template
   - **File:** `packages/db/config/pgbouncer.ini.template` (create)
   - **Action:** Create pgbouncer.ini template with recommended settings. Include comments explaining each setting.
   - **Validation:** Template is valid and well-documented.
 
-- [ ] **T010.04 [AGENT]** Document PgBouncer monitoring
+- [x] **T010.04 [AGENT]** Document PgBouncer monitoring
   - **File:** `packages/db/docs/pgbouncer-setup.md`
   - **Action:** Document SHOW STATS command. Explain key metrics. Provide monitoring dashboard examples.
   - **Validation:** Documentation covers monitoring.
 
-- [ ] **T010.05 [AGENT]** Document troubleshooting
+- [x] **T010.05 [AGENT]** Document troubleshooting
   - **File:** `packages/db/docs/pgbouncer-setup.md`
   - **Action:** Document common issues. Provide troubleshooting steps. Include error messages and solutions.
   - **Validation:** Documentation covers troubleshooting.
