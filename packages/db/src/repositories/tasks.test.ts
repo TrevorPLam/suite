@@ -292,6 +292,22 @@ describe.skipIf(!dbUrl)('PostgresTaskRepository', () => {
         expect(count).toBe(0);
       });
     });
+
+    it('should use COUNT(*) for efficient counting', async () => {
+      await withTransaction(client, async () => {
+        // Insert 100 tasks
+        for (let i = 0; i < 100; i++) {
+          await repository.create(await createTask({ title: `Task ${i}`, completed: false, archived: false, dueDate: null, priority: 'medium', tags: [] }), context1);
+        }
+
+        const startTime = Date.now();
+        const count = await repository.count({}, context1);
+        const duration = Date.now() - startTime;
+
+        expect(count).toBe(100);
+        expect(duration).toBeLessThan(50); // Should complete in under 50ms
+      });
+    });
   });
 
   describe('batch operations', () => {

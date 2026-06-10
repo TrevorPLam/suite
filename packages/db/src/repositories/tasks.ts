@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { tasks, type TaskSchema, type NewTaskSchema } from '../schema/tasks/index.js';
 import type { QueryRepository, Database, RepositoryContext } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
@@ -178,8 +178,8 @@ export class PostgresTaskRepository implements TaskRepository {
     return this.db.transaction(async (tx) => {
       await this.setContext(context);
       if (!criteria || Object.keys(criteria).length === 0) {
-        const result = await tx.select({ count: tasks.id }).from(tasks).where(eq(tasks.userId, context.userId));
-        return result.length;
+        const result = await tx.select({ count: sql<number>`count(*)` }).from(tasks).where(eq(tasks.userId, context.userId));
+        return Number(result[0]?.count ?? 0);
       }
       const conditions = [eq(tasks.userId, context.userId)];
       Object.entries(criteria).forEach(([key, value]) => 
@@ -187,8 +187,8 @@ export class PostgresTaskRepository implements TaskRepository {
         conditions.push(eq(tasks[key as keyof TaskSchema] as any, value as any))
       );
       const whereClause = and(...conditions);
-      const results = await tx.select().from(tasks).where(whereClause);
-      return results.length;
+      const result = await tx.select({ count: sql<number>`count(*)` }).from(tasks).where(whereClause);
+      return Number(result[0]?.count ?? 0);
     });
   }
 }

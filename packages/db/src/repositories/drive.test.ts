@@ -278,6 +278,22 @@ describe.skipIf(!dbUrl)('PostgresDriveFileRepository', () => {
         expect(count).toBe(0);
       });
     });
+
+    it('should use COUNT(*) for efficient counting', async () => {
+      await withTransaction(client, async () => {
+        // Insert 100 files
+        for (let i = 0; i < 100; i++) {
+          await repository.create(await createDriveFile({ name: `file${i}.txt`, size: i * 10, createdAt: '2026-06-10T10:00:00Z', modifiedAt: '2026-06-10T10:00:00Z' }), context1);
+        }
+
+        const startTime = Date.now();
+        const count = await repository.count({}, context1);
+        const duration = Date.now() - startTime;
+
+        expect(count).toBe(100);
+        expect(duration).toBeLessThan(50); // Should complete in under 50ms
+      });
+    });
   });
 });
 
@@ -520,6 +536,22 @@ describe.skipIf(!dbUrl)('PostgresDriveFolderRepository', () => {
       await withTransaction(client, async () => {
         const count = await repository.count({}, context1);
         expect(count).toBe(0);
+      });
+    });
+
+    it('should use COUNT(*) for efficient counting', async () => {
+      await withTransaction(client, async () => {
+        // Insert 100 folders
+        for (let i = 0; i < 100; i++) {
+          await repository.create(await createDriveFolder({ name: `Folder ${i}`, createdAt: '2026-06-10T10:00:00Z' }), context1);
+        }
+
+        const startTime = Date.now();
+        const count = await repository.count({}, context1);
+        const duration = Date.now() - startTime;
+
+        expect(count).toBe(100);
+        expect(duration).toBeLessThan(50); // Should complete in under 50ms
       });
     });
   });

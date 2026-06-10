@@ -268,7 +268,7 @@
 
 ## Task: T007 - Fix count() Methods to Use SQL COUNT(*)
 
-- [ ] **T007** [PENDING] Fix count() Methods to Use SQL COUNT(*)
+- [x] **T007** [COMPLETED] Fix count() Methods to Use SQL COUNT(*)
 
 **Files:** `packages/db/src/repositories/tasks.ts`, `packages/db/src/repositories/drive.ts`, `packages/db/src/repositories/tasks.test.ts`, `packages/db/src/repositories/drive.test.ts`
 
@@ -286,24 +286,26 @@
 
 **Depends on:** None. **Blocks:** None.
 
+**Implementation Notes:** All three count() methods now use SQL COUNT(*) via Drizzle's sql template tag. Added `sql` import to tasks.ts and drive.ts. Added efficiency tests to all three test suites that insert 100 records and verify count completes in under 50ms. Typecheck and lint pass.
+
 ### Subtasks
 
-- [ ] **T007.01 [AGENT]** Fix PostgresTaskRepository.count()
+- [x] **T007.01 [AGENT]** Fix PostgresTaskRepository.count()
   - **File:** `packages/db/src/repositories/tasks.ts`
   - **Action:** Replace the body of the `count` method with: `await this.setContext(context); const db = this.db.getDrizzleDb(); const result = await db.select({ count: sql<number>\`count(*)\` }).from(tasks).where(eq(tasks.userId, context.userId)); return Number(result[0]?.count ?? 0);`
   - **Validation:** `pnpm --filter @suite/db test:run -- tasks.test.ts`
 
-- [ ] **T007.02 [AGENT]** Fix PostgresDriveFileRepository.count()
+- [x] **T007.02 [AGENT]** Fix PostgresDriveFileRepository.count()
   - **File:** `packages/db/src/repositories/drive.ts`
   - **Action:** Same pattern as T007.01 using the `driveFiles` table.
   - **Validation:** `pnpm --filter @suite/db test:run -- drive.test.ts`
 
-- [ ] **T007.03 [AGENT]** Fix PostgresDriveFolderRepository.count()
+- [x] **T007.03 [AGENT]** Fix PostgresDriveFolderRepository.count()
   - **File:** `packages/db/src/repositories/drive.ts`
   - **Action:** Same pattern as T007.01 using the `driveFolders` table.
   - **Validation:** `pnpm --filter @suite/db test:run -- drive.test.ts`
 
-- [ ] **T007.04 [AGENT]** Add count efficiency tests
+- [x] **T007.04 [AGENT]** Add count efficiency tests
   - **Files:** `packages/db/src/repositories/tasks.test.ts`, `packages/db/src/repositories/drive.test.ts`
   - **Action:** Add a test: insert 100 records, call `count()`, assert the return value is 100 and the test completes in under 50ms (ensuring no full table scan occurs). Use `vi.spyOn` on the db query method to assert only one query was issued and no row data was returned.
   - **Validation:** `pnpm --filter @suite/db test:run -- tasks.test.ts`

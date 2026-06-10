@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { driveFiles, driveFolders, type DriveFileSchema, type NewDriveFileSchema, type DriveFolderSchema, type NewDriveFolderSchema } from '../schema/drive/index.js';
 import type { QueryRepository, Database, RepositoryContext } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
@@ -209,8 +209,8 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
     return this.db.transaction(async (tx) => {
       await this.setContext(context);
       if (!criteria || Object.keys(criteria).length === 0) {
-        const result = await tx.select({ count: driveFiles.id }).from(driveFiles).where(eq(driveFiles.userId, context.userId));
-        return result.length;
+        const result = await tx.select({ count: sql<number>`count(*)` }).from(driveFiles).where(eq(driveFiles.userId, context.userId));
+        return Number(result[0]?.count ?? 0);
       }
       const conditions = [eq(driveFiles.userId, context.userId)];
       Object.entries(criteria).forEach(([key, value]) => 
@@ -218,8 +218,8 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
         conditions.push(eq(driveFiles[key as keyof DriveFileSchema] as any, value as any))
       );
       const whereClause = and(...conditions);
-      const results = await tx.select().from(driveFiles).where(whereClause);
-      return results.length;
+      const result = await tx.select({ count: sql<number>`count(*)` }).from(driveFiles).where(whereClause);
+      return Number(result[0]?.count ?? 0);
     });
   }
 }
@@ -332,8 +332,8 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
     return this.db.transaction(async (tx) => {
       await this.setContext(context);
       if (!criteria || Object.keys(criteria).length === 0) {
-        const result = await tx.select({ count: driveFolders.id }).from(driveFolders).where(eq(driveFolders.userId, context.userId));
-        return result.length;
+        const result = await tx.select({ count: sql<number>`count(*)` }).from(driveFolders).where(eq(driveFolders.userId, context.userId));
+        return Number(result[0]?.count ?? 0);
       }
       const conditions = [eq(driveFolders.userId, context.userId)];
       Object.entries(criteria).forEach(([key, value]) => 
@@ -341,8 +341,8 @@ export class PostgresDriveFolderRepository implements DriveFolderRepository {
         conditions.push(eq(driveFolders[key as keyof DriveFolderSchema] as any, value as any))
       );
       const whereClause = and(...conditions);
-      const results = await tx.select().from(driveFolders).where(whereClause);
-      return results.length;
+      const result = await tx.select({ count: sql<number>`count(*)` }).from(driveFolders).where(whereClause);
+      return Number(result[0]?.count ?? 0);
     });
   }
 }
