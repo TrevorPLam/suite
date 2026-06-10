@@ -359,7 +359,6 @@ async function readRequestBody(c: { req: { json: () => Promise<unknown> } }) {
 const metrics = {
   requestCount: 0,
   errorCount: 0,
-  totalLatency: 0,
   requestLatencies: [] as number[],
 };
 

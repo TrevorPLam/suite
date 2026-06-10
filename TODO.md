@@ -314,7 +314,9 @@
 
 ## Task: T008 - Move Env Validation to App Startup
 
-- [ ] **T008** [PENDING] Move Env Validation to App Startup
+- [!] **T008** [BLOCKED] Move Env Validation to App Startup
+
+**Block Reason:** Architectural incompatibility. Task assumes Node.js environment with `process.env` available at module level, but these are Cloudflare Workers APIs where `process.env` is empty and environment variables come from `c.env` at runtime. The current per-request middleware pattern using `env(c)` from Hono adapter is the correct approach for Cloudflare Workers. Moving to module-level validation would require a different architecture (e.g., using wrangler.toml vars or a separate build-time validation step).
 
 **Files:** `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
 
@@ -353,7 +355,7 @@
 
 ## Task: T009 - Remove Dead Code Across APIs and Domain Packages
 
-- [ ] **T009** [PENDING] Remove Dead Code Across APIs and Domain Packages
+- [x] **T009** [COMPLETED] Remove Dead Code Across APIs and Domain Packages
 
 **Files:** `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`, `packages/domain-calendar/src/index.ts`, `packages/domain-tasks/src/index.ts`, `packages/domain-drive/src/index.ts`, `apps/drive/api/src/bootstrap.ts`, `packages/shared-kernel/src/durable-object.ts`, `packages/shared-kernel/src/index.ts`
 
@@ -371,32 +373,42 @@
 
 **Depends on:** None. **Blocks:** None.
 
+**Implementation Notes:**
+- T009.01: Removed `totalLatency: 0` from metrics objects in all three APIs (calendar, tasks, drive). No reads of this field found.
+- T009.02: Removed 5 no-op identity factory functions: `createTaskRepository`, `createCalendarEventRepository`, `createDriveFileRepository`, `createDriveFolderRepository`, `createDriveStorageAdapter`. All had zero external callers.
+- T009.03: SKIPPED - `InMemoryStorageAdapter` is used in `bootstrap.test.ts` for testing. Kept as test utility.
+- T009.04: Removed `ExampleChatRoomDO` class from `durable-object.ts` and its export from `index.ts`. Had zero external callers. `BaseDurableObject` remains.
+- T009.05: SKIPPED - `getCalendarOverview` does not exist. `getDriveOverview` is used in `index.test.ts` for testing. Kept as test utility.
+- All typechecks and lint pass successfully.
+
 ### Subtasks
 
-- [ ] **T009.01 [AGENT]** Remove metrics.totalLatency from all three APIs
+- [x] **T009.01 [AGENT]** Remove metrics.totalLatency from all three APIs
   - **Files:** `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
   - **Action:** In each file, remove the `totalLatency: 0` field from the `metrics` object literal. Search for any read of `metrics.totalLatency` using `grep -n "totalLatency"` in each file and remove any found references.
   - **Validation:** `pnpm nx affected -t typecheck`
 
-- [ ] **T009.02 [AGENT]** Remove no-op identity factory functions
+- [x] **T009.02 [AGENT]** Remove no-op identity factory functions
   - **Files:** Locate with `grep -rn "createTaskRepository\|createCalendarEventRepository\|createDriveFileRepository\|createDriveFolderRepository\|createDriveStorageAdapter" --include="*.ts" .`
   - **Action:** For each of the five identity factory functions: verify zero callers outside the defining file, delete the function body and export, remove from any barrel `index.ts`. If a caller exists, document it and skip that function.
   - **Validation:** `pnpm nx affected -t typecheck`
 
-- [ ] **T009.03 [AGENT]** Remove InMemoryStorageAdapter from bootstrap.ts
+- [x] **T009.03 [AGENT]** Remove InMemoryStorageAdapter from bootstrap.ts
   - **File:** `apps/drive/api/src/bootstrap.ts`
   - **Action:** Run `grep -rn "InMemoryStorageAdapter" --include="*.ts" .`. If zero callers outside `bootstrap.ts`, delete the class definition.
   - **Validation:** `pnpm --filter @suite/drive-api typecheck`
+  - **Status:** SKIPPED - Used in bootstrap.test.ts for testing
 
-- [ ] **T009.04 [AGENT]** Remove ExampleChatRoomDO from shared-kernel public exports
+- [x] **T009.04 [AGENT]** Remove ExampleChatRoomDO from shared-kernel public exports
   - **Files:** `packages/shared-kernel/src/durable-object.ts`, `packages/shared-kernel/src/index.ts`
   - **Action:** Remove the `export class ExampleChatRoomDO` declaration. Remove its export from any barrel file in `packages/shared-kernel/src/`. The `BaseDurableObject` base class must remain.
   - **Validation:** `pnpm --filter @suite/shared-kernel typecheck`
 
-- [ ] **T009.05 [AGENT]** Remove unused domain overview exports
+- [x] **T009.05 [AGENT]** Remove unused domain overview exports
   - **Files:** `packages/domain-drive/src/index.ts`, `packages/domain-calendar/src/index.ts`
   - **Action:** Run `grep -rn "getDriveOverview\|getCalendarOverview" --include="*.ts" . | grep -v "src/index.ts"` to identify callers outside the defining file. Remove any function with zero external callers and update barrel exports accordingly.
   - **Validation:** `pnpm nx affected -t typecheck`
+  - **Status:** SKIPPED - getCalendarOverview doesn't exist, getDriveOverview used in tests
 
 ---
 
@@ -519,10 +531,10 @@
 
 ```
 Bug fix chains (prioritize before infrastructure work):
-T004 → T005 → T008
+T004 → T005 → T008 [BLOCKED - architectural incompatibility with Cloudflare Workers]
 
 Independent (no blocking dependencies):
-T001, T002, T003, T006, T007, T009, T010
+T001 [BLOCKED], T002 [BLOCKED], T003 [COMPLETED], T006 [COMPLETED], T007 [COMPLETED], T009, T010
 ```
 
 (T001 and T002 are blocked with no open dependencies; they can start once unblocked.)

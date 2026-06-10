@@ -62,7 +62,6 @@ export type {
 } from './circuit-breaker.js';
 export {
   BaseDurableObject,
-  ExampleChatRoomDO,
 } from './durable-object.js';
 export type {
   DurableObjectEnv,

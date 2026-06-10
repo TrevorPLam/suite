@@ -123,11 +123,6 @@ export class InMemoryTaskRepository implements TaskRepository {
   }
 }
 
-// Factory function to create repository with dependencies
-export function createTaskRepository(repository: TaskRepository): TaskRepository {
-  return repository;
-}
-
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }

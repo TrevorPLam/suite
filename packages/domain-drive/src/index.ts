@@ -104,11 +104,6 @@ export interface StorageAdapter {
   delete(key: string): Promise<void>;
 }
 
-// Factory function to create storage adapter
-export function createDriveStorageAdapter(adapter: StorageAdapter): StorageAdapter {
-  return adapter;
-}
-
 // Set storage adapter globally (for backward compatibility with existing code)
 let currentStorageAdapter: StorageAdapter | null = null;
 
@@ -240,15 +235,6 @@ export class InMemoryDriveFolderRepository implements DriveFolderRepository {
   clear(): void {
     this.folders.clear();
   }
-}
-
-// Factory functions to create repositories
-export function createDriveFileRepository(repository: DriveFileRepository): DriveFileRepository {
-  return repository;
-}
-
-export function createDriveFolderRepository(repository: DriveFolderRepository): DriveFolderRepository {
-  return repository;
 }
 
 function snapshot(file: DriveFile): DriveFile {

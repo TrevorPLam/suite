@@ -100,7 +100,6 @@ app.use('/api/*', async (c, next) => {
 const metrics = {
   requestCount: 0,
   errorCount: 0,
-  totalLatency: 0,
   requestLatencies: [] as number[],
 };
 

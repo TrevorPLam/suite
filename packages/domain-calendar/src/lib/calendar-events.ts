@@ -88,11 +88,6 @@ export class InMemoryCalendarEventRepository implements CalendarEventRepository 
   }
 }
 
-// Factory function to create repository with dependencies
-export function createCalendarEventRepository(repository: CalendarEventRepository): CalendarEventRepository {
-  return repository;
-}
-
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
