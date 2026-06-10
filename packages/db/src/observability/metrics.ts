@@ -145,6 +145,18 @@ export function incrementSlowQueryCount(threshold: number): void {
 }
 
 /**
+ * Set prepared statement count gauge
+ */
+export function setPreparedStatementCount(count: number): void {
+  store.setGauge('db_prepared_statement_count', count);
+}
+
+/**
+ * Get prepared statement count threshold for logging
+ */
+export const PREPARED_STATEMENT_THRESHOLD = 1000;
+
+/**
  * Export metrics in Prometheus text format
  */
 export function exportMetrics(): string {

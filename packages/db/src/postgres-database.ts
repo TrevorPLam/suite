@@ -9,7 +9,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import type { Database, DatabaseEnvironment, TransactionContext, QueryResult } from './database.interface.js';
 import { logQuery, extractOperation, extractTableName, type QueryLogContext } from './observability/query-logger.js';
-import { recordQueryDuration, incrementQueryCount, incrementErrorCount, incrementTransactionCount, setPoolUtilization } from './observability/metrics.js';
+import { recordQueryDuration, incrementQueryCount, incrementErrorCount, incrementTransactionCount, setPoolUtilization, setPreparedStatementCount, PREPARED_STATEMENT_THRESHOLD } from './observability/metrics.js';
 import { detectSlowQuery } from './observability/slow-query-detector.js';
 import { retryWithBackoff } from './error-handling/retry.js';
 import { getDatabaseErrorCode } from './error-handling/error-codes.js';
@@ -23,12 +23,14 @@ export class PostgresDatabase implements Database {
   private pool: postgres.Sql;
   private db: ReturnType<typeof drizzle>;
   private isClosed = false;
+  private preparedStatementCount = 0;
 
   constructor(connectionString: string, poolConfig?: DatabaseEnvironment['pool']) {
     const config = {
       max: poolConfig?.max ?? 20,
       idle_timeout: poolConfig?.idle ?? 10,
       connect_timeout: poolConfig?.connectionTimeoutMillis ?? 10000,
+      prepare: true,
     };
 
     this.pool = postgres(connectionString, config);
@@ -85,6 +87,13 @@ export class PostgresDatabase implements Database {
         recordQueryDuration(duration, operation);
         incrementQueryCount(operation);
         detectSlowQuery(sql, duration, undefined, queryContext);
+
+        // Prepared statement monitoring
+        this.preparedStatementCount++;
+        setPreparedStatementCount(this.preparedStatementCount);
+        if (this.preparedStatementCount % PREPARED_STATEMENT_THRESHOLD === 0) {
+          logQuery(`Prepared statement count: ${this.preparedStatementCount}`, 0, queryContext);
+        }
 
         return result as unknown as QueryResult<T>;
       } catch (error) {
