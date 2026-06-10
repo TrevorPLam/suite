@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   setDriveKeyProvider,
   getDriveKeyProvider,
@@ -13,6 +13,7 @@ import {
   sealFolders,
   unsealFolders,
   resetKeyProvider,
+  resetInitialized,
 } from './drive-crypto.js';
 import { generateAESKey } from '@suite/crypto';
 import type { DriveFile, DriveFolder } from './index.js';
@@ -20,6 +21,11 @@ import type { DriveFile, DriveFolder } from './index.js';
 describe('drive-crypto - encryption activation', () => {
   beforeEach(() => {
     resetKeyProvider();
+  });
+
+  afterEach(() => {
+    // Reset initialized flag for test isolation
+    resetInitialized();
   });
 
   it('should return false for isEncryptionEnabled by default', () => {
@@ -33,8 +39,7 @@ describe('drive-crypto - encryption activation', () => {
   });
 
   it('should return false for isEncryptionEnabled when ENCRYPTION_KEY is not set', async () => {
-    delete process.env.ENCRYPTION_KEY;
-    await setDriveKeyProviderFromEnv();
+    await setDriveKeyProviderFromEnv(undefined);
     expect(isEncryptionEnabled()).toBe(false);
   });
 
@@ -44,17 +49,12 @@ describe('drive-crypto - encryption activation', () => {
     const exportedKey = await crypto.subtle.exportKey('raw', key);
     const base64Key = btoa(String.fromCharCode(...new Uint8Array(exportedKey)));
     
-    process.env.ENCRYPTION_KEY = base64Key;
-    await setDriveKeyProviderFromEnv();
+    await setDriveKeyProviderFromEnv(base64Key);
     expect(isEncryptionEnabled()).toBe(true);
-    
-    delete process.env.ENCRYPTION_KEY;
   });
 
   it('should throw error when ENCRYPTION_KEY is invalid', async () => {
-    process.env.ENCRYPTION_KEY = 'invalid-key';
-    await expect(setDriveKeyProviderFromEnv()).rejects.toThrow('Invalid ENCRYPTION_KEY');
-    delete process.env.ENCRYPTION_KEY;
+    await expect(setDriveKeyProviderFromEnv('invalid-key')).rejects.toThrow('Invalid ENCRYPTION_KEY');
   });
 
   it('should return the current key provider', () => {
@@ -272,5 +272,20 @@ describe('drive-crypto - encryption activation', () => {
 
     expect(encrypted).toHaveLength(0);
     expect(decrypted).toHaveLength(0);
+  });
+
+  it('should not re-import key when called twice with same key', async () => {
+    // Generate a valid base64-encoded 256-bit key
+    const key = await generateAESKey(true);
+    const exportedKey = await crypto.subtle.exportKey('raw', key);
+    const base64Key = btoa(String.fromCharCode(...new Uint8Array(exportedKey)));
+    
+    // First call - should import the key
+    await setDriveKeyProviderFromEnv(base64Key);
+    expect(isEncryptionEnabled()).toBe(true);
+    
+    // Second call with same key - should be no-op due to initialized guard
+    await setDriveKeyProviderFromEnv(base64Key);
+    expect(isEncryptionEnabled()).toBe(true);
   });
 });

@@ -22,6 +22,7 @@ const defaultKeyProvider: KeyProvider = async () => {
 };
 
 let currentKeyProvider: KeyProvider = defaultKeyProvider;
+let initialized = false;
 
 /**
  * Sets the key provider for encryption operations
@@ -40,10 +41,14 @@ export function getCalendarKeyProvider(): KeyProvider {
 
 /**
  * Sets the key provider from ENCRYPTION_KEY environment variable
- * @throws Error if ENCRYPTION_KEY is set but invalid
+ * @param encryptionKey - Base64-encoded 32-byte encryption key (optional)
+ * @throws Error if encryptionKey is set but invalid
  */
-export async function setCalendarKeyProviderFromEnv(): Promise<void> {
-  const encryptionKey = process.env.ENCRYPTION_KEY;
+export async function setCalendarKeyProviderFromEnv(encryptionKey?: string): Promise<void> {
+  // Guard against double-initialization
+  if (initialized) {
+    return;
+  }
   
   if (!encryptionKey) {
     // No key set, keep default provider (encryption disabled)
@@ -70,6 +75,7 @@ export async function setCalendarKeyProviderFromEnv(): Promise<void> {
     
     // Set provider that returns this key
     currentKeyProvider = async () => key;
+    initialized = true;
   } catch (error) {
     throw new Error(`Invalid ENCRYPTION_KEY: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -87,6 +93,13 @@ export function isEncryptionEnabled(): boolean {
  */
 export function resetKeyProvider(): void {
   currentKeyProvider = defaultKeyProvider;
+}
+
+/**
+ * Resets the initialized flag (for test teardown only)
+ */
+export function resetInitialized(): void {
+  initialized = false;
 }
 
 /**

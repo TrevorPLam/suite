@@ -186,7 +186,7 @@
 
 ## Task: T005 - Consolidate DB Client Creation to One Instance Per Request
 
-- [ ] **T005** [PENDING] Consolidate DB Client Creation to One Instance Per Request
+- [x] **T005** [COMPLETED] Consolidate DB Client Creation to One Instance Per Request
 
 **Files:** `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
 
@@ -204,19 +204,21 @@
 
 **Depends on:** T004. **Blocks:** T007.
 
+**Implementation Notes:** All three APIs now create a single DB client per request after env validation. The `db` field was added to each API's Variables type. All middleware (usageRepository, auth, repository setup, health endpoint) now reads from context.
+
 ### Subtasks
 
-- [ ] **T005.01 [AGENT]** Add shared DB client middleware to Calendar API
+- [x] **T005.01 [AGENT]** Add shared DB client middleware to Calendar API
   - **File:** `apps/calendar/api/src/index.ts`
   - **Action:** Register `app.use('/api/*', async (c, next) => { c.set('db', createDbClient(runtimeEnv)); await next(); })` immediately after the env validation middleware. Update usageRepository middleware, auth middleware, and calendar repository middleware to read `const db = c.get('db')` instead of calling `createDbClient(runtimeEnv)` independently.
   - **Validation:** `pnpm --filter @suite/calendar-api typecheck`
 
-- [ ] **T005.02 [AGENT]** Add shared DB client middleware to Tasks API
+- [x] **T005.02 [AGENT]** Add shared DB client middleware to Tasks API
   - **File:** `apps/tasks/api/src/index.ts`
   - **Action:** Same pattern as T005.01.
   - **Validation:** `pnpm --filter @suite/tasks-api typecheck`
 
-- [ ] **T005.03 [AGENT]** Add shared DB client middleware to Drive API
+- [x] **T005.03 [AGENT]** Add shared DB client middleware to Drive API
   - **File:** `apps/drive/api/src/index.ts`
   - **Action:** Same pattern as T005.01.
   - **Validation:** `pnpm --filter @suite/drive-api typecheck`
@@ -225,7 +227,7 @@
 
 ## Task: T006 - Move Encryption Key Init to App Startup
 
-- [ ] **T006** [PENDING] Move Encryption Key Init to App Startup
+- [x] **T006** [COMPLETED] Move Encryption Key Init to App Startup
 
 **Files:** `packages/domain-calendar/src/lib/calendar-crypto.ts`, `packages/domain-tasks/src/lib/tasks-crypto.ts`, `packages/domain-drive/src/drive-crypto.ts`, `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
 
@@ -243,19 +245,21 @@
 
 **Depends on:** None. **Blocks:** None.
 
+**Implementation Notes:** All three domain crypto modules now accept the encryption key as a parameter instead of reading from process.env. The initialized guard prevents re-importing the key on subsequent calls. All three APIs call the key init function once in the env validation middleware, passing c.env.ENCRYPTION_KEY. Tests updated to use the new signature and call resetInitialized() in afterEach. All typechecks and tests pass.
+
 ### Subtasks
 
-- [ ] **T006.01 [AGENT]** Refactor setXxxKeyProviderFromEnv to accept a key parameter and add initialized guard
-  - **Files:** `packages/domain-calendar/src/lib/calendar-crypto.ts`, `packages/domain-tasks/src/lib/tasks-crypto.ts`, `packages/domain-drive/src/drive-crypto.ts`
+- [x] **T006.01 [AGENT]** Refactor setXxxKeyProviderFromEnv to accept a key parameter and add initialized guard
+  - **File:** `packages/domain-calendar/src/lib/calendar-crypto.ts`, `packages/domain-tasks/src/lib/tasks-crypto.ts`, `packages/domain-drive/src/drive-crypto.ts`
   - **Action:** In each file: (1) Change function signature to `async function setXxxKeyProviderFromEnv(encryptionKey?: string): Promise<void>`. (2) Remove the `const encryptionKey = process.env.ENCRYPTION_KEY` line. (3) Add `let initialized = false;` as a module-level flag. (4) At the start of the function body, add `if (initialized) return;`. (5) At the end of the successful import block, add `initialized = true;`. (6) Export a `resetInitialized()` function for test teardown only.
   - **Validation:** `pnpm --filter @suite/domain-calendar typecheck && pnpm --filter @suite/domain-tasks typecheck && pnpm --filter @suite/domain-drive typecheck`
 
-- [ ] **T006.02 [AGENT]** Call key init once per request chain from env validation middleware
+- [x] **T006.02 [AGENT]** Call key init once per request chain from env validation middleware
   - **Files:** `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
   - **Action:** In each API's env validation middleware, after `validateXxxEnv(...)`, add `await setXxxKeyProviderFromEnv(c.env.ENCRYPTION_KEY)`. Remove any per-request call to `setXxxKeyProviderFromEnv()` from the repository setup middleware.
   - **Validation:** `pnpm nx affected -t typecheck`
 
-- [ ] **T006.03 [AGENT]** Update crypto module tests for new signature and guard
+- [x] **T006.03 [AGENT]** Update crypto module tests for new signature and guard
   - **Files:** `packages/domain-calendar/src/lib/calendar-crypto.test.ts`, `packages/domain-tasks/src/lib/tasks-crypto.test.ts`, `packages/domain-drive/src/drive-crypto.test.ts`
   - **Action:** Update all calls from `setCalendarKeyProviderFromEnv()` (no args) to `setCalendarKeyProviderFromEnv(base64Key)`. Call `resetInitialized()` in `afterEach` to clear state between tests. Add a test asserting calling with the same key twice does not call `importKey` a second time (verify via spy or initialized flag inspection).
   - **Validation:** `pnpm --filter @suite/domain-calendar test:run -- calendar-crypto.test.ts`

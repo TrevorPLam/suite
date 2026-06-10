@@ -29,6 +29,7 @@ let currentKeyProvider: KeyProvider = defaultKeyProvider;
 
 // Flag to track if a custom key provider has been set
 let customKeyProviderSet = false;
+let initialized = false;
 
 // Index key provider for blind indexing
 let currentIndexKey: CryptoKey | null = null;
@@ -137,10 +138,14 @@ export function getDriveKeyProvider(): KeyProvider {
 
 /**
  * Sets the key provider from ENCRYPTION_KEY environment variable
- * @throws Error if ENCRYPTION_KEY is set but invalid
+ * @param encryptionKey - Base64-encoded 32-byte encryption key (optional)
+ * @throws Error if encryptionKey is set but invalid
  */
-export async function setDriveKeyProviderFromEnv(): Promise<void> {
-  const encryptionKey = process.env.ENCRYPTION_KEY;
+export async function setDriveKeyProviderFromEnv(encryptionKey?: string): Promise<void> {
+  // Guard against double-initialization
+  if (initialized) {
+    return;
+  }
   
   if (!encryptionKey) {
     // No key set, keep default provider (encryption disabled)
@@ -168,6 +173,7 @@ export async function setDriveKeyProviderFromEnv(): Promise<void> {
     // Set provider that returns this key
     currentKeyProvider = async () => key;
     customKeyProviderSet = true;
+    initialized = true;
   } catch (error) {
     throw new Error(`Invalid ENCRYPTION_KEY: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -187,6 +193,13 @@ export function resetKeyProvider(): void {
   currentKeyProvider = defaultKeyProvider;
   customKeyProviderSet = false;
   resetIndexKey();
+}
+
+/**
+ * Resets the initialized flag (for test teardown only)
+ */
+export function resetInitialized(): void {
+  initialized = false;
 }
 
 /**

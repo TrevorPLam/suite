@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   setCalendarKeyProvider,
   getCalendarKeyProvider,
@@ -9,6 +9,7 @@ import {
   sealEvents,
   unsealEvents,
   resetKeyProvider,
+  resetInitialized,
 } from './calendar-crypto.js';
 import { generateAESKey } from '@suite/crypto';
 import type { CalendarEvent } from './calendar-events.js';
@@ -17,6 +18,11 @@ describe('calendar-crypto - encryption activation', () => {
   beforeEach(() => {
     // Reset to default provider (encryption disabled)
     resetKeyProvider();
+  });
+
+  afterEach(() => {
+    // Reset initialized flag for test isolation
+    resetInitialized();
   });
 
   it('should return false for isEncryptionEnabled by default', () => {
@@ -30,8 +36,7 @@ describe('calendar-crypto - encryption activation', () => {
   });
 
   it('should return false for isEncryptionEnabled when ENCRYPTION_KEY is not set', async () => {
-    delete process.env.ENCRYPTION_KEY;
-    await setCalendarKeyProviderFromEnv();
+    await setCalendarKeyProviderFromEnv(undefined);
     expect(isEncryptionEnabled()).toBe(false);
   });
 
@@ -41,30 +46,21 @@ describe('calendar-crypto - encryption activation', () => {
     const exportedKey = await crypto.subtle.exportKey('raw', key);
     const base64Key = btoa(String.fromCharCode(...new Uint8Array(exportedKey)));
     
-    process.env.ENCRYPTION_KEY = base64Key;
-    await setCalendarKeyProviderFromEnv();
+    await setCalendarKeyProviderFromEnv(base64Key);
     expect(isEncryptionEnabled()).toBe(true);
-    
-    delete process.env.ENCRYPTION_KEY;
   });
 
   it('should throw error when ENCRYPTION_KEY is invalid', async () => {
-    process.env.ENCRYPTION_KEY = 'invalid-key';
-    await expect(setCalendarKeyProviderFromEnv()).rejects.toThrow('Invalid ENCRYPTION_KEY');
-    delete process.env.ENCRYPTION_KEY;
+    await expect(setCalendarKeyProviderFromEnv('invalid-key')).rejects.toThrow('Invalid ENCRYPTION_KEY');
   });
 
   it('should throw error when ENCRYPTION_KEY is invalid base64', async () => {
-    process.env.ENCRYPTION_KEY = 'not-valid-base64!!!';
-    await expect(setCalendarKeyProviderFromEnv()).rejects.toThrow('Invalid ENCRYPTION_KEY');
-    delete process.env.ENCRYPTION_KEY;
+    await expect(setCalendarKeyProviderFromEnv('not-valid-base64!!!')).rejects.toThrow('Invalid ENCRYPTION_KEY');
   });
 
   it('should throw error when ENCRYPTION_KEY is wrong length', async () => {
     // Too short for AES-256 (needs 32 bytes)
-    process.env.ENCRYPTION_KEY = btoa('short');
-    await expect(setCalendarKeyProviderFromEnv()).rejects.toThrow('Invalid ENCRYPTION_KEY');
-    delete process.env.ENCRYPTION_KEY;
+    await expect(setCalendarKeyProviderFromEnv(btoa('short'))).rejects.toThrow('Invalid ENCRYPTION_KEY');
   });
 
   it('should actually encrypt when encryption is enabled', async () => {
@@ -175,5 +171,20 @@ describe('calendar-crypto - encryption activation', () => {
 
     expect(encrypted).toHaveLength(0);
     expect(decrypted).toHaveLength(0);
+  });
+
+  it('should not re-import key when called twice with same key', async () => {
+    // Generate a valid base64-encoded 256-bit key
+    const key = await generateAESKey(true);
+    const exportedKey = await crypto.subtle.exportKey('raw', key);
+    const base64Key = btoa(String.fromCharCode(...new Uint8Array(exportedKey)));
+    
+    // First call - should import the key
+    await setCalendarKeyProviderFromEnv(base64Key);
+    expect(isEncryptionEnabled()).toBe(true);
+    
+    // Second call with same key - should be no-op due to initialized guard
+    await setCalendarKeyProviderFromEnv(base64Key);
+    expect(isEncryptionEnabled()).toBe(true);
   });
 });

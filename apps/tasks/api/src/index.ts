@@ -41,6 +41,7 @@ type Env = {
   RATE_LIMIT_KV: KVNamespace;
   AUTH_KV: KVNamespace;
   HYPERDRIVE?: { connectionString: string };
+  ENCRYPTION_KEY?: string;
   waitUntil: (promise: Promise<unknown>) => void;
 } & TasksEnv;
 
@@ -50,6 +51,7 @@ type Variables = {
   auth: ReturnType<typeof createAuth>;
   taskRepo: TaskRepository;
   repositoryContext: RepositoryContext | null;
+  db: ReturnType<typeof createDbClient>;
 };
 
 const app = new Hono<{ Variables: Variables; Bindings: Env }>();
@@ -65,6 +67,22 @@ app.use('/api/*', async (c, next) => {
     }
   }
   validateTasksEnv(stringEnv);
+  // Initialize encryption key provider from c.env (not process.env)
+  await setTaskKeyProviderFromEnv(c.env.ENCRYPTION_KEY);
+  await next();
+});
+
+// Create shared DB client for the request
+app.use('/api/*', async (c, next) => {
+  const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
+  if (c.env.HYPERDRIVE) {
+    dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
+  }
+  if (c.env.DATABASE_URL) {
+    dbEnv.DATABASE_URL = c.env.DATABASE_URL;
+  }
+  const db = createDbClient(dbEnv);
+  c.set('db', db);
   await next();
 });
 
@@ -72,14 +90,7 @@ app.use('/api/*', async (c, next) => {
 let usageRepository: PostgresUsageRepository | null = null;
 app.use('/api/*', async (c, next) => {
   if (!usageRepository) {
-    const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
-    if (c.env.HYPERDRIVE) {
-      dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
-    }
-    if (c.env.DATABASE_URL) {
-      dbEnv.DATABASE_URL = c.env.DATABASE_URL;
-    }
-    const db = createDbClient(dbEnv);
+    const db = c.get('db');
     usageRepository = new PostgresUsageRepository(db);
   }
   await next();
@@ -194,14 +205,7 @@ app.use('/api/*', async (c, next) => {
 
 // Middleware to create auth instance per request
 app.use('/api/*', async (c, next) => {
-  const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
-  if (c.env.HYPERDRIVE) {
-    dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
-  }
-  if (c.env.DATABASE_URL) {
-    dbEnv.DATABASE_URL = c.env.DATABASE_URL;
-  }
-  const db = Object.keys(dbEnv).length > 0 ? createDbClient(dbEnv) : null;
+  const db = c.get('db');
   const auth = createAuth({
     db,
     env: {
@@ -243,9 +247,6 @@ app.use('/api/*', async (c, next) => {
 app.use('/api/*', async (c, next) => {
   const userId = c.get('userId') as string | undefined;
   
-  // Set up encryption key provider from environment
-  await setTaskKeyProviderFromEnv();
-
   // Require encryption in production
   if (c.env.NODE_ENV === 'production' && !isEncryptionEnabled()) {
     throw new Error(
@@ -267,16 +268,7 @@ app.use('/api/*', async (c, next) => {
     };
     c.set('repositoryContext', repositoryContext);
     
-    // Use HYPERDRIVE if available (Workers), otherwise DATABASE_URL (Node.js)
-    const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
-    if (c.env.HYPERDRIVE) {
-      dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
-    } else if (c.env.DATABASE_URL) {
-      dbEnv.DATABASE_URL = c.env.DATABASE_URL;
-    } else {
-      throw new Error('Either HYPERDRIVE or DATABASE_URL must be set');
-    }
-    const db = createDbClient(dbEnv);
+    const db = c.get('db');
     const repo = new PostgresTaskRepository(db);
     c.set('taskRepo', repo);
   }
@@ -328,14 +320,7 @@ function readTaskError(error: unknown): { status: 400 | 404 | 500; body: Record<
 }
 
 app.get('/api/v1/health', async (c) => {
-  const dbEnv: { HYPERDRIVE?: { connectionString: string }; DATABASE_URL?: string } = {};
-  if (c.env.HYPERDRIVE) {
-    dbEnv.HYPERDRIVE = c.env.HYPERDRIVE;
-  }
-  if (c.env.DATABASE_URL) {
-    dbEnv.DATABASE_URL = c.env.DATABASE_URL;
-  }
-  const db = Object.keys(dbEnv).length > 0 ? createDbClient(dbEnv) : null;
+  const db = c.get('db');
   let dbStatus = 'ok';
   let dbLatency: number | undefined;
 
