@@ -258,7 +258,7 @@ function snapshot(file: DriveFile): DriveFile {
 
 export async function listDriveFiles(fileRepository: DriveFileRepository = new InMemoryDriveFileRepository(), context: RepositoryContext): Promise<DriveFile[]> {
   const files = await fileRepository.findAll(context);
-  const reversed = files.reverse().map(snapshot);
+  const reversed = [...files].reverse().map(snapshot);
   
   // Decrypt names if encryption is enabled
   if (_isEncryptionEnabled()) {

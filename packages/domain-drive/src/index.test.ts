@@ -291,6 +291,30 @@ describe('drive - query', () => {
     const files = await listDriveFiles(fileRepository, context);
     expect(files).toHaveLength(0);
   });
+
+  it('should not mutate repository internal state on repeated calls', async () => {
+    const firstInput: UploadDriveFileInput = {
+      name: 'first.pdf',
+      size: 1024,
+    };
+
+    const secondInput: UploadDriveFileInput = {
+      name: 'second.pdf',
+      size: 2048,
+    };
+
+    await uploadDriveFile(firstInput, fileRepository, folderRepository, null, context);
+    await uploadDriveFile(secondInput, fileRepository, folderRepository, null, context);
+
+    const firstCall = await listDriveFiles(fileRepository, context);
+    const secondCall = await listDriveFiles(fileRepository, context);
+
+    // Both calls should return items in the same order
+    expect(firstCall).toHaveLength(2);
+    expect(secondCall).toHaveLength(2);
+    expect(firstCall[0]?.id).toBe(secondCall[0]?.id);
+    expect(firstCall[1]?.id).toBe(secondCall[1]?.id);
+  });
 });
 
 describe('drive - rename', () => {

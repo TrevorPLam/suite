@@ -242,7 +242,7 @@ export async function resetTasksDB(repository: TaskRepository = new InMemoryTask
 
 export async function listTasks(repository: TaskRepository = new InMemoryTaskRepository(), context: RepositoryContext): Promise<TaskItem[]> {
   const tasks = await repository.findAll(context);
-  const reversedTasks = tasks.reverse();
+  const reversedTasks = [...tasks].reverse();
 
   // Decrypt if encryption is enabled
   if (isEncryptionEnabled()) {

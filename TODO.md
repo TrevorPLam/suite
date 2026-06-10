@@ -1313,7 +1313,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T020 - Fix Array.reverse() Mutation in Domain List Functions
 
-- [ ] **T020** [PENDING] Fix Array.reverse() Mutation in Domain List Functions
+- [x] **T020** [COMPLETED] Fix Array.reverse() Mutation in Domain List Functions
 
 **Files:** `packages/domain-tasks/src/lib/tasks.ts`, `packages/domain-drive/src/index.ts`, `packages/domain-tasks/src/lib/tasks.test.ts`, `packages/domain-drive/src/index.test.ts`
 
@@ -1331,19 +1331,21 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Depends on:** None. **Blocks:** None.
 
+**Implementation Notes:** Fixed mutation in listTasks by changing `tasks.reverse()` to `[...tasks].reverse()`. Fixed mutation in listDriveFiles by changing `files.reverse().map(snapshot)` to `[...files].reverse().map(snapshot)`. Added regression tests in both test files to verify that repeated calls return identical ordering. All tests pass (89 tasks tests, 68 drive tests). Typecheck passes for both packages.
+
 ### Subtasks
 
-- [ ] **T020.01 [AGENT]** Fix mutation in listTasks
+- [x] **T020.01 [AGENT]** Fix mutation in listTasks
   - **File:** `packages/domain-tasks/src/lib/tasks.ts`
   - **Action:** Change `const reversedTasks = tasks.reverse();` to `const reversedTasks = [...tasks].reverse();`.
   - **Validation:** `pnpm --filter @suite/domain-tasks test:run -- tasks.test.ts`
 
-- [ ] **T020.02 [AGENT]** Fix mutation in listDriveFiles
+- [x] **T020.02 [AGENT]** Fix mutation in listDriveFiles
   - **File:** `packages/domain-drive/src/index.ts`
   - **Action:** Change `const reversed = files.reverse().map(snapshot);` to `const reversed = [...files].reverse().map(snapshot);`.
   - **Validation:** `pnpm --filter @suite/domain-drive test:run -- index.test.ts`
 
-- [ ] **T020.03 [AGENT]** Add mutation regression tests
+- [x] **T020.03 [AGENT]** Add mutation regression tests
   - **Files:** `packages/domain-tasks/src/lib/tasks.test.ts`, `packages/domain-drive/src/index.test.ts`
   - **Action:** In each file add a test: create two items, call the list function twice on the same repository, assert the first call and second call return items in the same order (not alternately reversed). Name the test "should not mutate repository internal state on repeated calls".
   - **Validation:** `pnpm --filter @suite/domain-tasks test:run -- tasks.test.ts && pnpm --filter @suite/domain-drive test:run -- index.test.ts`

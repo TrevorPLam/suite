@@ -456,6 +456,28 @@ describe('tasks - query', () => {
     expect(tasks).toHaveLength(1);
     expect(tasks[0]?.id).toBe(firstTask.id);
   });
+
+  it('should not mutate repository internal state on repeated calls', async () => {
+    const firstInput: CreateTaskInput = {
+      title: 'First task',
+    };
+
+    const secondInput: CreateTaskInput = {
+      title: 'Second task',
+    };
+
+    await createTask(firstInput, repository, context);
+    await createTask(secondInput, repository, context);
+
+    const firstCall = await listTasks(repository, context);
+    const secondCall = await listTasks(repository, context);
+
+    // Both calls should return items in the same order
+    expect(firstCall).toHaveLength(2);
+    expect(secondCall).toHaveLength(2);
+    expect(firstCall[0]?.id).toBe(secondCall[0]?.id);
+    expect(firstCall[1]?.id).toBe(secondCall[1]?.id);
+  });
 });
 
 describe('filterTasks', () => {
