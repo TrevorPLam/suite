@@ -29,8 +29,9 @@ import {
   type RenameDriveFileInput,
   type CreateFolderInput,
 } from './index.js';
-import { generateAESKey } from '@suite/crypto';
+import { generateAESKey, generateSalt, deriveIndexKey } from '@suite/crypto';
 import type { RepositoryContext } from '@suite/db';
+import { setDriveIndexKey, generateDriveBlindIndex } from './drive-crypto.js';
 
 function createTestContext(): RepositoryContext {
   return {
@@ -994,5 +995,59 @@ describe('drive - property-based tests', () => {
         }
       )
     );
+  });
+
+  describe('Blind Index Regeneration', () => {
+    beforeEach(() => {
+      resetDriveFiles();
+      resetDriveFolders();
+      resetKeyProvider();
+    });
+
+    it('BDD: Given a file with name "old.txt", when renaming to "new.txt", then search finds by new name but not old name', async () => {
+      // Given: Set up index key and upload a file
+      const salt = await generateSalt();
+      const saltString = new TextDecoder().decode(salt);
+      const indexKey = await deriveIndexKey('test-password', saltString);
+      setDriveIndexKey(indexKey, saltString);
+
+      const oldName = 'old.txt';
+      const file = await uploadDriveFile({ name: oldName, size: 100 }, fileRepository, folderRepository, null, context);
+
+      // When: Rename the file
+      const newName = 'new.txt';
+      await renameDriveFile({ id: file.id, name: newName }, fileRepository, context);
+
+      // Then: Search by new name should find the file
+      const newNameBlindIndex = await generateDriveBlindIndex(newName);
+      expect(newNameBlindIndex).not.toBeNull();
+      if (newNameBlindIndex) {
+        const resultsByNewName = await searchFiles({ blindIndex: newNameBlindIndex }, fileRepository, context);
+        expect(resultsByNewName.length).toBe(1);
+        expect(resultsByNewName[0]?.name).toBe(newName);
+      }
+
+      // And: Search by old name should not find the file
+      const oldNameBlindIndex = await generateDriveBlindIndex(oldName);
+      expect(oldNameBlindIndex).not.toBeNull();
+      if (oldNameBlindIndex) {
+        const resultsByOldName = await searchFiles({ blindIndex: oldNameBlindIndex }, fileRepository, context);
+        expect(resultsByOldName.length).toBe(0);
+      }
+    });
+
+    it('BDD: Given a file without index key, when renaming, then blindIndex remains null', async () => {
+      // Given: Upload a file without setting index key
+      const oldName = 'old.txt';
+      const file = await uploadDriveFile({ name: oldName, size: 100 }, fileRepository, folderRepository, null, context);
+
+      // When: Rename the file
+      const newName = 'new.txt';
+      await renameDriveFile({ id: file.id, name: newName }, fileRepository, context);
+
+      // Then: blindIndex should remain null
+      const updated = await getDriveFile(file.id, fileRepository, context);
+      expect(updated?.blindIndex).toBeUndefined();
+    });
   });
 });

@@ -16,13 +16,14 @@ export {
   unsealFolder,
   sealFolders,
   unsealFolders,
+  generateDriveBlindIndex,
   type EncryptedDriveFile,
   type EncryptedDriveFolder,
   type KeyProvider,
 } from './drive-crypto.js';
 
 // Import encryption functions for internal use
-import { sealFile as _sealFile, unsealFile as _unsealFile, sealFolder as _sealFolder, unsealFolder as _unsealFolder, sealFiles as _sealFiles, unsealFiles as _unsealFiles, sealFolders as _sealFolders, unsealFolders as _unsealFolders, isEncryptionEnabled as _isEncryptionEnabled } from './drive-crypto.js';
+import { sealFile as _sealFile, unsealFile as _unsealFile, sealFolder as _sealFolder, unsealFolder as _unsealFolder, sealFiles as _sealFiles, unsealFiles as _unsealFiles, sealFolders as _sealFolders, unsealFolders as _unsealFolders, isEncryptionEnabled as _isEncryptionEnabled, generateDriveBlindIndex as _generateDriveBlindIndex } from './drive-crypto.js';
 
 export type DriveFile = {
   id: string;
@@ -467,6 +468,12 @@ export async function renameDriveFile(input: RenameDriveFileInput, fileRepositor
     updateData = { ...updateData, name: encrypted.encryptedName as any };
   } else {
     updateData.name = name;
+  }
+  
+  // Regenerate blind index when name changes
+  const blindIndex = await _generateDriveBlindIndex(name);
+  if (blindIndex !== null) {
+    updateData.blindIndex = blindIndex;
   }
 
   const updated = await fileRepository.update(input.id, updateData, context);

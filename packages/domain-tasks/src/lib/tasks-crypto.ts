@@ -4,7 +4,7 @@
  */
 
 import type { EncryptedData } from '@suite/crypto';
-import { decryptItem, encryptItem, generateAESKey } from '@suite/crypto';
+import { decryptItem, encryptItem, generateAESKey, generateBlindIndex, generateSalt } from '@suite/crypto';
 import type { TaskItem } from './tasks.js';
 
 export type EncryptedTaskItem = Omit<TaskItem, 'title' | 'tags'> & {
@@ -23,6 +23,95 @@ const defaultKeyProvider: KeyProvider = async () => {
 };
 
 let currentKeyProvider: KeyProvider = defaultKeyProvider;
+
+// Index key provider for blind indexing
+let currentIndexKey: CryptoKey | null = null;
+let _currentIndexKeySalt: string | null = null;
+
+/**
+ * Sets the index key for blind indexing operations
+ * @param key - HMAC key for blind index generation
+ * @param salt - Salt used to derive the key (for reference)
+ */
+export function setTaskIndexKey(key: CryptoKey, salt: string): void {
+  currentIndexKey = key;
+  _currentIndexKeySalt = salt;
+}
+
+/**
+ * Gets the current index key
+ * @returns The current index key or null if not set
+ */
+export function getTaskIndexKey(): CryptoKey | null {
+  return currentIndexKey;
+}
+
+/**
+ * Sets the index key from ENCRYPTION_KEY environment variable
+ * Derives a separate HMAC key for blind indexing from the encryption key
+ * @throws Error if ENCRYPTION_KEY is set but invalid
+ */
+export async function setTaskIndexKeyFromEnv(): Promise<void> {
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+  
+  if (!encryptionKey) {
+    // No key set, keep null (blind indexing disabled)
+    return;
+  }
+  
+  try {
+    // Decode base64 key
+    const keyData = Uint8Array.from(atob(encryptionKey), c => c.charCodeAt(0));
+    
+    // Assert byte length is exactly 32 bytes for AES-256
+    if (keyData.byteLength !== 32) {
+      throw new Error('Invalid ENCRYPTION_KEY: must decode to exactly 32 bytes');
+    }
+    
+    // Generate a salt for index key derivation
+    const salt = await generateSalt();
+    const saltString = new TextDecoder().decode(salt);
+    
+    // Import the encryption key as raw key material
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
+    
+    // Derive an HMAC key for blind indexing (separate from encryption key)
+    const indexKey = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: new TextEncoder().encode(saltString),
+        iterations: 100000,
+        hash: 'SHA-256'
+      },
+      keyMaterial,
+      {
+        name: 'HMAC',
+        hash: 'SHA-256',
+        length: 256
+      },
+      false,
+      ['sign']
+    );
+    
+    setTaskIndexKey(indexKey, saltString);
+  } catch (error) {
+    throw new Error(`Failed to derive index key from ENCRYPTION_KEY: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Resets the index key to null (for testing)
+ */
+export function resetIndexKey(): void {
+  currentIndexKey = null;
+  _currentIndexKeySalt = null;
+}
 
 /**
  * Sets the key provider for encryption operations
@@ -88,6 +177,7 @@ export function isEncryptionEnabled(): boolean {
  */
 export function resetKeyProvider(): void {
   currentKeyProvider = defaultKeyProvider;
+  resetIndexKey();
 }
 
 /**
@@ -150,4 +240,17 @@ export async function sealTasks(tasks: TaskItem[]): Promise<EncryptedTaskItem[]>
  */
 export async function unsealTasks(encryptedTasks: EncryptedTaskItem[]): Promise<TaskItem[]> {
   return Promise.all(encryptedTasks.map(unsealTask));
+}
+
+/**
+ * Generates a blind index for a task title
+ * @param title - The task title to index
+ * @returns Hex-encoded HMAC-SHA256 token, or null if index key is not set
+ */
+export async function generateTaskBlindIndex(title: string): Promise<string | null> {
+  const indexKey = getTaskIndexKey();
+  if (!indexKey) {
+    return null;
+  }
+  return await generateBlindIndex(title, indexKey);
 }

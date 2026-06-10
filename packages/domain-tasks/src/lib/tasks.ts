@@ -1,6 +1,6 @@
 import type { QueryRepository, RepositoryContext } from '@suite/db';
 import { generateUUID } from '@suite/shared-kernel';
-import { sealTask, unsealTask, unsealTasks, isEncryptionEnabled, type EncryptedTaskItem } from './tasks-crypto.js';
+import { sealTask, unsealTask, unsealTasks, isEncryptionEnabled, generateTaskBlindIndex, type EncryptedTaskItem } from './tasks-crypto.js';
 
 export type TaskPriority = 'low' | 'medium' | 'high';
 
@@ -347,6 +347,11 @@ export async function updateTask(id: string, input: UpdateTaskInput, repository:
 
   if (input.title !== undefined) {
     updates.title = normalizeTaskTitle(input.title);
+    // Regenerate blind index when title changes
+    const blindIndex = await generateTaskBlindIndex(updates.title);
+    if (blindIndex !== null) {
+      updates.blindIndex = blindIndex;
+    }
   }
 
   if (input.dueDate !== undefined) {

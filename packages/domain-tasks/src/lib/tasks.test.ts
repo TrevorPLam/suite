@@ -25,8 +25,8 @@ import {
   type TaskRepository,
   InMemoryTaskRepository,
 } from './tasks.js';
-import { sealTask, unsealTask, setTaskKeyProvider, resetKeyProvider } from './tasks-crypto.js';
-import { generateAESKey } from '@suite/crypto';
+import { sealTask, unsealTask, setTaskKeyProvider, resetKeyProvider, setTaskIndexKey, generateTaskBlindIndex } from './tasks-crypto.js';
+import { generateAESKey, generateSalt, deriveIndexKey } from '@suite/crypto';
 import type { RepositoryContext } from '@suite/db';
 import { randomUUID } from 'crypto';
 
@@ -1495,5 +1495,60 @@ describe('tasks - property-based tests', () => {
         }
       )
     );
+  });
+
+  describe('Blind Index Regeneration', () => {
+    beforeEach(() => {
+      resetTasks();
+      resetKeyProvider();
+    });
+
+    it('BDD: Given a task with title "old title", when updating title to "new title", then search finds by new title but not old title', async () => {
+      // Given: Set up index key and create a task
+      const salt = await generateSalt();
+      const saltString = new TextDecoder().decode(salt);
+      const indexKey = await deriveIndexKey('test-password', saltString);
+      setTaskIndexKey(indexKey, saltString);
+
+      const repository = new InMemoryTaskRepository();
+      const oldTitle = 'old title';
+      const task = await createTask({ title: oldTitle }, repository, context);
+
+      // When: Update the task title
+      const newTitle = 'new title';
+      await updateTask(task.id, { title: newTitle }, repository, context);
+
+      // Then: Search by new title should find the task
+      const newTitleBlindIndex = await generateTaskBlindIndex(newTitle);
+      expect(newTitleBlindIndex).not.toBeNull();
+      if (newTitleBlindIndex) {
+        const resultsByNewTitle = await searchTasks({ blindIndex: newTitleBlindIndex }, repository, context);
+        expect(resultsByNewTitle.length).toBe(1);
+        expect(resultsByNewTitle[0]?.title).toBe(newTitle);
+      }
+
+      // And: Search by old title should not find the task
+      const oldTitleBlindIndex = await generateTaskBlindIndex(oldTitle);
+      expect(oldTitleBlindIndex).not.toBeNull();
+      if (oldTitleBlindIndex) {
+        const resultsByOldTitle = await searchTasks({ blindIndex: oldTitleBlindIndex }, repository, context);
+        expect(resultsByOldTitle.length).toBe(0);
+      }
+    });
+
+    it('BDD: Given a task without index key, when updating title, then blindIndex remains null', async () => {
+      // Given: Create a task without setting index key
+      const repository = new InMemoryTaskRepository();
+      const oldTitle = 'old title';
+      const task = await createTask({ title: oldTitle }, repository, context);
+
+      // When: Update the task title
+      const newTitle = 'new title';
+      await updateTask(task.id, { title: newTitle }, repository, context);
+
+      // Then: blindIndex should remain null
+      const updated = await getTask(task.id, repository, context);
+      expect(updated?.blindIndex).toBeUndefined();
+    });
   });
 });
