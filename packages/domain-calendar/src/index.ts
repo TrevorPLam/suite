@@ -7,6 +7,7 @@ export {
   resetCalendarEvents,
   resetCalendarEventsDB,
   updateCalendarEvent,
+  deleteCalendarEvent,
   type CalendarEventRepository,
 } from './lib/calendar-events.js';
 

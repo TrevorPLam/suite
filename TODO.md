@@ -202,7 +202,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T054 - Add Calendar DELETE Endpoint
 
-- [ ] **T054** [PENDING] Add Calendar DELETE Endpoint
+- [x] **T054** [COMPLETED] Add Calendar DELETE Endpoint
 
 **Block Reason:** Calendar API missing DELETE /api/v1/events/:id endpoint (Tasks and Drive have DELETE).
 
@@ -220,14 +220,16 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Imports/Exports:** No new exports.
 
+**Implementation Notes:** Added `deleteCalendarEvent` function to domain-calendar package. Added DELETE endpoint to Calendar API following Tasks/Drive pattern. Added tests for DELETE endpoint.
+
 ### Subtasks
 
-- [ ] **T054.01 [AGENT]** Add DELETE events endpoint
+- [x] **T054.01 [AGENT]** Add DELETE events endpoint
   - **File:** `apps/calendar/api/src/index.ts`
   - **Action:** Add DELETE /api/v1/events/:id endpoint following Tasks/Drive pattern.
   - **Validation:** `pnpm --filter calendar-api typecheck`.
 
-- [ ] **T054.02 [AGENT]** Add DELETE endpoint test
+- [x] **T054.02 [AGENT]** Add DELETE endpoint test
   - **File:** `apps/calendar/api/src/index.test.ts` (create if needed)
   - **Action:** Test DELETE endpoint returns 200 and deletes event.
   - **Validation:** `pnpm --filter calendar-api test:run`.

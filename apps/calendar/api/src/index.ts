@@ -12,6 +12,7 @@ import {
   listCalendarEvents,
   listCalendarEventsInRange,
   updateCalendarEvent,
+  deleteCalendarEvent,
   type CalendarEventRange,
   type CalendarEventRepository,
   setCalendarKeyProviderFromEnv,
@@ -615,6 +616,47 @@ app.put('/api/v1/events/:id', requireAuth, requireOrganization, async (c) => {
     }
     const event = await updateCalendarEvent(id, result.data, repo, repositoryContext);
     return c.json({ event });
+  } catch (error) {
+    const response = readCalendarError(error);
+
+    return c.json(response.body, response.status);
+  }
+});
+
+app.delete('/api/v1/events/:id', requireAuth, requireOrganization, async (c) => {
+  const id = (c.req.param('id') || '').trim();
+
+  if (!isNonEmptyString(id)) {
+    return c.json(
+      {
+        error: {
+          code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+          message: 'Invalid event id',
+          details: { expected: ['id'] },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      400,
+    );
+  }
+
+  try {
+    const repo = c.get('calendarRepo');
+    const repositoryContext = c.get('repositoryContext');
+    if (!repositoryContext) {
+      return c.json(
+        {
+          error: {
+            code: ERROR_CODES.GLOBAL_INVALID_REQUEST,
+            message: 'Repository context not found',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        500,
+      );
+    }
+    await deleteCalendarEvent(id, repo, repositoryContext);
+    return c.json({ success: true });
   } catch (error) {
     const response = readCalendarError(error);
 

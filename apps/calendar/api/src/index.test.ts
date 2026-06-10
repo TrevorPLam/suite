@@ -300,3 +300,65 @@ describe('calendar API - update event', () => {
     expect(json).toHaveProperty('error');
   });
 });
+
+describe('calendar API - delete event', () => {
+  beforeEach(async () => {
+    resetCalendarEvents();
+  });
+
+  it('DELETE /api/events/:id returns 401 without session', async () => {
+    const res = await app.request('/api/v1/events/some-id', {
+      method: 'DELETE',
+    });
+
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
+
+  it('should delete an existing event', async () => {
+    allowAuth = true;
+    // Create event first
+    const createRes = await app.request('/api/v1/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Team Meeting',
+        startAt: '2025-01-15T10:00:00Z',
+        endAt: '2025-01-15T11:00:00Z',
+      }),
+    });
+
+    const createJson = await createRes.json();
+    const eventId = createJson.event.id;
+
+    // Delete event
+    const res = await app.request(`/api/v1/events/${eventId}`, {
+      method: 'DELETE',
+    });
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toHaveProperty('success');
+    expect(json.success).toBe(true);
+    allowAuth = false;
+  });
+
+  it('should reject delete with missing id', async () => {
+    const res = await app.request('/api/v1/events/', {
+      method: 'DELETE',
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('should reject delete for non-existent event', async () => {
+    const res = await app.request('/api/v1/events/non-existent-id', {
+      method: 'DELETE',
+    });
+
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
+});

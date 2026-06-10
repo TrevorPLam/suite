@@ -382,3 +382,27 @@ export async function updateCalendarEvent(id: string, input: UpdateCalendarEvent
 
   return snapshot(updated);
 }
+
+export async function deleteCalendarEvent(id: string, repository: CalendarEventRepository = new InMemoryCalendarEventRepository(), context: RepositoryContext): Promise<void> {
+  if (!isNonEmptyString(id)) {
+    throw new CalendarEventError('Invalid calendar event id', 'validation_error', [
+      'id must be a non-empty string',
+    ]);
+  }
+
+  const existingEvent = await repository.findById(id, context);
+
+  if (!existingEvent) {
+    throw new CalendarEventError(`Calendar event "${id}" was not found`, 'not_found_error', [
+      `No event exists for id "${id}"`,
+    ]);
+  }
+
+  const deleted = await repository.delete(id, context);
+
+  if (!deleted) {
+    throw new CalendarEventError(`Calendar event "${id}" was not found`, 'not_found_error', [
+      `No event exists for id "${id}"`,
+    ]);
+  }
+}
