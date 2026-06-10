@@ -125,7 +125,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T052 - Fix pnpm-workspace.yaml Placeholder
 
-- [ ] **T052** [PENDING] Fix pnpm-workspace.yaml Placeholder
+- [x] **T052** [COMPLETED] Fix pnpm-workspace.yaml Placeholder
 
 **Block Reason:** Configuration has literal placeholder string instead of boolean.
 
@@ -143,9 +143,11 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Imports/Exports:** No new exports.
 
+**Implementation Notes:** Set protobufjs allowBuilds to false, consistent with other entries (esbuild, nx, sharp, workerd). protobufjs is not actively used in the codebase.
+
 ### Subtasks
 
-- [ ] **T052.01 [AGENT]** Fix protobufjs allowBuilds value
+- [x] **T052.01 [AGENT]** Fix protobufjs allowBuilds value
   - **File:** `pnpm-workspace.yaml`
   - **Action:** Change "set this to true or false" to boolean value (true or false).
   - **Validation:** `pnpm install` succeeds.

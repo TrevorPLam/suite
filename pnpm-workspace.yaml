@@ -52,6 +52,6 @@ sharedWorkspaceLockfile: true
 allowBuilds:
   esbuild: false
   nx: false
-  protobufjs: set this to true or false
+  protobufjs: false
   sharp: false
   workerd: false
