@@ -238,7 +238,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T055 - Fix Unsafe organizationId Cast
 
-- [ ] **T055** [PENDING] Fix Unsafe organizationId Cast
+- [x] **T055** [COMPLETED] Fix Unsafe organizationId Cast
 
 **Block Reason:** apps/*/api organizationId read via unsafe (c.get('auth') as any)?.session?.organizationId cast.
 
@@ -256,19 +256,21 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Imports/Exports:** No new exports.
 
+**Implementation Notes:** Replaced unsafe type casts with properly typed context access. Added `organizationId: string | null` to Variables type in all three API files to match the value set by authMiddleware.
+
 ### Subtasks
 
-- [ ] **T055.01 [AGENT]** Fix organizationId cast in Calendar API
+- [x] **T055.01 [AGENT]** Fix organizationId cast in Calendar API
   - **File:** `apps/calendar/api/src/index.ts`
   - **Action:** Replace (c.get('auth') as any)?.session?.organizationId with c.get('organizationId').
   - **Validation:** `pnpm --filter calendar-api typecheck`.
 
-- [ ] **T055.02 [AGENT]** Fix organizationId cast in Tasks API
+- [x] **T055.02 [AGENT]** Fix organizationId cast in Tasks API
   - **File:** `apps/tasks/api/src/index.ts`
   - **Action:** Replace (c.get('auth') as any)?.session?.organizationId with c.get('organizationId').
   - **Validation:** `pnpm --filter tasks-api typecheck`.
 
-- [ ] **T055.03 [AGENT]** Fix organizationId cast in Drive API
+- [x] **T055.03 [AGENT]** Fix organizationId cast in Drive API
   - **File:** `apps/drive/api/src/index.ts`
   - **Action:** Replace (c.get('auth') as any)?.session?.organizationId with c.get('organizationId').
   - **Validation:** `pnpm --filter drive-api typecheck`.

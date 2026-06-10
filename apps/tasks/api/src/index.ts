@@ -46,6 +46,7 @@ type Env = {
 
 type Variables = {
   userId: string | null;
+  organizationId: string | null;
   auth: ReturnType<typeof createAuth>;
   taskRepo: TaskRepository;
   repositoryContext: RepositoryContext | null;
@@ -255,8 +256,7 @@ app.use('/api/*', async (c, next) => {
 
   if (userId) {
     // Use organizationId from auth context as tenantId, fallback to 'default' for single-tenant
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const organizationId = (c.get('auth') as any)?.session?.organizationId || 'default';
+    const organizationId = c.get('organizationId') || 'default';
     
     // Create repository context
     const requestId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
