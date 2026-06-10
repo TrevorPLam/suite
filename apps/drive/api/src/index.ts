@@ -32,7 +32,7 @@ import {
 import { PostgresDriveFileRepository, PostgresDriveFolderRepository, createDbClient, type RepositoryContext } from '@suite/db';
 import { R2StorageAdapter } from './bootstrap.js';
 import { validateDriveEnv, type DriveEnv } from '@suite/env-config';
-import { mountAuth, requireAuth, requireOrganization, createAuth } from '@suite/auth';
+import { mountAuth, requireAuth, requireOrganization, createAuth, authMiddleware } from '@suite/auth';
 import { UsageMonitor, rateLimit, structuredLogger, requestId, ERROR_CODES, type KVNamespace, requireRepositoryContext } from '@suite/shared-kernel';
 import { PostgresUsageRepository } from '@suite/db';
 import {
@@ -229,6 +229,9 @@ app.use('/api/*', async (c, next) => {
 // Mount Better Auth handler
 mountAuth(app);
 
+// Mount auth middleware globally to set userId in context for all requests
+app.use('/api/*', authMiddleware);
+
 // Mount UsageMonitor middleware (blocks at 80% of 1000 requests per hour) - only if DATABASE_URL is set
 app.use('/api/*', async (c, next) => {
   if (usageRepository) {
@@ -317,8 +320,8 @@ app.use('/api/*', async (c, next) => {
   await next();
 });
 
-// Validate repository context for all API routes
-app.use('/api/*', requireRepositoryContext());
+// Validate repository context for API routes that require it (exclude health and metrics)
+app.use('/api/v1/*', requireRepositoryContext());
 
 function readDriveError(error: unknown): { status: 400 | 404 | 500; body: Record<string, unknown> } {
   if (error instanceof DriveError) {

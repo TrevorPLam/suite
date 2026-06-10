@@ -45,7 +45,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T051 - Fix Auth Middleware Mounting
 
-- [ ] **T051** [PENDING] Fix Auth Middleware Mounting
+- [x] **T051** [COMPLETED] Fix Auth Middleware Mounting
 
 **Block Reason:** GET endpoints are inaccessible because userId is never set in context.
 
@@ -65,25 +65,59 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ### Subtasks
 
-- [ ] **T051.01 [AGENT]** Mount authMiddleware globally in Calendar API
+- [x] **T051.01 [AGENT]** Mount authMiddleware globally in Calendar API
   - **File:** `apps/calendar/api/src/index.ts`
   - **Action:** Move authMiddleware to global mount. Ensure it runs before all routes.
   - **Validation:** `pnpm --filter calendar-api typecheck`.
 
-- [ ] **T051.02 [AGENT]** Mount authMiddleware globally in Tasks API
+- [x] **T051.02 [AGENT]** Mount authMiddleware globally in Tasks API
   - **File:** `apps/tasks/api/src/index.ts`
   - **Action:** Move authMiddleware to global mount. Ensure it runs before all routes.
   - **Validation:** `pnpm --filter tasks-api typecheck`.
 
-- [ ] **T051.03 [AGENT]** Mount authMiddleware globally in Drive API
+- [x] **T051.03 [AGENT]** Mount authMiddleware globally in Drive API
   - **File:** `apps/drive/api/src/index.ts`
   - **Action:** Move authMiddleware to global mount. Ensure it runs before all routes.
   - **Validation:** `pnpm --filter drive-api typecheck`.
 
-- [ ] **T051.04 [AGENT]** Fix health check endpoint blocking
+- [x] **T051.04 [AGENT]** Fix health check endpoint blocking
   - **Files:** `apps/*/api/src/index.ts`
   - **Action:** Remove requireRepositoryContext from /api/v1/health and /api/metrics routes.
   - **Validation:** Health checks return 200 without auth.
+
+---
+
+## Task: T056 - Fix Pre-existing Calendar Domain Test Failures
+
+- [ ] **T056** [PENDING] Fix Pre-existing Calendar Domain Test Failures
+
+**Block Reason:** packages/domain-calendar tests are failing (12 failed, 33 passed). Tests expect conflict detection behavior that may be related to T050 fix.
+
+**Files:** `packages/domain-calendar/src/lib/calendar-events.test.ts`
+
+**Definition of done:** All calendar domain tests pass.
+
+**Out of scope:** Changing test logic without understanding requirements.
+
+**Rules:** Pre-existing test failures must be fixed before proceeding with other work.
+
+**Pattern:** Investigate test failures, determine if they're related to T050 fix, update tests or code accordingly.
+
+**Anti-pattern:** Ignoring test failures, skipping tests without understanding root cause.
+
+**Imports/Exports:** No new exports.
+
+### Subtasks
+
+- [ ] **T056.01 [AGENT]** Investigate calendar test failures
+  - **File:** `packages/domain-calendar/src/lib/calendar-events.test.ts`
+  - **Action:** Analyze failing tests to understand root cause. Check if related to T050 findOverlapping fix.
+  - **Validation:** Root cause identified.
+
+- [ ] **T056.02 [AGENT]** Fix calendar test failures
+  - **File:** `packages/domain-calendar/src/lib/calendar-events.test.ts` or `packages/domain-calendar/src/lib/calendar-events.ts`
+  - **Action:** Fix tests or code based on investigation results.
+  - **Validation:** `pnpm --filter @suite/domain-calendar test:run` passes.
 
 ---
 
