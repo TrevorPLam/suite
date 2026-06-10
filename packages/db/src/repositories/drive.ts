@@ -2,6 +2,7 @@ import { eq, and } from 'drizzle-orm';
 import { driveFiles, driveFolders, type DriveFileSchema, type NewDriveFileSchema, type DriveFolderSchema, type NewDriveFolderSchema } from '../schema/drive/index.js';
 import type { QueryRepository, Database, RepositoryContext } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
+import { logDataCreated, logDataUpdated, logDataDeleted } from '../security/audit-logger.js';
 
 // Domain types (from @suite/domain-drive)
 export type DriveFile = {
@@ -136,6 +137,8 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
     if (!results[0]) {
       throw new Error('Failed to create drive file');
     }
+    // Security: audit log data creation
+    logDataCreated(context.userId, context.tenantId, 'drive_file', newEntity.id);
     return mapFileToDomain(results[0]);
   }
 
@@ -155,7 +158,12 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
       .set(schemaEntity)
       .where(and(eq(driveFiles.id, id), eq(driveFiles.userId, context.userId)))
       .returning();
-    return results[0] ? mapFileToDomain(results[0]) : null;
+    if (results[0]) {
+      // Security: audit log data update
+      logDataUpdated(context.userId, context.tenantId, 'drive_file', id);
+      return mapFileToDomain(results[0]);
+    }
+    return null;
   }
 
   async delete(id: string, context: RepositoryContext): Promise<boolean> {
@@ -165,6 +173,10 @@ export class PostgresDriveFileRepository implements DriveFileRepository {
       .delete(driveFiles)
       .where(and(eq(driveFiles.id, id), eq(driveFiles.userId, context.userId)))
       .returning();
+    if (results.length > 0) {
+      // Security: audit log data deletion
+      logDataDeleted(context.userId, context.tenantId, 'drive_file', id);
+    }
     return results.length > 0;
   }
 

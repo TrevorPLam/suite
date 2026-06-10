@@ -2,6 +2,7 @@ import { eq, and } from 'drizzle-orm';
 import { tasks, type TaskSchema, type NewTaskSchema } from '../schema/tasks/index.js';
 import type { QueryRepository, Database, RepositoryContext } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
+import { logDataCreated, logDataUpdated, logDataDeleted } from '../security/audit-logger.js';
 
 // Domain type (from @suite/domain-tasks)
 export type TaskItem = {
@@ -105,6 +106,8 @@ export class PostgresTaskRepository implements TaskRepository {
     if (!results[0]) {
       throw new Error('Failed to create task');
     }
+    // Security: audit log data creation
+    logDataCreated(context.userId, context.tenantId, 'task', newEntity.id);
     return mapToDomain(results[0]);
   }
 
@@ -124,7 +127,12 @@ export class PostgresTaskRepository implements TaskRepository {
       .set(schemaEntity)
       .where(and(eq(tasks.id, id), eq(tasks.userId, context.userId)))
       .returning();
-    return results[0] ? mapToDomain(results[0]) : null;
+    if (results[0]) {
+      // Security: audit log data update
+      logDataUpdated(context.userId, context.tenantId, 'task', id);
+      return mapToDomain(results[0]);
+    }
+    return null;
   }
 
   async delete(id: string, context: RepositoryContext): Promise<boolean> {
@@ -134,6 +142,10 @@ export class PostgresTaskRepository implements TaskRepository {
       .delete(tasks)
       .where(and(eq(tasks.id, id), eq(tasks.userId, context.userId)))
       .returning();
+    if (results.length > 0) {
+      // Security: audit log data deletion
+      logDataDeleted(context.userId, context.tenantId, 'task', id);
+    }
     return results.length > 0;
   }
 

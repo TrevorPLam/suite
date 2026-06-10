@@ -2,6 +2,7 @@ import { eq, and, lt, gt, ne } from 'drizzle-orm';
 import { calendarEvents, type CalendarEventSchema, type NewCalendarEventSchema } from '../schema/calendar/index.js';
 import type { Repository, Database, RepositoryContext } from '../index.js';
 import { generateUUID } from '@suite/shared-kernel';
+import { logDataCreated, logDataUpdated, logDataDeleted } from '../security/audit-logger.js';
 
 // Domain type (from @suite/domain-calendar)
 export type CalendarEvent = {
@@ -85,6 +86,8 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
     if (!results[0]) {
       throw new Error('Failed to create calendar event');
     }
+    // Security: audit log data creation
+    logDataCreated(context.userId, context.tenantId, 'calendar_event', newEntity.id);
     return mapToDomain(results[0]);
   }
 
@@ -101,7 +104,12 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
       .set(schemaEntity)
       .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, context.userId)))
       .returning();
-    return results[0] ? mapToDomain(results[0]) : null;
+    if (results[0]) {
+      // Security: audit log data update
+      logDataUpdated(context.userId, context.tenantId, 'calendar_event', id);
+      return mapToDomain(results[0]);
+    }
+    return null;
   }
 
   async delete(id: string, context: RepositoryContext): Promise<boolean> {
@@ -111,6 +119,10 @@ export class PostgresCalendarEventRepository implements CalendarEventRepository 
       .delete(calendarEvents)
       .where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, context.userId)))
       .returning();
+    if (results.length > 0) {
+      // Security: audit log data deletion
+      logDataDeleted(context.userId, context.tenantId, 'calendar_event', id);
+    }
     return results.length > 0;
   }
 

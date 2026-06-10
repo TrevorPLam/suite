@@ -13,6 +13,8 @@ import { recordQueryDuration, incrementQueryCount, incrementErrorCount, incremen
 import { detectSlowQuery } from './observability/slow-query-detector.js';
 import { retryWithBackoff } from './error-handling/retry.js';
 import { getDatabaseErrorCode } from './error-handling/error-codes.js';
+import { validateQueryWithParams } from './security/query-validator.js';
+import { checkRateLimit } from './security/rate-limiter.js';
 
 /**
  * WorkerDatabase implementation using Hyperdrive
@@ -48,6 +50,20 @@ export class WorkerDatabase implements Database {
   async query<T = unknown>(sql: string, params?: unknown[], context?: QueryLogContext): Promise<QueryResult<T>> {
     if (this.isClosed) {
       throw new Error('Database connection is closed');
+    }
+
+    // Security: validate query and parameters before execution
+    const validation = validateQueryWithParams(sql, params);
+    if (!validation.valid) {
+      throw new Error(`Query validation failed: ${validation.error}`);
+    }
+
+    // Security: rate limit per tenant
+    if (context?.tenantId) {
+      const rateLimitResult = checkRateLimit(context.tenantId);
+      if (!rateLimitResult.allowed) {
+        throw new Error(`Rate limit exceeded for tenant ${context.tenantId}. Reset at ${rateLimitResult.resetTime.toISOString()}`);
+      }
     }
 
     const operation = extractOperation(sql);
