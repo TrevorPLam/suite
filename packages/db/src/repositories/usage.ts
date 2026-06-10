@@ -22,14 +22,15 @@ export class PostgresUsageRepository implements UsageRepository {
     const now = new Date();
 
     // Try to find existing usage record for this period
+    // Find the record whose period window contains 'now'
     const existingUsage = await drizzleDb
       .select()
       .from(usage)
       .where(
         and(
           eq(usage.userId, userId),
-          gte(usage.periodStart, periodStart),
-          lte(usage.periodEnd, now)
+          lte(usage.periodStart, now),
+          gte(usage.periodEnd, now)
         )
       )
       .limit(1);

@@ -1109,7 +1109,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T015 - Fix UsageMonitor findOrCreateUsage Period Query
 
-- [ ] **T015** [PENDING] Fix UsageMonitor findOrCreateUsage Period Query
+- [x] **T015** [COMPLETED] Fix UsageMonitor findOrCreateUsage Period Query
 
 **Files:** `packages/db/src/repositories/usage.ts`, `packages/db/src/repositories/usage.test.ts`
 
@@ -1129,15 +1129,17 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ### Subtasks
 
-- [ ] **T015.01 [AGENT]** Fix the period query WHERE condition
+- [x] **T015.01 [AGENT]** Fix the period query WHERE condition
   - **File:** `packages/db/src/repositories/usage.ts:28-34`
   - **Action:** Replace the `and(...)` predicate with `and(eq(usage.userId, userId), lte(usage.periodStart, now), gte(usage.periodEnd, now))`. Remove the `gte(usage.periodStart, periodStart)` clause — the `lte(periodStart, now)` constraint is sufficient to anchor to the current window.
   - **Validation:** `pnpm --filter @suite/db test:run -- usage.test.ts`
 
-- [ ] **T015.02 [AGENT]** Add regression tests for period deduplication
+- [x] **T015.02 [AGENT]** Add regression tests for period deduplication
   - **File:** `packages/db/src/repositories/usage.test.ts` (create if absent)
   - **Action:** Write two tests: (1) Call `findOrCreateUsage` twice with the same userId and overlapping period. Assert the returned `id` is identical on both calls (no duplicate row created). (2) Call `incrementUsage` between two `findOrCreateUsage` calls. Assert `requestCount` is 1 on the second call, not 0.
   - **Validation:** `pnpm --filter @suite/db test:run -- usage.test.ts`
+
+**Implementation Notes:** Fixed the period query WHERE condition in findOrCreateUsage to correctly find the record whose period window contains 'now'. Changed from gte(periodStart, periodStart) + lte(periodEnd, now) to lte(periodStart, now) + gte(periodEnd, now). Added comprehensive regression tests in usage.test.ts to verify period deduplication and requestCount increment behavior. Tests are skipped when DATABASE_URL is not set (integration tests). All typecheck and lint checks pass.
 
 ---
 
