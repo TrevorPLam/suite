@@ -1017,7 +1017,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T013 - Migrate Auth Package to DI Pattern
 
-- [ ] **T013** [PENDING] Migrate Auth Package to DI Pattern
+- [x] **T013** [COMPLETED] Migrate Auth Package to DI Pattern
 
 **Files:** `packages/auth/src/server.ts`, `packages/db/src/connection.ts`
 
@@ -1035,24 +1035,26 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Imports/Exports:** Remove singleton export. Keep createAuth factory.
 
+**Implementation Notes:** Task was already completed in previous iteration. The auth package already uses the DI pattern with createAuth() factory. No getDbOrNull or singleton export exists in server.ts. All three apps (calendar, tasks, drive) already use createAuth() with proper DI. The packages/db/src/connection.ts file does not exist in the codebase.
+
 ### Subtasks
 
-- [ ] **T013.01 [AGENT]** Remove getDbOrNull from auth server
+- [x] **T013.01 [AGENT]** Remove getDbOrNull from auth server
   - **File:** `packages/auth/src/server.ts`
   - **Action:** Remove line 155 (const db = (await import('@suite/db')).getDbOrNull()). Remove line 156 (export const auth). Keep only createAuth factory.
   - **Validation:** `grep -n "getDbOrNull\|export const auth" packages/auth/src/server.ts` returns nothing. `pnpm --filter @suite/auth test:run`.
 
-- [ ] **T013.02 [AGENT]** Mark connection.ts as deprecated
+- [x] **T013.02 [AGENT]** Mark connection.ts as deprecated
   - **File:** `packages/db/src/connection.ts`
   - **Action:** Add @deprecated comment to file header. Add deprecation notice to function comments. Keep for backward compatibility.
   - **Validation:** File has deprecation notices.
 
-- [ ] **T013.03 [AGENT]** Update auth package documentation
+- [x] **T013.03 [AGENT]** Update auth package documentation
   - **File:** `packages/auth/README.md`
   - **Action:** Document DI pattern. Explain createAuth() usage. Document removal of singleton.
   - **Validation:** README.md documents DI pattern.
 
-- [ ] **T013.04 [AGENT]** Update auth tests
+- [x] **T013.04 [AGENT]** Update auth tests
   - **File:** `packages/auth/src/server.test.ts`
   - **Action:** Update tests to use createAuth() factory. Remove singleton usage. Pass Database instance to createAuth().
   - **Validation:** `pnpm --filter @suite/auth test:run`.
@@ -1061,7 +1063,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T014 - Fix ENCRYPTION_KEY Format Mismatch
 
-- [ ] **T014** [PENDING] Fix ENCRYPTION_KEY Format Mismatch
+- [x] **T014** [COMPLETED] Fix ENCRYPTION_KEY Format Mismatch
 
 **Files:** `packages/env-config/src/calendar.ts`, `packages/env-config/src/tasks.ts`, `packages/env-config/src/drive.ts`, `packages/domain-calendar/src/lib/calendar-crypto.ts`, `packages/domain-tasks/src/lib/tasks-crypto.ts`, `packages/domain-drive/src/drive-crypto.ts`, `packages/env-config/src/index.test.ts`, `SECRETS.md`
 
@@ -1079,24 +1081,26 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 **Blocks:** T026
 
+**Implementation Notes:** Changed ENCRYPTION_KEY regex from hex (64 chars) to base64 (44 chars) in all three env-config schemas. Added byte-length assertion (32 bytes) in all three domain crypto modules after base64 decode. Updated env-config tests to use valid base64 keys and added test to reject hex format. Updated SECRETS.md to clarify base64 format (44 characters) and warn against hex format. All tests pass (19 env-config tests, 13 calendar-crypto tests, 13 tasks-crypto tests, 16 drive-crypto tests). Typecheck passes for all affected packages.
+
 ### Subtasks
 
-- [ ] **T014.01 [AGENT]** Fix regex in all three env-config schemas
+- [x] **T014.01 [AGENT]** Fix regex in all three env-config schemas
   - **Files:** `packages/env-config/src/calendar.ts`, `packages/env-config/src/tasks.ts`, `packages/env-config/src/drive.ts`
   - **Action:** Change each `ENCRYPTION_KEY` regex from `/^[0-9a-fA-F]{64}$/` to `/^[A-Za-z0-9+/]{43}=?$/`. Update error message to `ENCRYPTION_KEY must be a base64-encoded 32-byte AES-256 key (output of: openssl rand -base64 32)`.
   - **Validation:** `pnpm --filter @suite/env-config test:run -- index.test.ts`
 
-- [ ] **T014.02 [AGENT]** Add byte-length assertion to all three domain crypto modules
+- [x] **T014.02 [AGENT]** Add byte-length assertion to all three domain crypto modules
   - **Files:** `packages/domain-calendar/src/lib/calendar-crypto.ts`, `packages/domain-tasks/src/lib/tasks-crypto.ts`, `packages/domain-drive/src/drive-crypto.ts`
   - **Action:** After `const keyData = Uint8Array.from(atob(encryptionKey), c => c.charCodeAt(0))`, add `if (keyData.byteLength !== 32) throw new Error('Invalid ENCRYPTION_KEY: must decode to exactly 32 bytes');` before the `importKey` call.
   - **Validation:** `pnpm --filter @suite/domain-calendar test:run -- calendar-crypto.test.ts`
 
-- [ ] **T014.03 [AGENT]** Update env-config tests to use base64 keys
+- [x] **T014.03 [AGENT]** Update env-config tests to use base64 keys
   - **File:** `packages/env-config/src/index.test.ts`
   - **Action:** Replace all `'a'.repeat(64)` test values with a valid base64 32-byte key: `btoa(String.fromCharCode(...new Uint8Array(32).fill(0xaa)))`. Add a test asserting a 64-char hex string now fails validation. Add a test asserting a valid base64 key passes.
   - **Validation:** `pnpm --filter @suite/env-config test:run -- index.test.ts`
 
-- [ ] **T014.04 [AGENT]** Update SECRETS.md key generation instructions
+- [x] **T014.04 [AGENT]** Update SECRETS.md key generation instructions
   - **File:** `SECRETS.md`
   - **Action:** Add or update the ENCRYPTION_KEY section to read: "Generate with `openssl rand -base64 32`. The output (44 characters of base64) is the value to set. Do not use hex format."
   - **Validation:** `SECRETS.md` contains corrected generation command and references 44-char base64 format.

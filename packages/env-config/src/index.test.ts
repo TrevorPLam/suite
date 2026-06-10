@@ -75,7 +75,9 @@ describe('Environment Configuration', () => {
     process.env.BETTER_AUTH_URL = 'http://localhost:3002';
     process.env.PORT = '3001';
     process.env.NODE_ENV = 'production';
-    process.env.ENCRYPTION_KEY = 'a'.repeat(64);
+    // Generate valid base64 32-byte key
+    const testKey = btoa(String.fromCharCode(...new Uint8Array(32).fill(0xaa)));
+    process.env.ENCRYPTION_KEY = testKey;
 
     const env = validateTasksEnv();
     expect(env.DATABASE_URL).toBe('postgresql://localhost:5432/test');
@@ -86,13 +88,14 @@ describe('Environment Configuration', () => {
   });
 
   it('should validate tasks environment with explicit env object', () => {
+    const testKey = btoa(String.fromCharCode(...new Uint8Array(32).fill(0xaa)));
     const customEnv = {
       DATABASE_URL: 'postgresql://localhost:5432/test',
       BETTER_AUTH_SECRET: 'dev-secret-change-in-production-32chars',
       BETTER_AUTH_URL: 'http://localhost:3002',
       PORT: '3001',
       NODE_ENV: 'production',
-      ENCRYPTION_KEY: 'a'.repeat(64),
+      ENCRYPTION_KEY: testKey,
     };
 
     const env = validateTasksEnv(customEnv);
@@ -155,30 +158,31 @@ describe('Environment Configuration', () => {
     expect(() => validateCalendarEnv()).toThrow();
   });
 
-  it('should validate with valid 32-byte hex ENCRYPTION_KEY', () => {
+  it('should validate with valid 32-byte base64 ENCRYPTION_KEY', () => {
     process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
     process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
     process.env.BETTER_AUTH_URL = 'http://localhost:3001';
     process.env.PORT = '3000';
     process.env.NODE_ENV = 'development';
-    process.env.ENCRYPTION_KEY = 'a'.repeat(64);
+    const testKey = btoa(String.fromCharCode(...new Uint8Array(32).fill(0xaa)));
+    process.env.ENCRYPTION_KEY = testKey;
 
     const env = validateCalendarEnv();
-    expect(env.ENCRYPTION_KEY).toBe('a'.repeat(64));
+    expect(env.ENCRYPTION_KEY).toBe(testKey);
   });
 
-  it('should throw error for invalid ENCRYPTION_KEY format (not hex)', () => {
+  it('should throw error for invalid ENCRYPTION_KEY format (not base64)', () => {
     process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
     process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
     process.env.BETTER_AUTH_URL = 'http://localhost:3001';
     process.env.PORT = '3000';
     process.env.NODE_ENV = 'development';
-    process.env.ENCRYPTION_KEY = 'not-hex-string';
+    process.env.ENCRYPTION_KEY = 'not-base64-string';
 
     expect(() => validateCalendarEnv()).toThrow();
   });
 
-  it('should throw error for invalid ENCRYPTION_KEY length (not 64 chars)', () => {
+  it('should throw error for invalid ENCRYPTION_KEY length (not 44 chars)', () => {
     process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
     process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
     process.env.BETTER_AUTH_URL = 'http://localhost:3001';
@@ -210,15 +214,40 @@ describe('Environment Configuration', () => {
     expect(() => validateCalendarEnv()).toThrow('ENCRYPTION_KEY is required in production');
   });
 
+  it('should throw error for hex ENCRYPTION_KEY (old format)', () => {
+    process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+    process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
+    process.env.BETTER_AUTH_URL = 'http://localhost:3001';
+    process.env.PORT = '3000';
+    process.env.NODE_ENV = 'development';
+    process.env.ENCRYPTION_KEY = 'a'.repeat(64); // Old hex format
+
+    expect(() => validateCalendarEnv()).toThrow('ENCRYPTION_KEY must be a base64-encoded 32-byte AES-256 key');
+  });
+
+  it('should accept valid base64 ENCRYPTION_KEY', () => {
+    process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+    process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
+    process.env.BETTER_AUTH_URL = 'http://localhost:3001';
+    process.env.PORT = '3000';
+    process.env.NODE_ENV = 'development';
+    const testKey = btoa(String.fromCharCode(...new Uint8Array(32).fill(0xaa)));
+    process.env.ENCRYPTION_KEY = testKey;
+
+    const env = validateCalendarEnv();
+    expect(env.ENCRYPTION_KEY).toBe(testKey);
+  });
+
   it('should validate production with valid ENCRYPTION_KEY', () => {
     process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
     process.env.BETTER_AUTH_SECRET = 'dev-secret-change-in-production-32chars';
     process.env.BETTER_AUTH_URL = 'http://localhost:3001';
     process.env.PORT = '3000';
     process.env.NODE_ENV = 'production';
-    process.env.ENCRYPTION_KEY = 'a'.repeat(64);
+    const testKey = btoa(String.fromCharCode(...new Uint8Array(32).fill(0xaa)));
+    process.env.ENCRYPTION_KEY = testKey;
 
     const env = validateCalendarEnv();
-    expect(env.ENCRYPTION_KEY).toBe('a'.repeat(64));
+    expect(env.ENCRYPTION_KEY).toBe(testKey);
   });
 });

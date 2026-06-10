@@ -62,6 +62,11 @@ export async function setDriveKeyProviderFromEnv(): Promise<void> {
     // Decode base64 key
     const keyData = Uint8Array.from(atob(encryptionKey), c => c.charCodeAt(0));
     
+    // Assert byte length is exactly 32 bytes for AES-256
+    if (keyData.byteLength !== 32) {
+      throw new Error('Invalid ENCRYPTION_KEY: must decode to exactly 32 bytes');
+    }
+    
     // Import as AES-GCM key
     const key = await crypto.subtle.importKey(
       'raw',

@@ -31,11 +31,12 @@ This document describes the secret management strategy for the Suite productivit
 
 #### ENCRYPTION_KEY
 - **Purpose**: AES-256-GCM encryption key for E2EE user content encryption
-- **Format**: Base64-encoded 256-bit key (32 bytes)
+- **Format**: Base64-encoded 256-bit key (32 bytes = 44 characters of base64)
 - **Required by**: calendar-api, tasks-api, drive-api
-- **Generate**: `openssl rand -base64 32`
+- **Generate**: `openssl rand -base64 32` (the output is 44 characters of base64)
 - **Set via**: `wrangler secret put ENCRYPTION_KEY`
 - **CI/CD**: Set per-API via `wrangler secret put` (not in GitHub Actions)
+- **Important**: Do not use hex format. Use only base64 format.
 
 ### Drive API Specific Secrets
 

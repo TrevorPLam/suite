@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const tasksEnvSchema = z.object({
   DATABASE_URL: z.string().url(),
-  ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/, 'ENCRYPTION_KEY must be a 32-byte hex string (64 characters)').optional(),
+  ENCRYPTION_KEY: z.string().regex(/^[A-Za-z0-9+/]{43}=?$/, 'ENCRYPTION_KEY must be a base64-encoded 32-byte AES-256 key (output of: openssl rand -base64 32)').optional(),
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.string().url().default('http://localhost:3002'),
   BETTER_AUTH_API_KEY: z.string().optional(),
