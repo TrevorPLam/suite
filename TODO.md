@@ -954,7 +954,7 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ## Task: T012 - Create Schema Registry
 
-- [ ] **T012** [PENDING] Create Schema Registry
+- [x] **T012** [COMPLETED] Create Schema Registry
 
 **Files:** `packages/db/src/schema-registry/version-tracker.ts` (create), `packages/db/src/schema-registry/contract-tester.ts` (create), `packages/db/scripts/schema-diff.ts` (create)
 
@@ -976,40 +976,42 @@ Here is the cleaned-up and renumbered list of open tasks, with the T032 dependen
 
 ### Subtasks
 
-- [ ] **T012.01 [AGENT]** Create version tracker
+- [x] **T012.01 [AGENT]** Create version tracker
   - **File:** `packages/db/src/schema-registry/version-tracker.ts` (create)
   - **Action:** Create trackSchemaVersion(domain, version) function. Store version in registry. Query current version.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T012.02 [AGENT]** Create contract tester
+- [x] **T012.02 [AGENT]** Create contract tester
   - **File:** `packages/db/src/schema-registry/contract-tester.ts` (create)
   - **Action:** Create testSchemaContract(domain, expectedSchema) function. Compare current schema with expected. Detect breaking changes.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T012.03 [AGENT]** Create schema diff tool
+- [x] **T012.03 [AGENT]** Create schema diff tool
   - **File:** `packages/db/scripts/schema-diff.ts` (create)
   - **Action:** Create diffSchemas(fromVersion, toVersion) function. Show added/removed/changed tables and columns. Output in readable format.
   - **Validation:** `pnpm --filter @suite/db typecheck`.
 
-- [ ] **T012.04 [AGENT]** Integrate version tracking in migrations
+- [x] **T012.04 [AGENT]** Integrate version tracking in migrations
   - **File:** `packages/db/scripts/migrate.ts`
   - **Action:** Call trackSchemaVersion() after successful migration. Update registry with new version.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T012.05 [AGENT]** Add contract tests to CI
+- [x] **T012.05 [AGENT]** Add contract tests to CI
   - **File:** `.github/workflows/ci.yml`
   - **Action:** Add step to run contract tests after migrations. Fail CI on breaking changes.
   - **Validation:** CI workflow includes contract test step.
 
-- [ ] **T012.06 [AGENT]** Add schema registry tests
+- [x] **T012.06 [AGENT]** Add schema registry tests
   - **File:** `packages/db/src/schema-registry/schema-registry.test.ts` (create)
   - **Action:** Test version tracking. Test contract detection. Test schema diff.
   - **Validation:** `pnpm --filter @suite/db test:run`.
 
-- [ ] **T012.07 [AGENT]** Document schema registry
+- [x] **T012.07 [AGENT]** Document schema registry
   - **File:** `packages/db/docs/schema-registry.md` (create)
   - **Action:** Document version tracking. Explain contract tests. Document diff tool usage.
   - **Validation:** Documentation explains registry clearly.
+
+**Implementation Notes:** Created version tracker with SHA-256 checksums, contract tester for breaking change detection, schema diff tool for comparing versions. Integrated version tracking into migration script to automatically track schema versions after successful migrations. Added contract tests to CI workflow. Created comprehensive test suite with 12 tests covering version tracking and contract testing. Documented the schema registry with usage examples, best practices, and troubleshooting guide.
 
 ---
 

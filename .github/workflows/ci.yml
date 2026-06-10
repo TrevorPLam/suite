@@ -102,6 +102,11 @@ jobs:
           APP_DOMAIN: localhost
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/suite
 
+      - name: Run schema contract tests
+        run: pnpm --filter @suite/db test:run -- schema-registry.test.ts
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/suite
+
       - name: Run full test suite
         run: pnpm test:run
         env:
