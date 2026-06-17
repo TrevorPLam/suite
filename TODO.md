@@ -414,7 +414,7 @@
 
 ## Task: T011 - Fix Test Suite Mock Issues
 
-- [ ] **T011** [PENDING] Fix Test Suite Mock Issues
+- [x] **T011** [COMPLETED] Fix Test Suite Mock Issues
 
 **Files:** `apps/calendar/api/src/index.test.ts`, `apps/tasks/api/src/index.test.ts`, `apps/drive/api/src/index.test.ts`
 
@@ -432,19 +432,66 @@
 
 **Depends on:** None. **Blocks:** None.
 
-**Context:** Discovered during T004 execution. better-auth mock causes "z$1.url is not a function" error preventing test execution. This is a pre-existing issue affecting all API test suites.
+**Implementation Notes:**
+- **Root Cause:** The test files used `vi.importActual<any>` in mock factories, which triggered better-auth's internal initialization. This caused the "z$1.url is not a function" error from @better-auth/infra.
+- **Fix Applied:** Removed `vi.importActual` calls and replaced with direct mock exports. Mocked only the specific functions needed (requireAuth, mountAuth, authMiddleware, requireOrganization, createAuth) without importing the actual module.
+- **Result:** The better-auth mock error is eliminated. Tests now import and run without the initialization error.
+- **Remaining Issue:** Tests still fail due to missing database/repository mocking infrastructure (500 errors instead of expected 401/404/409). This is a separate test infrastructure issue, not the better-auth mock problem itself. See T013 for database mocking.
 
 ### Subtasks
 
-- [ ] **T011.01 [AGENT]** Investigate better-auth mock error in calendar API tests
+- [x] **T011.01 [AGENT]** Investigate better-auth mock error in calendar API tests
   - **File:** `apps/calendar/api/src/index.test.ts`
   - **Action:** Debug the "z$1.url is not a function" error from @better-auth/infra. Identify the root cause (likely circular dependency or improper mock setup).
   - **Validation:** Document root cause in TODO.md.
+  - **Result:** Root cause identified - vi.importActual triggers better-auth initialization which fails in test environment.
 
-- [ ] **T011.02 [AGENT]** Fix better-auth mock across all API test suites
+- [x] **T011.02 [AGENT]** Fix better-auth mock across all API test suites
   - **Files:** `apps/calendar/api/src/index.test.ts`, `apps/tasks/api/src/index.test.ts`, `apps/drive/api/src/index.test.ts`
   - **Action:** Apply consistent fix to all three API test files. Ensure tests can run without errors.
   - **Validation:** `pnpm vitest run apps/*/api/src/index.test.ts`
+  - **Result:** Better-auth mock error fixed. Tests now run without initialization errors.
+
+---
+
+## Task: T013 - Add Database and Repository Mocking to API Tests
+
+- [ ] **T013** [PENDING] Add Database and Repository Mocking to API Tests
+
+**Files:** `apps/calendar/api/src/index.test.ts`, `apps/tasks/api/src/index.test.ts`, `apps/drive/api/src/index.test.ts`
+
+**Definition of done:** All API test suites can run with mocked database and repository layers. Tests return expected HTTP status codes (401, 404, 409) instead of 500 errors.
+
+**Out of scope:** Setting up actual test databases, integration tests with real PostgreSQL.
+
+**Rules:** Unit tests should not require external dependencies. Database operations must be mocked to test API logic in isolation.
+
+**Pattern:** Mock `createDbClient` to return a mock database instance. Mock repository methods to return test data. Use Vitest's vi.fn() for function mocking.
+
+**Anti-pattern:** Tests that require a running PostgreSQL instance. Tests that fail with 500 errors due to missing database connections.
+
+**Imports/Exports:** No new exports. Add mock configurations to existing test files.
+
+**Depends on:** T011. **Blocks:** None.
+
+**Context:** Discovered during T011 execution. After fixing the better-auth mock, tests still fail with 500 errors because the repository layer requires database connections that aren't mocked. The API routes call repository methods which try to connect to PostgreSQL, causing internal server errors.
+
+### Subtasks
+
+- [ ] **T013.01 [AGENT]** Mock createDbClient in calendar API tests
+  - **File:** `apps/calendar/api/src/index.test.ts`
+  - **Action:** Mock `@suite/db` to provide a mock `createDbClient` that returns a mock database with mocked repository methods.
+  - **Validation:** Calendar API tests return expected status codes instead of 500.
+
+- [ ] **T013.02 [AGENT]** Mock createDbClient in tasks API tests
+  - **File:** `apps/tasks/api/src/index.test.ts`
+  - **Action:** Same pattern as T013.01 for tasks API.
+  - **Validation:** Tasks API tests return expected status codes instead of 500.
+
+- [ ] **T013.03 [AGENT]** Mock createDbClient in drive API tests
+  - **File:** `apps/drive/api/src/index.test.ts`
+  - **Action:** Same pattern as T013.01 for drive API.
+  - **Validation:** Drive API tests return expected status codes instead of 500.
 
 ---
 

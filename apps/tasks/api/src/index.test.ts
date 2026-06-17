@@ -3,36 +3,36 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { resetTasks } from '@suite/domain-tasks';
 
 // Mock env validation to bypass DATABASE_URL requirement in tests
-vi.mock('@suite/env-config', async () => {
-  const actual = await vi.importActual<any>('@suite/env-config');
-  return {
-    ...actual,
-    validateTasksEnv: vi.fn(() => ({
-      DATABASE_URL: 'postgresql://localhost:5432/test',
-      ENCRYPTION_KEY: undefined,
-      PORT: 3001,
-      NODE_ENV: 'test',
-    })),
-  };
-});
+vi.mock('@suite/env-config', () => ({
+  validateTasksEnv: vi.fn(() => ({
+    DATABASE_URL: 'postgresql://localhost:5432/test',
+    ENCRYPTION_KEY: undefined,
+    PORT: 3001,
+    NODE_ENV: 'test',
+  })),
+}));
 
 // Mock requireAuth to return 401 by default, but allow override for authenticated tests
 let allowAuth = false;
 
-vi.mock('@suite/auth', async () => {
-  const actual = await vi.importActual<any>('@suite/auth');
-  return {
-    ...actual,
-    requireAuth: vi.fn(async (c: any, next: any) => {
-      if (allowAuth) {
-        c.set('userId', 'test-user-id');
-        await next();
-      } else {
-        return c.json({ error: 'Unauthorized' }, 401);
-      }
-    }),
-  };
-});
+vi.mock('@suite/auth', () => ({
+  requireAuth: vi.fn(async (c: any, next: any) => {
+    if (allowAuth) {
+      c.set('userId', 'test-user-id');
+      await next();
+    } else {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+  }),
+  mountAuth: vi.fn(() => {}),
+  authMiddleware: vi.fn(async (c: any, next: any) => {
+    await next();
+  }),
+  requireOrganization: vi.fn(async (c: any, next: any) => {
+    await next();
+  }),
+  createAuth: vi.fn(() => ({})),
+}));
 
 import app from './index.js';
 
