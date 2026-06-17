@@ -39,6 +39,22 @@ export function validateRepositoryContext(context: unknown): context is Reposito
  */
 export function requireRepositoryContext() {
   return async (c: Context, next: () => Promise<void>) => {
+    // Check if userId is present (set by authMiddleware)
+    // If not, the request is unauthenticated - return 401
+    const userId = c.get('userId');
+    if (!userId) {
+      return c.json(
+        {
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+            timestamp: new Date().toISOString(),
+          },
+        },
+        401,
+      );
+    }
+
     const repositoryContext = c.get('repositoryContext');
 
     try {

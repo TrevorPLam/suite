@@ -637,7 +637,7 @@
 
 ## Task: T015 - Fix Unauthenticated Data Requests Returning 500 Instead of 401
 
-- [ ] **T015** [PENDING] Fix Unauthenticated Data Requests Returning 500 Instead of 401
+- [x] **T015** [COMPLETED] Fix Unauthenticated Data Requests Returning 500 Instead of 401
 
 **Priority:** CRITICAL — MVP BLOCKER. Unauthenticated clients (e.g. browser before sign-in) that call `GET /api/v1/events` receive `500 GLOBAL_INVALID_REQUEST: Repository context must have a valid userId` instead of `401 Unauthorized`.
 
@@ -657,23 +657,27 @@
 
 **Depends on:** None. **Blocks:** None.
 
+**Implementation Notes:** Added userId check at the top of `requireRepositoryContext()` middleware. When userId is null/undefined, returns 401 with UNAUTHORIZED code. When userId is set but context is invalid, still returns 500. Added comprehensive unit tests covering both paths. All typechecks pass.
+
 ### Subtasks
 
-- [ ] **T015.01 [AGENT]** Update requireRepositoryContext to return 401 when userId is absent
+- [x] **T015.01 [AGENT]** Update requireRepositoryContext to return 401 when userId is absent
   - **File:** `packages/shared-kernel/src/repository-context.ts`
   - **Action:** At the top of the returned middleware, add: `const userId = c.get('userId'); if (!userId) { return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required', timestamp: new Date().toISOString() } }, 401); }`. Place this check before the existing `validateRepositoryContext` call.
   - **Validation:** `pnpm --filter @suite/shared-kernel typecheck`
+  - **Result:** Completed. userId check added before context validation.
 
-- [ ] **T015.02 [AGENT]** Add unit tests for the 401 path in requireRepositoryContext
+- [x] **T015.02 [AGENT]** Add unit tests for the 401 path in requireRepositoryContext
   - **File:** `packages/shared-kernel/src/repository-context.test.ts` (create if absent)
   - **Action:** Write a test asserting that when `c.get('userId')` is null/undefined, the middleware returns 401 with the UNAUTHORIZED code. Write a second test asserting that when `userId` is set but context is invalid, it still returns 500.
   - **Validation:** `pnpm --filter @suite/shared-kernel test:run`
+  - **Result:** Completed. Created test file with 4 tests covering 401 path (null/undefined userId), 500 path (invalid context with valid userId), and happy path (valid userId and context). All tests pass.
 
 ---
 
 ## Task: T016 - Fix Auth Server process.env Usage Incompatible with Cloudflare Workers
 
-- [ ] **T016** [PENDING] Fix Auth Server process.env Usage Incompatible with Cloudflare Workers
+- [x] **T016** [COMPLETED] Fix Auth Server process.env Usage Incompatible with Cloudflare Workers
 
 **Priority:** HIGH — Social authentication (Google/GitHub), Passkey, and production cookie security do not work in deployed Workers because `process.env` is empty in the Cloudflare Workers runtime. Secrets must be accessed via `c.env`.
 
@@ -702,17 +706,23 @@ In Cloudflare Workers, these values are in `c.env` (the Worker binding), not `pr
 
 **Depends on:** None. **Blocks:** None.
 
+**Implementation Notes:**
+- T016.01: Added optional fields to CreateAuthOptions: googleClientId, googleClientSecret, githubClientId, githubClientSecret, passkeyRpId, nodeEnv. Updated createAuth function signature to accept these parameters. Replaced process.env usage in socialProviders, passkey configuration, and cookie prefix with the new parameters.
+- T016.02: Updated all three APIs (calendar, tasks, drive) to pass the new options from c.env to createAuth(). Added the required fields to each API's Env type definition. All typechecks pass.
+
 ### Subtasks
 
-- [ ] **T016.01 [AGENT]** Add social provider and passkey options to CreateAuthOptions
+- [x] **T016.01 [AGENT]** Add social provider and passkey options to CreateAuthOptions
   - **File:** `packages/auth/src/server.ts`
   - **Action:** Add to `CreateAuthOptions`: `googleClientId?: string; googleClientSecret?: string; githubClientId?: string; githubClientSecret?: string; passkeyRpId?: string; nodeEnv?: string;`. Replace `process.env.GOOGLE_CLIENT_ID` etc. with the corresponding parameter values. Replace `process.env.NODE_ENV` with `nodeEnv ?? 'development'`.
   - **Validation:** `pnpm --filter @suite/auth typecheck`
+  - **Result:** Completed. All process.env usage replaced with parameters.
 
-- [ ] **T016.02 [AGENT]** Pass social provider and passkey config from c.env in all three APIs
+- [x] **T016.02 [AGENT]** Pass social provider and passkey config from c.env in all three APIs
   - **Files:** `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
   - **Action:** In each API's auth instance creation middleware, pass the new options to `createAuth()`: `googleClientId: c.env.GOOGLE_CLIENT_ID, googleClientSecret: c.env.GOOGLE_CLIENT_SECRET, githubClientId: c.env.GITHUB_CLIENT_ID, githubClientSecret: c.env.GITHUB_CLIENT_SECRET, passkeyRpId: c.env.PASSKEY_RP_ID, nodeEnv: c.env.NODE_ENV`. Add these fields to each API's `Env` type definition.
   - **Validation:** `pnpm nx affected -t typecheck`
+  - **Result:** Completed. All three APIs updated and typecheck passes.
 
 ---
 

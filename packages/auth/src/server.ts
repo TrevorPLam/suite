@@ -29,9 +29,15 @@ interface CreateAuthOptions {
   waitUntil?: (promise: Promise<unknown>) => void;
   trustedOrigins?: string;
   betterAuthApiKey?: string;
+  googleClientId?: string;
+  googleClientSecret?: string;
+  githubClientId?: string;
+  githubClientSecret?: string;
+  passkeyRpId?: string;
+  nodeEnv?: string;
 }
 
-export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKey }: CreateAuthOptions) {
+export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKey, googleClientId, googleClientSecret, githubClientId, githubClientSecret, passkeyRpId, nodeEnv }: CreateAuthOptions) {
   // Validate environment variables
   const validatedEnv = validateAuthEnv(env || process.env);
 
@@ -151,16 +157,16 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
       },
     },
     socialProviders: {
-      ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? {
+      ...(googleClientId && googleClientSecret ? {
         google: {
-          clientId: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          clientId: googleClientId,
+          clientSecret: googleClientSecret,
         },
       } : {}),
-      ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET ? {
+      ...(githubClientId && githubClientSecret ? {
         github: {
-          clientId: process.env.GITHUB_CLIENT_ID,
-          clientSecret: process.env.GITHUB_CLIENT_SECRET,
+          clientId: githubClientId,
+          clientSecret: githubClientSecret,
         },
       } : {}),
     },
@@ -187,9 +193,9 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
       }),
       sso(),
       passkey({
-        rpID: process.env.PASSKEY_RP_ID || 'localhost',
+        rpID: passkeyRpId || 'localhost',
         rpName: 'Suite',
-        origin: process.env.BETTER_AUTH_URL || 'http://localhost:8787',
+        origin: validatedEnv.BETTER_AUTH_URL || 'http://localhost:8787',
         authenticatorSelection: {
           residentKey: 'preferred',
           userVerification: 'preferred',
@@ -204,7 +210,7 @@ export function createAuth({ db, env, waitUntil, trustedOrigins, betterAuthApiKe
       // Use __Host- prefix for production to enforce browser-level security guarantees
       // Requires: Secure attribute, no Domain attribute, Path=/ (all met by current config)
       // Falls back to 'suite' prefix in development for HTTP compatibility
-      cookiePrefix: process.env.NODE_ENV === 'production' ? '__Host-suite' : 'suite',
+      cookiePrefix: nodeEnv === 'production' ? '__Host-suite' : 'suite',
       crossSubDomainCookies: {
         enabled: false,
       },

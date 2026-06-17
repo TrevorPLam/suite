@@ -31,6 +31,12 @@ type Env = {
   HYPERDRIVE?: { connectionString: string };
   ENCRYPTION_KEY?: string;
   waitUntil: (promise: Promise<unknown>) => void;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  GITHUB_CLIENT_ID?: string;
+  GITHUB_CLIENT_SECRET?: string;
+  PASSKEY_RP_ID?: string;
+  NODE_ENV?: string;
 } & CalendarEnv;
 
 type Variables = {
@@ -194,6 +200,12 @@ app.use('/api/*', async (c, next) => {
     waitUntil: c.env.waitUntil,
     ...(c.env.TRUSTED_ORIGINS && { trustedOrigins: c.env.TRUSTED_ORIGINS }),
     ...(c.env.BETTER_AUTH_API_KEY && { betterAuthApiKey: c.env.BETTER_AUTH_API_KEY }),
+    ...(c.env.GOOGLE_CLIENT_ID && { googleClientId: c.env.GOOGLE_CLIENT_ID }),
+    ...(c.env.GOOGLE_CLIENT_SECRET && { googleClientSecret: c.env.GOOGLE_CLIENT_SECRET }),
+    ...(c.env.GITHUB_CLIENT_ID && { githubClientId: c.env.GITHUB_CLIENT_ID }),
+    ...(c.env.GITHUB_CLIENT_SECRET && { githubClientSecret: c.env.GITHUB_CLIENT_SECRET }),
+    ...(c.env.PASSKEY_RP_ID && { passkeyRpId: c.env.PASSKEY_RP_ID }),
+    ...(c.env.NODE_ENV && { nodeEnv: c.env.NODE_ENV }),
   });
   c.set('auth', auth);
   await next();
