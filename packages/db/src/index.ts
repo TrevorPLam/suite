@@ -4,18 +4,13 @@
  * without knowing implementation details (repository pattern)
  */
 
-// Repository context for request-scoped data
-export interface RepositoryContext {
-  /** The authenticated user ID for the current request */
-  userId: string;
-  
-  /** The tenant/organization ID for multi-tenancy */
-  tenantId: string;
-  
-  /** Unique request ID for tracing and logging */
-  requestId: string;
-}
+// Import RepositoryContext from shared-kernel (canonical definition)
+import type { RepositoryContext } from '@suite/shared-kernel';
 
+// Re-export for consumers
+export type { RepositoryContext };
+
+// DB-specific validation and creation utilities
 export { validateRepositoryContext, createRepositoryContext } from './repository-context.js';
 
 export interface Repository<T, ID = string> {

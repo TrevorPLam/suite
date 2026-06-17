@@ -1,4 +1,5 @@
 import type { MiddlewareHandler } from 'hono';
+import type { RepositoryContext } from './repository-context.js';
 
 export interface UsageRecord {
   id: string;
@@ -6,12 +7,6 @@ export interface UsageRecord {
   requestCount: number;
   periodStart: Date;
   periodEnd: Date;
-}
-
-export interface RepositoryContext {
-  userId: string;
-  tenantId: string;
-  requestId: string;
 }
 
 export interface UsageRepository {

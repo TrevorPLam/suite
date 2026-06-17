@@ -1,7 +1,10 @@
 /**
- * RepositoryContext - Request-scoped context for repository operations
+ * RepositoryContext utilities for the db package
  *
- * This interface encapsulates request-scoped data that repositories need to perform
+ * The RepositoryContext type is defined in @suite/shared-kernel (canonical definition).
+ * This file provides db-specific validation and creation utilities.
+ *
+ * RepositoryContext encapsulates request-scoped data that repositories need to perform
  * their operations. By passing context as a parameter to repository methods instead
  * of storing it in the repository instance, we:
  *
@@ -12,16 +15,7 @@
  * 5. Enable testability by making context explicit
  */
 
-export interface RepositoryContext {
-  /** The authenticated user ID for the current request */
-  userId: string;
-  
-  /** The tenant/organization ID for multi-tenancy */
-  tenantId: string;
-  
-  /** Unique request ID for tracing and logging */
-  requestId: string;
-}
+import type { RepositoryContext } from '@suite/shared-kernel';
 
 /**
  * Validate that a RepositoryContext has valid values
