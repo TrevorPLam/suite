@@ -13,9 +13,9 @@ describe('Calendar API Contract Tests', () => {
     resetCalendarEvents();
   });
 
-  describe('GET /api/v1/health', () => {
+  describe('GET /api/health', () => {
     it('returns 200 with valid health response structure', async () => {
-      const res = await app.request('/api/v1/health');
+      const res = await app.request('/api/health');
       expect(res.status).toBe(200);
       
       const body = await res.json() as { ok: boolean; app: string; db: string; timestamp: string; dbLatency?: string };
@@ -33,7 +33,7 @@ describe('Calendar API Contract Tests', () => {
       // This test validates the error contract for unhealthy state
       // In a real scenario, we'd mock the database to be unhealthy
       // For now, we validate the structure exists
-      const res = await app.request('/api/v1/health');
+      const res = await app.request('/api/health');
       // If db is healthy, we get 200; if unhealthy, we get 503
       // Both responses should have the required fields
       expect([200, 503]).toContain(res.status);

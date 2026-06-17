@@ -362,7 +362,7 @@ const metrics = {
   requestLatencies: [] as number[],
 };
 
-app.get('/api/v1/health', async (c) => {
+app.get('/api/health', async (c) => {
   const db = c.get('db');
   let dbStatus = 'ok';
   let dbLatency: number | undefined;

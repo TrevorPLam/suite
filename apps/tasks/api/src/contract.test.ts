@@ -13,9 +13,9 @@ describe('Tasks API Contract Tests', () => {
     resetTasks();
   });
 
-  describe('GET /api/v1/health', () => {
+  describe('GET /api/health', () => {
     it('returns 200 with valid health response structure', async () => {
-      const res = await app.request('/api/v1/health');
+      const res = await app.request('/api/health');
       expect(res.status).toBe(200);
       
       const body = await res.json() as { ok: boolean; app: string; db: string; timestamp: string; dbLatency?: string };
@@ -30,7 +30,7 @@ describe('Tasks API Contract Tests', () => {
     });
 
     it('returns 503 when database is unhealthy', async () => {
-      const res = await app.request('/api/v1/health');
+      const res = await app.request('/api/health');
       expect([200, 503]).toContain(res.status);
       
       const body = await res.json() as { ok: boolean; app: string; db: string; timestamp: string };

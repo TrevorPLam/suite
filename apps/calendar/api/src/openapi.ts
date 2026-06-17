@@ -12,7 +12,7 @@ export const openApiDoc = {
     },
   ],
   paths: {
-    '/api/v1/health': {
+    '/api/health': {
       get: {
         summary: 'Health check',
         description: 'Check if the API and database are healthy',

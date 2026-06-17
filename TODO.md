@@ -336,20 +336,14 @@
 
 ### Subtasks
 
-- [ ] **T008.01 [AGENT]** Move Calendar API env validation to module level
-  - **File:** `apps/calendar/api/src/index.ts`
-  - **Action:** Remove `validateCalendarEnv(...)` from the per-request middleware. Add `const validatedEnv = validateCalendarEnv(process.env as unknown as Record<string, string>);` at module level before `const app = new Hono()`. Downstream middleware closes over `validatedEnv` directly.
-  - **Validation:** `pnpm --filter @suite/calendar-api typecheck`
+- [!] **T008.01 [SKIPPED]** Move Calendar API env validation to module level
+  - **Status:** SKIPPED — Parent task T008 is BLOCKED (architectural incompatibility with Cloudflare Workers). `process.env` is empty in Workers runtime; env vars come from `c.env` at request time. Module-level validation is not applicable.
 
-- [ ] **T008.02 [AGENT]** Move Tasks API env validation to module level
-  - **File:** `apps/tasks/api/src/index.ts`
-  - **Action:** Same pattern as T008.01 using `validateTasksEnv`.
-  - **Validation:** `pnpm --filter @suite/tasks-api typecheck`
+- [!] **T008.02 [SKIPPED]** Move Tasks API env validation to module level
+  - **Status:** SKIPPED — Same reason as T008.01.
 
-- [ ] **T008.03 [AGENT]** Move Drive API env validation to module level
-  - **File:** `apps/drive/api/src/index.ts`
-  - **Action:** Same pattern as T008.01 using `validateDriveEnv`.
-  - **Validation:** `pnpm --filter @suite/drive-api typecheck`
+- [!] **T008.03 [SKIPPED]** Move Drive API env validation to module level
+  - **Status:** SKIPPED — Same reason as T008.01.
 
 ---
 
@@ -596,34 +590,219 @@
 
 ---
 
+## Task: T014 - Fix Health Endpoint Blocked by requireRepositoryContext
+
+- [x] **T014** [COMPLETED] Fix Health Endpoint Blocked by requireRepositoryContext
+
+**Priority:** CRITICAL — MVP BLOCKER. Health checks from load balancers and monitoring tools fail with 500 instead of 200/503.
+
+**Root Cause:** `app.use('/api/v1/*', requireRepositoryContext())` is mounted on the `/api/v1/*` pattern, which matches `/api/v1/health`. An unauthenticated health probe has no `userId` set, so `repositoryContext` is never populated, and `requireRepositoryContext()` returns `500 GLOBAL_INVALID_REQUEST` before the health handler runs.
+
+**Files:** `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
+
+**Definition of done:** `GET /api/health` (or `/api/v1/health` once excluded from requireRepositoryContext) returns `200` or `503` without authentication. Health checks never return 500.
+
+**Out of scope:** Changing health check logic or response schema, authentication for health endpoints.
+
+**Rules:** Health checks must be unauthenticated. Monitoring infrastructure cannot provide session tokens.
+
+**Pattern:** Move health endpoint from `/api/v1/health` to `/api/health` so it falls outside the `/api/v1/*` `requireRepositoryContext` middleware. The DB client middleware is already registered on `/api/*` so `c.get('db')` remains available.
+
+**Anti-pattern:** Running auth-gated middleware on public operational endpoints.
+
+**Depends on:** None. **Blocks:** None.
+
+**Implementation Notes:** Moved health endpoint from `/api/v1/health` to `/api/health` in all three APIs (calendar, tasks, drive). Updated OpenAPI specs to reflect the new path. Updated contract tests to use the new path. Typecheck passes. The health endpoint now bypasses the `requireRepositoryContext()` middleware since it's outside the `/api/v1/*` pattern, while still benefiting from the DB client middleware on `/api/*`.
+
+### Subtasks
+
+- [x] **T014.01 [AGENT]** Move health endpoint path from `/api/v1/health` to `/api/health` in all three APIs
+  - **Files:** `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
+  - **Action:** Change `app.get('/api/v1/health', ...)` to `app.get('/api/health', ...)` in each file. The DB client and env-validation middleware are on `/api/*` so they still run. The requireRepositoryContext middleware on `/api/v1/*` no longer intercepts the health route.
+  - **Validation:** `curl http://localhost:8787/api/health` returns 200 or 503 (never 500).
+  - **Result:** Completed. Health endpoint moved in all three APIs.
+
+- [x] **T014.02 [AGENT]** Update OpenAPI spec health path in all three APIs
+  - **Files:** `apps/calendar/api/src/openapi.ts`, `apps/tasks/api/src/openapi.ts`, `apps/drive/api/src/openapi.ts`
+  - **Action:** Update any path reference from `/api/v1/health` to `/api/health` in the OpenAPI documents.
+  - **Validation:** `pnpm nx affected -t typecheck`
+  - **Result:** Completed. OpenAPI specs updated in all three APIs. Typecheck passes.
+
+- [x] **T014.03 [AGENT]** Update contract tests health path
+  - **Files:** `apps/calendar/api/src/contract.test.ts`, `apps/tasks/api/src/contract.test.ts`, `apps/drive/api/src/contract.test.ts`
+  - **Action:** Replace any `'/api/v1/health'` with `'/api/health'` in test files.
+  - **Validation:** `pnpm nx affected -t test`
+
+---
+
+## Task: T015 - Fix Unauthenticated Data Requests Returning 500 Instead of 401
+
+- [ ] **T015** [PENDING] Fix Unauthenticated Data Requests Returning 500 Instead of 401
+
+**Priority:** CRITICAL — MVP BLOCKER. Unauthenticated clients (e.g. browser before sign-in) that call `GET /api/v1/events` receive `500 GLOBAL_INVALID_REQUEST: Repository context must have a valid userId` instead of `401 Unauthorized`.
+
+**Root Cause:** GET list/search endpoints (`GET /api/v1/events`, `GET /api/v1/tasks`, `GET /api/v1/files`) have no explicit `requireAuth` middleware. The `requireRepositoryContext()` middleware on `/api/v1/*` runs for these routes and throws 500 when `userId` is null (unauthenticated). The error code and status are semantically wrong; the client is not authenticated, not sending an invalid request.
+
+**Files:** `packages/shared-kernel/src/repository-context.ts`
+
+**Definition of done:** An unauthenticated `GET /api/v1/events` returns `401` (not 500). An authenticated but contextless call still returns `500` for internal errors.
+
+**Out of scope:** Adding authentication to health/metrics endpoints, changing the auth flow.
+
+**Rules:** Always return semantically correct HTTP status codes. 401 means not authenticated; 500 means server error.
+
+**Pattern:** In `requireRepositoryContext()`, check `c.get('userId')` before validating the context object. If `userId` is `null` or `undefined`, return `401 UNAUTHORIZED`. Only return `500` if `userId` is set but the context is otherwise malformed.
+
+**Anti-pattern:** Returning 500 for requests that simply lack authentication.
+
+**Depends on:** None. **Blocks:** None.
+
+### Subtasks
+
+- [ ] **T015.01 [AGENT]** Update requireRepositoryContext to return 401 when userId is absent
+  - **File:** `packages/shared-kernel/src/repository-context.ts`
+  - **Action:** At the top of the returned middleware, add: `const userId = c.get('userId'); if (!userId) { return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required', timestamp: new Date().toISOString() } }, 401); }`. Place this check before the existing `validateRepositoryContext` call.
+  - **Validation:** `pnpm --filter @suite/shared-kernel typecheck`
+
+- [ ] **T015.02 [AGENT]** Add unit tests for the 401 path in requireRepositoryContext
+  - **File:** `packages/shared-kernel/src/repository-context.test.ts` (create if absent)
+  - **Action:** Write a test asserting that when `c.get('userId')` is null/undefined, the middleware returns 401 with the UNAUTHORIZED code. Write a second test asserting that when `userId` is set but context is invalid, it still returns 500.
+  - **Validation:** `pnpm --filter @suite/shared-kernel test:run`
+
+---
+
+## Task: T016 - Fix Auth Server process.env Usage Incompatible with Cloudflare Workers
+
+- [ ] **T016** [PENDING] Fix Auth Server process.env Usage Incompatible with Cloudflare Workers
+
+**Priority:** HIGH — Social authentication (Google/GitHub), Passkey, and production cookie security do not work in deployed Workers because `process.env` is empty in the Cloudflare Workers runtime. Secrets must be accessed via `c.env`.
+
+**Root Cause:** `packages/auth/src/server.ts` reads the following from `process.env`:
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (lines ~154-158)
+- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` (lines ~160-165)
+- `PASSKEY_RP_ID` (line ~190)
+- `BETTER_AUTH_URL` (for passkey origin, line ~192)
+- `NODE_ENV` (for cookie prefix, line ~207)
+
+In Cloudflare Workers, these values are in `c.env` (the Worker binding), not `process.env`. They are always `undefined` in the deployed Workers context.
+
+**Files:** `packages/auth/src/server.ts`, `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
+
+**Definition of done:** Social providers and passkey are configured from the `env` parameter passed to `createAuth()`, not from `process.env`. In Workers, these features work if the corresponding env vars are set. `NODE_ENV`-based cookie prefix uses the value from the passed env.
+
+**Out of scope:** Adding new social providers, implementing passkey from scratch, changing the Better Auth plugin configuration.
+
+**Rules:** In Cloudflare Workers, secrets come from `c.env`, never from `process.env`. All configurable credentials must flow through the dependency injection `env` parameter.
+
+**Pattern:** Add optional fields to `CreateAuthOptions`: `googleClientId?`, `googleClientSecret?`, `githubClientId?`, `githubClientSecret?`, `passkeyRpId?`, `nodeEnv?`. Pass these from `c.env` in each API's auth instance creation middleware.
+
+**Anti-pattern:** Reading secrets from `process.env` inside a Cloudflare Worker module.
+
+**Imports/Exports:** Update `CreateAuthOptions` interface and `createAuth()` signature in `packages/auth/src/server.ts`.
+
+**Depends on:** None. **Blocks:** None.
+
+### Subtasks
+
+- [ ] **T016.01 [AGENT]** Add social provider and passkey options to CreateAuthOptions
+  - **File:** `packages/auth/src/server.ts`
+  - **Action:** Add to `CreateAuthOptions`: `googleClientId?: string; googleClientSecret?: string; githubClientId?: string; githubClientSecret?: string; passkeyRpId?: string; nodeEnv?: string;`. Replace `process.env.GOOGLE_CLIENT_ID` etc. with the corresponding parameter values. Replace `process.env.NODE_ENV` with `nodeEnv ?? 'development'`.
+  - **Validation:** `pnpm --filter @suite/auth typecheck`
+
+- [ ] **T016.02 [AGENT]** Pass social provider and passkey config from c.env in all three APIs
+  - **Files:** `apps/calendar/api/src/index.ts`, `apps/tasks/api/src/index.ts`, `apps/drive/api/src/index.ts`
+  - **Action:** In each API's auth instance creation middleware, pass the new options to `createAuth()`: `googleClientId: c.env.GOOGLE_CLIENT_ID, googleClientSecret: c.env.GOOGLE_CLIENT_SECRET, githubClientId: c.env.GITHUB_CLIENT_ID, githubClientSecret: c.env.GITHUB_CLIENT_SECRET, passkeyRpId: c.env.PASSKEY_RP_ID, nodeEnv: c.env.NODE_ENV`. Add these fields to each API's `Env` type definition.
+  - **Validation:** `pnpm nx affected -t typecheck`
+
+---
+
+## Task: T017 - Configure Cloudflare Infrastructure for Deployment
+
+- [ ] **T017** [PENDING] Configure Cloudflare Infrastructure for Deployment
+
+**Priority:** MEDIUM — Required before first production deploy. `wrangler deploy --dry-run` will fail in CI because wrangler.toml `[[hyperdrive]]` blocks are missing the required `id` field.
+
+**Files:** `apps/calendar/api/wrangler.toml`, `apps/tasks/api/wrangler.toml`, `apps/drive/api/wrangler.toml`
+
+**Definition of done:** All three wrangler.toml files have valid Cloudflare resource IDs. `wrangler deploy --dry-run` passes for all three APIs in CI. Required secrets are documented and set.
+
+**Out of scope:** Setting up a new Cloudflare account, purchasing domains, configuring DNS.
+
+**Rules:** Never commit secrets to source control. Use `wrangler secret put` for all sensitive values.
+
+**Pattern:** Create Cloudflare resources (KV namespaces, Hyperdrive config, R2 bucket), record their IDs, update wrangler.toml. Set secrets via `wrangler secret put`.
+
+**Anti-pattern:** Hardcoding secrets in wrangler.toml `[vars]`. Committing CLOUDFLARE_API_TOKEN to the repo.
+
+**Depends on:** None. **Blocks:** Production deployment.
+
+### Subtasks
+
+- [ ] **T017.01 [HUMAN]** Create Cloudflare KV namespaces and update wrangler.toml
+  - **Action:** Run `wrangler kv namespace create RATE_LIMIT_KV` and `wrangler kv namespace create AUTH_KV` for each app (or create shared namespaces). Update `[[kv_namespaces]]` `id` fields in all three wrangler.toml files with the real IDs.
+  - **Validation:** IDs are non-placeholder UUIDs in wrangler.toml.
+
+- [ ] **T017.02 [HUMAN]** Create Cloudflare Hyperdrive configuration and update wrangler.toml
+  - **Action:** Create a Hyperdrive config via Cloudflare dashboard or `wrangler hyperdrive create` pointing at the production PostgreSQL database. Add `id = "<real-id>"` to each `[[hyperdrive]]` block in all three wrangler.toml files.
+  - **Validation:** `wrangler deploy --dry-run` passes for all three APIs.
+
+- [ ] **T017.03 [HUMAN]** Create R2 bucket and confirm wrangler.toml binding
+  - **Action:** Create `drive-files` R2 bucket via `wrangler r2 bucket create drive-files`. Confirm the `bucket_name` in `apps/drive/api/wrangler.toml` matches.
+  - **Validation:** `wrangler r2 bucket list` shows `drive-files`.
+
+- [ ] **T017.04 [HUMAN]** Set required secrets via wrangler secret put
+  - **Action:** For each API Worker, run:
+    - `wrangler secret put BETTER_AUTH_SECRET --name <worker-name>`
+    - `wrangler secret put BETTER_AUTH_URL --name <worker-name>`
+    - `wrangler secret put DATABASE_URL --name <worker-name>` (only needed if not using Hyperdrive)
+    - `wrangler secret put ENCRYPTION_KEY --name <worker-name>` (generate with `openssl rand -base64 32`)
+  - **Validation:** `wrangler secret list --name <worker-name>` shows all required secrets.
+
+- [ ] **T017.05 [HUMAN]** Update .env.production files with real production URLs
+  - **Files:** `apps/calendar/web/.env.production`, `apps/tasks/web/.env.production`, `apps/drive/web/.env.production`
+  - **Action:** Replace placeholder `https://<app>-api.yourdomain.com` values with actual deployed Worker URLs.
+  - **Validation:** Frontend builds target the correct API base URL.
+
+---
+
 ## Dependency Graph (Open Tasks Only)
 
 ```
-Bug fix chains (prioritize before infrastructure work):
-T004 → T005 → T008 [BLOCKED - architectural incompatibility with Cloudflare Workers]
+Critical bug fixes (must complete before MVP):
+T014 (health endpoint) — independent
+T015 (401 vs 500) — independent
+T016 (process.env in Workers) — independent
 
-Independent (no blocking dependencies):
-T001 [BLOCKED], T002 [BLOCKED], T003 [COMPLETED], T006 [COMPLETED], T007 [COMPLETED], T009, T010
+Deployment (human-gated):
+T017 (infra config) — independent; blocks production deploy
+
+Blocked (needs human decision or deferred):
+T001 [BLOCKED], T002 [BLOCKED], T008 [BLOCKED]
+
+All completed:
+T003, T004, T005, T006, T007, T009, T010, T011, T012, T013
 ```
-
-(T001 and T002 are blocked with no open dependencies; they can start once unblocked.)
 
 ---
 
 ## Quick Reference: Validation Commands
 
-| Task | Validation Command |
-|------|-------------------|
-| T001 | `pnpm --filter @suite/auth test:run` |
-| T002 | `pnpm --filter @suite/auth test:run` |
-| T003 | `pnpm --filter @suite/db test:run -- calendar.test.ts tasks.test.ts drive.test.ts` |
-| T004 | `pnpm --filter @suite/calendar-api test:run -- index.test.ts` |
-| T005 | `pnpm nx affected -t typecheck` |
-| T006 | `pnpm --filter @suite/domain-calendar test:run -- calendar-crypto.test.ts` |
-| T007 | `pnpm --filter @suite/db test:run -- tasks.test.ts drive.test.ts` |
-| T008 | `pnpm nx affected -t typecheck` |
-| T009 | `pnpm nx affected -t typecheck` |
-| T010 | `pnpm nx affected -t typecheck` |
+| Task  | Validation Command |
+|-------|-------------------|
+| T014  | `curl http://localhost:8787/api/health` → 200 or 503, never 500 |
+| T015  | `pnpm --filter @suite/shared-kernel test:run` |
+| T016  | `pnpm --filter @suite/auth typecheck && pnpm nx affected -t typecheck` |
+| T017  | `wrangler deploy --dry-run` (from each API directory) |
+| T001  | `pnpm --filter @suite/auth test:run` |
+| T002  | `pnpm --filter @suite/auth test:run` |
+| T003  | `pnpm --filter @suite/db test:run -- calendar.test.ts tasks.test.ts drive.test.ts` |
+| T004  | `pnpm --filter @suite/calendar-api test:run -- index.test.ts` |
+| T005  | `pnpm nx affected -t typecheck` |
+| T006  | `pnpm --filter @suite/domain-calendar test:run -- calendar-crypto.test.ts` |
+| T007  | `pnpm --filter @suite/db test:run -- tasks.test.ts drive.test.ts` |
+| T008  | `pnpm nx affected -t typecheck` |
+| T009  | `pnpm nx affected -t typecheck` |
+| T010  | `pnpm nx affected -t typecheck` |
 
 ---
 
