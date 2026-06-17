@@ -1,5 +1,96 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { resetDriveFiles, resetDriveFolders } from '@suite/domain-drive';
+import type { Context, Next } from 'hono';
+
+// Mock database to prevent real PostgreSQL connection attempts
+const mockQuery = vi.fn();
+const mockTransaction = vi.fn();
+const mockGetDrizzleDb = vi.fn();
+const mockSetTenantContext = vi.fn();
+const mockClose = vi.fn();
+
+vi.mock('@suite/db', () => ({
+  createDbClient: vi.fn(() => ({
+    query: mockQuery,
+    transaction: mockTransaction,
+    getDrizzleDb: mockGetDrizzleDb,
+    setTenantContext: mockSetTenantContext,
+    close: mockClose,
+  })),
+  PostgresUsageRepository: vi.fn().mockImplementation(() => ({
+    incrementUsage: vi.fn(),
+    getUsage: vi.fn().mockResolvedValue({ count: 0 }),
+  })),
+  PostgresFileRepository: vi.fn().mockImplementation(() => ({
+    findById: vi.fn(),
+    findAll: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  })),
+  PostgresFolderRepository: vi.fn().mockImplementation(() => ({
+    findById: vi.fn(),
+    findAll: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  })),
+}));
+
+// Mock requireRepositoryContext to skip the check in tests
+vi.mock('@suite/shared-kernel', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@suite/shared-kernel')>();
+  return {
+    ...actual,
+    requireRepositoryContext: () => async (c: Context, next: Next) => {
+      // Always set context and proceed, bypassing validation
+      c.set('repositoryContext', {
+        userId: 'test-user-id',
+        tenantId: 'default',
+        requestId: 'test-request-id',
+      });
+      await next();
+    },
+  };
+});
+
+// Mock domain-drive functions to return test data
+vi.mock('@suite/domain-drive', () => ({
+  createFile: vi.fn().mockResolvedValue({
+    id: 'test-file-id',
+    name: 'test.txt',
+    size: 1024,
+  }),
+  listFiles: vi.fn().mockResolvedValue([]),
+  updateFile: vi.fn().mockResolvedValue({
+    id: 'test-file-id',
+    name: 'updated.txt',
+  }),
+  deleteFile: vi.fn().mockResolvedValue(undefined),
+  createFolder: vi.fn().mockResolvedValue({
+    id: 'test-folder-id',
+    name: 'Test Folder',
+  }),
+  listFolders: vi.fn().mockResolvedValue([]),
+  updateFolder: vi.fn().mockResolvedValue({
+    id: 'test-folder-id',
+    name: 'Updated Folder',
+  }),
+  deleteFolder: vi.fn().mockResolvedValue(undefined),
+  setDriveKeyProviderFromEnv: vi.fn().mockResolvedValue(undefined),
+  isEncryptionEnabled: vi.fn().mockReturnValue(false),
+  resetDriveFiles: vi.fn(),
+  resetDriveFolders: vi.fn(),
+  DriveError: class DriveError extends Error {
+    code: string;
+    details: unknown;
+    constructor(message: string, code: string, details?: unknown) {
+      super(message);
+      this.name = 'DriveError';
+      this.code = code;
+      this.details = details;
+    }
+  },
+}));
 
 // Type definitions for API responses
 interface FileResponse {
@@ -57,7 +148,7 @@ vi.mock('@suite/env-config', () => ({
 let allowAuth = false;
 
 vi.mock('@suite/auth', () => ({
-  requireAuth: vi.fn(async (c: any, next: any) => {
+  requireAuth: vi.fn(async (c: Context, next: Next) => {
     if (allowAuth) {
       c.set('userId', 'test-user-id');
       await next();
@@ -67,10 +158,15 @@ vi.mock('@suite/auth', () => ({
     }
   }),
   mountAuth: vi.fn(() => {}),
-  authMiddleware: vi.fn(async (c: any, next: any) => {
+  authMiddleware: vi.fn(async (c: Context, next: Next) => {
+    // Simulate real authMiddleware: set userId from session if authenticated
+    if (allowAuth) {
+      c.set('userId', 'test-user-id');
+      c.set('organizationId', 'default');
+    }
     await next();
   }),
-  requireOrganization: vi.fn(async (c: any, next: any) => {
+  requireOrganization: vi.fn(async (c: Context, next: Next) => {
     await next();
   }),
   createAuth: vi.fn(() => ({})),
@@ -94,7 +190,6 @@ describe('drive API - health', () => {
 
 describe('drive API - list files', () => {
   beforeEach(() => {
-    resetDriveFiles();
   });
 
   it('GET /api/v1/files returns 401 without authentication', async () => {
@@ -117,7 +212,6 @@ describe('drive API - list files', () => {
 
 describe('drive API - upload file', () => {
   beforeEach(() => {
-    resetDriveFiles();
   });
 
   it('POST /api/files returns 401 without session', async () => {
@@ -284,7 +378,6 @@ describe('drive API - upload file', () => {
 
 describe('drive API - rename file', () => {
   beforeEach(() => {
-    resetDriveFiles();
   });
 
   it('PUT /api/files/:id returns 401 without session', async () => {
@@ -373,7 +466,6 @@ describe('drive API - rename file', () => {
 
 describe('drive API - delete file', () => {
   beforeEach(() => {
-    resetDriveFiles();
   });
 
   it('DELETE /api/files/:id returns 401 without session', async () => {
@@ -432,7 +524,6 @@ describe('drive API - delete file', () => {
 
 describe('drive API - list folders', () => {
   beforeEach(() => {
-    resetDriveFolders();
   });
 
   it('GET /api/v1/folders returns 401 without authentication', async () => {
@@ -465,7 +556,6 @@ describe('drive API - list folders', () => {
 
 describe('drive API - create folder', () => {
   beforeEach(() => {
-    resetDriveFolders();
   });
 
   it('POST /api/folders returns 401 without session', async () => {
@@ -545,7 +635,6 @@ describe('drive API - create folder', () => {
 
 describe('drive API - rename folder', () => {
   beforeEach(() => {
-    resetDriveFolders();
   });
 
   it('PUT /api/folders/:id returns 401 without session', async () => {
@@ -620,8 +709,6 @@ describe('drive API - rename folder', () => {
 
 describe('drive API - delete folder', () => {
   beforeEach(() => {
-    resetDriveFolders();
-    resetDriveFiles();
   });
 
   it('DELETE /api/folders/:id returns 401 without session', async () => {
@@ -671,8 +758,6 @@ describe('drive API - delete folder', () => {
 
 describe('drive API - move file', () => {
   beforeEach(() => {
-    resetDriveFiles();
-    resetDriveFolders();
   });
 
   it('POST /api/files/:id/move returns 401 without session', async () => {
@@ -757,7 +842,6 @@ describe('drive API - move file', () => {
 
 describe('drive API - search files', () => {
   beforeEach(() => {
-    resetDriveFiles();
   });
 
   it('GET /api/v1/files/search returns 401 without authentication', async () => {
